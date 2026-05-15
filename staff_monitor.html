@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社員所在地ボード — モニター</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { width:100%; height:100%; font-family:'Noto Sans JP',sans-serif; background:#1a1a1a; overflow:hidden; }
+
+  .slide-wrap { width:100%; height:100%; position:relative; }
+
+  .slide {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    opacity:0; transition:opacity 0.6s ease; pointer-events:none;
+  }
+  .slide.active { opacity:1; pointer-events:auto; }
+
+  /* HEADER */
+  .slide-header {
+    padding: 20px 48px 10px;
+    display:flex; align-items:flex-start; justify-content:space-between; flex-shrink:0;
+  }
+  .slide-location { display:flex; align-items:center; gap:14px; }
+  .location-dot { width:18px; height:18px; border-radius:50%; flex-shrink:0; }
+  .location-name { font-size:36px; font-weight:900; letter-spacing:-1px; line-height:1; }
+  .location-subtitle { font-size:13px; opacity:0.45; margin-top:3px; font-weight:400; }
+  .location-count { font-size:18px; font-weight:500; opacity:0.5; margin-left:4px; }
+  .slide-meta { text-align:right; }
+  .slide-company { font-size:12px; font-weight:500; opacity:0.45; }
+  .slide-clock { font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; }
+
+  /* PROGRESS */
+  .progress-bar {
+    height:3px; flex-shrink:0; margin:8px 48px 10px;
+    border-radius:999px; overflow:hidden; background:rgba(255,255,255,0.12);
+  }
+  .progress-fill { height:100%; border-radius:999px; width:0%; transition:width linear; }
+
+  /* GRID */
+  .slide-body { flex:1; overflow:hidden; padding:0 48px 20px; }
+
+  .staff-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap:7px;
+    align-content:start;
+  }
+
+  .staff-card {
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:10px;
+    padding:9px 12px;
+    position:relative; overflow:hidden;
+  }
+  .staff-card.non-default {
+    background:rgba(255,255,255,0.13);
+    border-color:rgba(255,160,40,0.55);
+  }
+  .staff-card.non-default::before {
+    content:''; position:absolute; left:0; top:0; bottom:0;
+    width:4px; background:#FFA028; border-radius:10px 0 0 10px;
+  }
+
+  .card-name {
+    font-size:17px; font-weight:700;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    margin-bottom:2px; line-height:1.3;
+  }
+  .card-name.long {
+    font-size:12px;
+    white-space:normal;
+    overflow:visible;
+    text-overflow:unset;
+    line-height:1.25;
+  }
+  .card-dept { font-size:11px; opacity:0.45; margin-bottom:0; }
+  .card-time { font-size:10px; opacity:0.3; margin-top:3px; }
+
+  .empty-msg { flex:1; display:flex; align-items:center; justify-content:center; font-size:18px; opacity:0.3; font-weight:500; }
+
+  /* INDICATORS */
+  .indicators {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    display:flex; gap:6px; z-index:200;
+  }
+  .ind-dot {
+    width:7px; height:7px; border-radius:50%;
+    background:rgba(255,255,255,0.25); cursor:pointer;
+    transition:background .2s, transform .2s;
+  }
+  .ind-dot.active { background:rgba(255,255,255,0.9); transform:scale(1.3); }
+
+  /* SYNC */
+  .sync-badge {
+    position:fixed; top:16px; right:16px;
+    display:flex; align-items:center; gap:6px;
+    background:rgba(0,0,0,0.4); padding:5px 10px; border-radius:999px;
+    font-size:11px; z-index:200; backdrop-filter:blur(4px);
+  }
+  .sync-dot { width:7px; height:7px; border-radius:50%; background:#1D9E75; }
+  .sync-dot.syncing { background:#BA7517; animation:pulse 1s infinite; }
+  .sync-dot.error   { background:#E24B4A; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .sync-text { font-size:11px; opacity:0.7; }
+
+  /* CONTROLS */
+  .controls { position:fixed; bottom:50px; right:20px; display:flex; flex-direction:column; gap:6px; z-index:200; }
+  .ctrl-btn {
+    width:38px; height:38px; border-radius:50%;
+    background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15);
+    color:rgba(255,255,255,0.7); font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s; font-family:inherit;
+  }
+  .ctrl-btn:hover { background:rgba(255,255,255,0.22); }
+  .ctrl-btn.paused { background:rgba(255,200,0,0.2); color:#ffd000; }
+
+  .interval-select {
+    position:fixed; bottom:20px; right:20px;
+    background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
+    border:1px solid rgba(255,255,255,0.15); border-radius:8px;
+    color:rgba(255,255,255,0.7); font-size:12px; padding:4px 8px;
+    font-family:inherit; cursor:pointer; z-index:200;
+  }
+  .interval-select option { background:#2a2a2a; color:#fff; }
+
+  .loading-overlay {
+    position:fixed; inset:0; z-index:400; background:#1a1a1a;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+  }
+  .loading-spinner {
+    width:36px; height:36px; border:3px solid rgba(255,255,255,0.15); border-top-color:#1D9E75;
+    border-radius:50%; animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-text { font-size:14px; color:rgba(255,255,255,0.4); }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">データを読み込んでいます...</div>
+</div>
+
+<div class="slide-wrap" id="slideWrap"></div>
+<div class="indicators" id="indicators"></div>
+
+<div class="sync-badge">
+  <span class="sync-dot" id="syncDot"></span>
+  <span class="sync-text" id="syncText">--</span>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="pauseBtn" onclick="togglePause()" title="一時停止/再生">⏸</button>
+  <button class="ctrl-btn" onclick="prevSlide()" title="前へ">‹</button>
+  <button class="ctrl-btn" onclick="nextSlide()" title="次へ">›</button>
+</div>
+
+<select class="interval-select" id="intervalSelect" onchange="changeInterval(this.value)">
+  <option value="5000">5秒</option>
+  <option value="8000" selected>8秒</option>
+  <option value="10000">10秒</option>
+  <option value="15000">15秒</option>
+  <option value="20000">20秒</option>
+</select>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwT7aSD1CmIOp_TlVa3yzUZr99b-yzMd5h_--kgweBABdyW8SnRMscd3cdWlTp6GsQzUQ/exec';
+const FETCH_INTERVAL = 15000;
+
+const STAFF_MASTER = [
+  {id:88,name:'中島 基木',dept:'社長',base:'honsha_office'},
+  {id:89,name:'笹倉 俊彦',dept:'役員',base:'honsha_office'},
+  {id:90,name:'石川 明雄',dept:'役員',base:'honsha_office'},
+  {id:91,name:'中島 大',  dept:'役員',base:'nezaki2'},
+  {id:13,name:'加藤 愛子',dept:'総務部',base:'honsha_office'},
+  {id:38,name:'石原 知佳',dept:'総務部',base:'honsha_office'},
+  {id:41,name:'澤井 裕司',dept:'総務部',base:'honsha_office'},
+  {id:49,name:'山口 奈奈美',dept:'総務部',base:'honsha_office'},
+  {id:52,name:'加藤 友那',dept:'総務部',base:'honsha_office'},
+  {id:63,name:'江嵜 嘉浩',dept:'総務部',base:'honsha_office'},
+  {id:85,name:'田島 靖子',dept:'総務部',base:'honsha_office'},
+  {id:54,name:'有江 達夫',dept:'営業部',base:'honsha_office'},
+  {id:64,name:'古田 毅',  dept:'営業部',base:'honsha_office'},
+  {id:69,name:'小野田 隆弘',dept:'営業部',base:'honsha_office'},
+  {id:86,name:'稲吉 一春',dept:'営業部',base:'honsha_office'},
+  {id:48,name:'鶴永 将人',dept:'購買課',base:'nezaki2'},
+  {id:51,name:'内木 緑',  dept:'購買課',base:'nezaki2'},
+  {id:71,name:'宮川 哲平',dept:'購買課',base:'nezaki2'},
+  {id:75,name:'安藤 奈津子',dept:'購買課',base:'nezaki2'},
+  {id:17,name:'鄒 永',    dept:'第一製造部',base:'honsha_office'},
+  {id:5, name:'平井 三洋',dept:'設計課',base:'honsha_office'},
+  {id:6, name:'寺本 豊',  dept:'設計課',base:'honsha_office'},
+  {id:10,name:'鈴木 桂',  dept:'設計課',base:'honsha_office'},
+  {id:22,name:'中島 來夢',dept:'設計課',base:'honsha_office'},
+  {id:25,name:'松木 建太郎',dept:'設計課',base:'honsha_office'},
+  {id:30,name:'茨 泰憲',  dept:'設計課',base:'honsha_office'},
+  {id:32,name:'広瀬 靖志',dept:'設計課',base:'honsha_office'},
+  {id:33,name:'TRAN PHONG VU',dept:'設計課',base:'honsha_office'},
+  {id:36,name:'深見 健太',dept:'設計課',base:'honsha_office'},
+  {id:39,name:'伊串 希',  dept:'設計課',base:'honsha_office'},
+  {id:40,name:'近藤 あゆみ',dept:'設計課',base:'honsha_office'},
+  {id:42,name:'米津 友里',dept:'設計課',base:'honsha_office'},
+  {id:56,name:'加藤 絢',  dept:'設計課',base:'honsha_office'},
+  {id:58,name:'小松 亜澄',dept:'設計課',base:'honsha_office'},
+  {id:60,name:'廣瀬 昇',  dept:'設計課',base:'honsha_office'},
+  {id:70,name:'荒川 真緒',dept:'設計課',base:'honsha_office'},
+  {id:7, name:'成田 健',  dept:'電気課',base:'honsha_office'},
+  {id:8, name:'中島 正隆',dept:'電気課',base:'honsha_office'},
+  {id:18,name:'加藤 幸浩',dept:'電気課',base:'honsha_office'},
+  {id:24,name:'坂本 英一',dept:'電気課',base:'honsha_office'},
+  {id:27,name:'宇野 孝祐',dept:'電気課',base:'honsha_office'},
+  {id:35,name:'城 重光',  dept:'電気課',base:'honsha_office'},
+  {id:43,name:'當眞 一聖',dept:'電気課',base:'honsha_office'},
+  {id:45,name:'山田 護',  dept:'電気課',base:'honsha_office'},
+  {id:61,name:'船木 勇作',dept:'電気課',base:'honsha_office'},
+  {id:66,name:'坂下 優',  dept:'電気課',base:'honsha_office'},
+  {id:67,name:'NGUYEN THI TUYET MAI',dept:'電気課',base:'honsha_office'},
+  {id:73,name:'NGUYEN HOANG PHUC AN',dept:'電気課',base:'honsha_office'},
+  {id:77,name:'牧内 宗真',dept:'電気課',base:'honsha_office'},
+  {id:78,name:'中村 尚幹',dept:'電気課',base:'honsha_office'},
+  {id:83,name:'荒木 萌々花',dept:'電気課',base:'honsha_office'},
+  {id:1, name:'川村 隆浩',dept:'加工課',base:'nezaki'},
+  {id:3, name:'柏田 祐介',dept:'加工課',base:'honsha_office'},
+  {id:11,name:'青山 薫',  dept:'加工課',base:'nezaki'},
+  {id:12,name:'中島 学',  dept:'加工課',base:'honsha_office'},
+  {id:14,name:'野村 昌史',dept:'加工課',base:'nezaki'},
+  {id:15,name:'大出 直明',dept:'加工課',base:'nezaki'},
+  {id:16,name:'小池 佑介',dept:'加工課',base:'nezaki'},
+  {id:28,name:'NGUYEN VAN LANH',dept:'加工課',base:'nezaki'},
+  {id:31,name:'川口 信夫',dept:'加工課',base:'nezaki'},
+  {id:34,name:'TRAN VAN THAN',dept:'加工課',base:'nezaki'},
+  {id:37,name:'NGUYEN HOANG AN',dept:'加工課',base:'nezaki'},
+  {id:44,name:'川端 英裕',dept:'加工課',base:'nezaki'},
+  {id:47,name:'太田 安彦',dept:'加工課',base:'nezaki'},
+  {id:55,name:'加古 武',  dept:'加工課',base:'nezaki'},
+  {id:57,name:'佐藤 佳宏',dept:'加工課',base:'nezaki'},
+  {id:59,name:'NGUYEN THANH NHANH',dept:'加工課',base:'nezaki'},
+  {id:62,name:'石田 昌也',dept:'加工課',base:'nezaki'},
+  {id:65,name:'坂本 和貴',dept:'加工課',base:'nezaki'},
+  {id:68,name:'TRAN KIM TUYEN',dept:'加工課',base:'nezaki'},
+  {id:79,name:'TRAN CHI TAM',dept:'加工課',base:'nezaki'},
+  {id:80,name:'神谷 翼',  dept:'加工課',base:'nezaki'},
+  {id:82,name:'今泉 崇',  dept:'加工課',base:'nezaki'},
+  {id:0, name:'塩澤 真治',dept:'組付課',base:'nezaki2'},
+  {id:2, name:'吉田 一英',dept:'組付課',base:'nezaki2'},
+  {id:4, name:'渡瀬 一美',dept:'組付課',base:'nezaki2'},
+  {id:9, name:'竹内 和人',dept:'組付課',base:'nezaki2'},
+  {id:21,name:'大村 秀樹',dept:'組付課',base:'nezaki2'},
+  {id:23,name:'渡辺 健一',dept:'組付課',base:'nezaki2'},
+  {id:26,name:'坂野 公彦',dept:'組付課',base:'nezaki2'},
+  {id:46,name:'近藤 隼次',dept:'組付課',base:'nezaki2'},
+  {id:50,name:'尾崎 佑和',dept:'組付課',base:'nezaki2'},
+  {id:53,name:'松尾 康平',dept:'組付課',base:'nezaki2'},
+  {id:72,name:'髙木 和幸',dept:'組付課',base:'nezaki2'},
+  {id:74,name:'BIEN VAN MINH',dept:'組付課',base:'nezaki2'},
+  {id:76,name:'富樫 至史',dept:'組付課',base:'nezaki2'},
+  {id:81,name:'真栄田 義斗',dept:'組付課',base:'nezaki2'},
+  {id:84,name:'加藤 翼',  dept:'組付課',base:'nezaki2'},
+  {id:87,name:'澤田 隆昭',dept:'組付課',base:'nezaki2'},
+];
+
+// state
+let state = {};
+STAFF_MASTER.forEach(s => { state[s.id] = { status: s.base, updated: '', memo: '' }; });
+
+// スライド定義
+const SLIDE_DEFS = [
+  { label:'本社事務所①', subtitle:'社長・役員・総務部・営業部',
+    color:'#1D9E75', bg:'linear-gradient(135deg,#0d3d2e,#0f5a40)',
+    filter: m => state[m.id].status==='honsha_office' && (['社長','役員','総務部','営業部'].includes(m.dept) && m.id !== 90) || m.id === 12 },
+  { label:'本社事務所②', subtitle:'設計課・第一製造部',
+    color:'#1D9E75', bg:'linear-gradient(135deg,#0a3228,#0d4a38)',
+    filter: m => state[m.id].status==='honsha_office' && (['設計課','第一製造部'].includes(m.dept) || m.id === 90 || m.id === 3) },
+  { label:'本社事務所③', subtitle:'電気課・購買課',
+    color:'#1D9E75', bg:'linear-gradient(135deg,#07281e,#0a3828)',
+    filter: m => state[m.id].status==='honsha_office' && ['電気課','購買課'].includes(m.dept) },
+  { label:'本社工場', subtitle:'',
+    color:'#0e7fa8', bg:'linear-gradient(135deg,#052a38,#083d52)',
+    filter: m => state[m.id].status==='honsha_factory' },
+  { label:'根崎', subtitle:'加工課',
+    color:'#185FA5', bg:'linear-gradient(135deg,#0a2a4a,#0d3d6b)',
+    filter: m => state[m.id].status==='nezaki' },
+  { label:'根崎第2', subtitle:'組付課・購買課',
+    color:'#534AB7', bg:'linear-gradient(135deg,#1e1a4a,#2d2870)',
+    filter: m => state[m.id].status==='nezaki2' },
+  { label:'外出/出張', subtitle:'',
+    color:'#BA7517', bg:'linear-gradient(135deg,#3d2000,#5a3200)',
+    filter: m => state[m.id].status==='gaishutsu' },
+  { label:'在宅', subtitle:'',
+    color:'#639922', bg:'linear-gradient(135deg,#1a2e0a,#274510)',
+    filter: m => state[m.id].status==='zaitaku' },
+  { label:'休み', subtitle:'',
+    color:'#888780', bg:'linear-gradient(135deg,#222220,#333330)',
+    filter: m => state[m.id].status==='yasumi' },
+];
+
+let currentIndex = 0;
+let slideInterval = 8000;
+let isPaused = false;
+let slideTimer = null;
+let progressTimer = null;
+let slideKeys = [];
+
+function updateClock() {
+  const now = new Date();
+  const str = now.toLocaleDateString('ja-JP',{month:'short',day:'numeric',weekday:'short'}) + ' ' +
+    now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  document.querySelectorAll('.slide-clock').forEach(el => el.textContent = str);
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+function setSyncStatus(st, msg) {
+  const dot = document.getElementById('syncDot');
+  dot.className = 'sync-dot' + (st==='syncing'?' syncing':st==='error'?' error':'');
+  document.getElementById('syncText').textContent = msg;
+}
+
+async function fetchAll(silent=false) {
+  if (!silent) setSyncStatus('syncing','取得中...');
+  try {
+    const res = await fetch(GAS_URL + '?t=' + Date.now());
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    json.data.forEach(row => {
+      const id = parseInt(row.id);
+      if (!isNaN(id) && state[id]!==undefined && row.status) {
+        state[id] = { status: row.status, updated: row.updated||'', memo: row.memo||'' };
+      }
+    });
+    const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus('ok', t+' 更新');
+    rebuildSlides();
+  } catch(e) { setSyncStatus('error','通信エラー'); }
+}
+
+function rebuildSlides() {
+  // 0名スライドはスキップ（本社工場・外出・在宅・休みのみ）
+  slideKeys = SLIDE_DEFS
+    .map((def,idx) => idx)
+    .filter(idx => {
+      const members = STAFF_MASTER.filter(SLIDE_DEFS[idx].filter);
+      // 本社①②③は常に表示、その他は0名ならスキップ
+      if (idx <= 2) return true;
+      return members.length > 0;
+    });
+
+  const wrap = document.getElementById('slideWrap');
+  wrap.innerHTML = '';
+
+  slideKeys.forEach((defIdx, idx) => {
+    const def = SLIDE_DEFS[defIdx];
+    const members = STAFF_MASTER.filter(def.filter);
+
+    const slide = document.createElement('div');
+    slide.className = 'slide' + (idx===currentIndex?' active':'');
+    slide.id = 'slide-' + idx;
+    slide.style.background = def.bg;
+    slide.style.color = '#ffffff';
+
+    const cardsHtml = members.length > 0
+      ? `<div class="staff-grid">${members.map(m => {
+          const isNonDefault = state[m.id].status !== m.base;
+          return `<div class="staff-card ${isNonDefault?'non-default':''}">
+            <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
+            <div class="card-dept">${m.dept}</div>
+            ${state[m.id].memo?`<div class="card-time" style="color:rgba(255,200,100,0.8);font-size:11px;">📍 ${state[m.id].memo}</div>`:''}
+            ${state[m.id].updated?`<div class="card-time">${state[m.id].updated}</div>`:''}
+          </div>`;
+        }).join('')}</div>`
+      : `<div class="empty-msg">現在この場所にいる社員はいません</div>`;
+
+    slide.innerHTML = `
+      <div class="slide-header">
+        <div class="slide-location">
+          <div class="location-dot" style="background:${def.color};"></div>
+          <div>
+            <div style="display:flex;align-items:baseline;gap:8px;">
+              <span class="location-name">${def.label}</span>
+              <span class="location-count">${members.length}名</span>
+            </div>
+            ${def.subtitle?`<div class="location-subtitle">${def.subtitle}</div>`:''}
+          </div>
+        </div>
+        <div class="slide-meta">
+          <div class="slide-company">Nakashima Manufacturing</div>
+          <div class="slide-clock"></div>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-${idx}" style="background:${def.color};"></div>
+      </div>
+      <div class="slide-body">${cardsHtml}</div>
+    `;
+    wrap.appendChild(slide);
+  });
+
+  const indWrap = document.getElementById('indicators');
+  indWrap.innerHTML = slideKeys.map((defIdx, idx) => {
+    const def = SLIDE_DEFS[defIdx];
+    return `<div class="ind-dot ${idx===currentIndex?'active':''}"
+      style="${idx===currentIndex?`background:${def.color};`:''}"
+      onclick="goSlide(${idx})" title="${def.label}"></div>`;
+  }).join('');
+
+  updateClock();
+  if (currentIndex >= slideKeys.length) currentIndex = 0;
+  showSlide(currentIndex, false);
+}
+
+function showSlide(idx, animate=true) {
+  currentIndex = idx;
+  document.querySelectorAll('.slide').forEach((el,i) => el.classList.toggle('active', i===idx));
+  document.querySelectorAll('.ind-dot').forEach((el,i) => {
+    const def = SLIDE_DEFS[slideKeys[i]];
+    el.classList.toggle('active', i===idx);
+    el.style.background = i===idx ? def.color : '';
+  });
+  startProgress(idx);
+}
+
+function startProgress(idx) {
+  clearInterval(progressTimer);
+  const fill = document.getElementById('progress-'+idx);
+  if (!fill) return;
+  fill.style.transition = 'none'; fill.style.width = '0%';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fill.style.transition = `width ${slideInterval}ms linear`;
+    fill.style.width = '100%';
+  }));
+}
+
+function nextSlide() { showSlide((currentIndex+1)%slideKeys.length); resetTimer(); }
+function prevSlide() { showSlide((currentIndex-1+slideKeys.length)%slideKeys.length); resetTimer(); }
+function goSlide(idx) { showSlide(idx); resetTimer(); }
+
+function resetTimer() {
+  clearInterval(slideTimer);
+  if (!isPaused) slideTimer = setInterval(nextSlide, slideInterval);
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  const btn = document.getElementById('pauseBtn');
+  btn.textContent = isPaused ? '▶' : '⏸';
+  btn.classList.toggle('paused', isPaused);
+  if (isPaused) {
+    clearInterval(slideTimer);
+    const fill = document.getElementById('progress-'+currentIndex);
+    if (fill) { const w = getComputedStyle(fill).width; fill.style.transition='none'; fill.style.width=w; }
+  } else { resetTimer(); startProgress(currentIndex); }
+}
+
+function changeInterval(val) { slideInterval=parseInt(val); resetTimer(); startProgress(currentIndex); }
+
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key==='ArrowDown') nextSlide();
+  if (e.key==='ArrowLeft'||e.key==='ArrowUp') prevSlide();
+  if (e.key===' ') { e.preventDefault(); togglePause(); }
+  if (e.key==='f'||e.key==='F') document.documentElement.requestFullscreen?.();
+});
+
+async function init() {
+  rebuildSlides();
+  await fetchAll(false);
+  document.getElementById('loadingOverlay').style.display = 'none';
+  slideTimer = setInterval(nextSlide, slideInterval);
+  setInterval(() => fetchAll(true), FETCH_INTERVAL);
+}
+
+init();
+</script>
+</body>
+</html>

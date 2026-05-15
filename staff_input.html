@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>所在地登録</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f4f2; --surface: #ffffff; --border: #e2e0db;
+    --text: #1a1a1a; --text-sub: #6b6965; --text-hint: #a09d99; --accent: #1a1a1a;
+  }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
+
+  .header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 20px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-logo {
+    width: 34px; height: 34px; border-radius: 9px; background: #1a1a1a;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .header-logo svg { width: 18px; height: 18px; fill: #fff; }
+  .header-title { font-size: 16px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
+
+  .main { padding: 24px 20px 48px; max-width: 480px; margin: 0 auto; }
+
+  .steps { display: flex; align-items: center; margin-bottom: 28px; }
+  .step { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-hint); flex: 1; }
+  .step.active { color: var(--text); }
+  .step.done { color: #1D9E75; }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0; background: var(--surface);
+  }
+  .step.active .step-num { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .step.done .step-num { border-color: #1D9E75; background: #1D9E75; color: #fff; }
+  .step-line { flex: 1; height: 1px; background: var(--border); margin: 0 4px; }
+
+  .section-label { font-size: 12px; font-weight: 700; color: var(--text-hint); letter-spacing: 0.6px; margin-bottom: 10px; }
+
+  .btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 24px; }
+  .btn-grid.col3 { grid-template-columns: repeat(3, 1fr); }
+
+  .sel-btn {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 14px 10px; text-align: center; font-size: 14px; font-weight: 500;
+    cursor: pointer; color: var(--text); font-family: inherit;
+    transition: border-color .15s, background .15s, transform .1s; line-height: 1.3;
+  }
+  .sel-btn:active { transform: scale(0.97); }
+  .sel-btn.selected { border-color: var(--accent); background: var(--accent); color: #fff; }
+
+  .sel-btn.status-btn.sel-honsha_office  { border-color: #1D9E75; background: #e8f5f0; color: #0f6e56; }
+  .sel-btn.status-btn.sel-honsha_factory { border-color: #0e7fa8; background: #e0f4fa; color: #084f6a; }
+  .sel-btn.status-btn.sel-nezaki         { border-color: #185FA5; background: #e6f1fb; color: #0c447c; }
+  .sel-btn.status-btn.sel-nezaki2        { border-color: #534AB7; background: #eeedfe; color: #3c3489; }
+  .sel-btn.status-btn.sel-gaishutsu      { border-color: #BA7517; background: #faeeda; color: #633806; }
+  .sel-btn.status-btn.sel-zaitaku        { border-color: #639922; background: #eaf3de; color: #27500a; }
+  .sel-btn.status-btn.sel-yasumi         { border-color: #888780; background: #f1efe8; color: #444441; }
+
+  .status-icon { font-size: 22px; margin-bottom: 4px; }
+
+  .name-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .name-btn {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; text-align: left; font-size: 15px; font-weight: 500;
+    cursor: pointer; color: var(--text); font-family: inherit;
+    transition: border-color .15s, background .15s;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .name-btn.selected { border-color: var(--accent); background: #f8f8f6; }
+  .name-btn .check { color: #1D9E75; font-size: 18px; opacity: 0; }
+  .name-btn.selected .check { opacity: 1; }
+
+  .submit-btn {
+    width: 100%; padding: 16px; background: var(--accent); color: #fff;
+    border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: opacity .15s, transform .1s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .submit-btn:not(:disabled):active { transform: scale(0.98); }
+
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none; font-size: 13px; color: var(--text-sub);
+    cursor: pointer; font-family: inherit; padding: 0; margin-bottom: 20px;
+  }
+
+  .result-screen { display: none; text-align: center; padding: 40px 20px; }
+  .result-icon {
+    width: 72px; height: 72px; border-radius: 50%; background: #e8f5f0;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 32px;
+  }
+  .result-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .result-sub { font-size: 14px; color: var(--text-sub); margin-bottom: 28px; line-height: 1.6; }
+  .result-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 20px; border-radius: 999px; font-size: 14px; font-weight: 700; margin-bottom: 32px;
+  }
+  .result-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .again-btn {
+    width: 100%; padding: 14px; background: var(--bg); color: var(--text);
+    border: 1.5px solid var(--border); border-radius: 14px; font-size: 15px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+  }
+  .hidden { display: none !important; }
+
+  .saving-overlay {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(255,255,255,0.85);
+    align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+  }
+  .saving-overlay.show { display: flex; }
+  .saving-spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: #1D9E75;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .saving-text { font-size: 14px; color: var(--text-sub); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+  </div>
+  <div>
+    <div class="header-title">所在地登録</div>
+    <div class="header-sub">Nakashima Manufacturing</div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="steps" id="stepIndicator">
+    <div class="step active" id="stepEl1"><div class="step-num">1</div><span>部署</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="stepEl2"><div class="step-num">2</div><span>氏名</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="stepEl3"><div class="step-num">3</div><span>居場所</span></div>
+  </div>
+
+  <div id="step1">
+    <div class="section-label">部署を選んでください</div>
+    <div class="btn-grid" id="deptGrid"></div>
+  </div>
+
+  <div id="step2" class="hidden">
+    <button class="back-btn" onclick="goStep(1)">← 部署を選び直す</button>
+    <div class="section-label" id="step2Label">氏名を選んでください</div>
+    <div class="name-list" id="nameList"></div>
+  </div>
+
+  <div id="step3" class="hidden">
+    <button class="back-btn" onclick="goStep(2)">← 氏名を選び直す</button>
+    <div class="section-label" id="step3Label">居場所を選んでください</div>
+    <div class="btn-grid col3" id="statusGrid"></div>
+    <button class="submit-btn" id="submitBtn" onclick="submit()" disabled>登録する</button>
+  </div>
+
+  <div class="result-screen" id="resultScreen">
+    <div class="result-icon">✓</div>
+    <div class="result-title">登録しました</div>
+    <div class="result-sub" id="resultSub"></div>
+    <div class="result-badge" id="resultBadge"></div>
+    <button class="again-btn" onclick="reset()">別の人を登録する</button>
+  </div>
+</div>
+
+<div class="saving-overlay" id="savingOverlay">
+  <div class="saving-spinner"></div>
+  <div class="saving-text">登録中...</div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwT7aSD1CmIOp_TlVa3yzUZr99b-yzMd5h_--kgweBABdyW8SnRMscd3cdWlTp6GsQzUQ/exec';
+
+const STATUSES = [
+  { key:'honsha_office',  label:'本社事務所', bg:'#e8f5f0', fg:'#0f6e56', dot:'#1D9E75', icon:'🏢' },
+  { key:'honsha_factory', label:'本社工場',   bg:'#e0f4fa', fg:'#084f6a', dot:'#0e7fa8', icon:'🏭' },
+  { key:'nezaki',         label:'根崎',       bg:'#e6f1fb', fg:'#0c447c', dot:'#185FA5', icon:'🔧' },
+  { key:'nezaki2',        label:'根崎第2',    bg:'#eeedfe', fg:'#3c3489', dot:'#534AB7', icon:'🏗' },
+  { key:'gaishutsu',      label:'外出/出張',  bg:'#faeeda', fg:'#633806', dot:'#BA7517', icon:'🚗' },
+  { key:'zaitaku',        label:'在宅',       bg:'#eaf3de', fg:'#27500a', dot:'#639922', icon:'🏠' },
+  { key:'yasumi',         label:'休み',       bg:'#f1efe8', fg:'#444441', dot:'#888780', icon:'🌙' },
+];
+const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.key, s]));
+
+const DEPT_ORDER = ['社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
+
+const STAFF_MASTER = [
+  {id:88,name:'中島 基木',dept:'社長',base:'honsha_office'},
+  {id:89,name:'笹倉 俊彦',dept:'役員',base:'honsha_office'},
+  {id:90,name:'石川 明雄',dept:'役員',base:'honsha_office'},
+  {id:91,name:'中島 大',  dept:'役員',base:'nezaki2'},
+  {id:13,name:'加藤 愛子',dept:'総務部',base:'honsha_office'},
+  {id:38,name:'石原 知佳',dept:'総務部',base:'honsha_office'},
+  {id:41,name:'澤井 裕司',dept:'総務部',base:'honsha_office'},
+  {id:49,name:'山口 奈奈美',dept:'総務部',base:'honsha_office'},
+  {id:52,name:'加藤 友那',dept:'総務部',base:'honsha_office'},
+  {id:63,name:'江嵜 嘉浩',dept:'総務部',base:'honsha_office'},
+  {id:85,name:'田島 靖子',dept:'総務部',base:'honsha_office'},
+  {id:54,name:'有江 達夫',dept:'営業部',base:'honsha_office'},
+  {id:64,name:'古田 毅',  dept:'営業部',base:'honsha_office'},
+  {id:69,name:'小野田 隆弘',dept:'営業部',base:'honsha_office'},
+  {id:86,name:'稲吉 一春',dept:'営業部',base:'honsha_office'},
+  {id:48,name:'鶴永 将人',dept:'購買課',base:'nezaki2'},
+  {id:51,name:'内木 緑',  dept:'購買課',base:'nezaki2'},
+  {id:71,name:'宮川 哲平',dept:'購買課',base:'nezaki2'},
+  {id:75,name:'安藤 奈津子',dept:'購買課',base:'nezaki2'},
+  {id:17,name:'鄒 永',    dept:'第一製造部',base:'honsha_office'},
+  {id:5, name:'平井 三洋',dept:'設計課',base:'honsha_office'},
+  {id:6, name:'寺本 豊',  dept:'設計課',base:'honsha_office'},
+  {id:10,name:'鈴木 桂',  dept:'設計課',base:'honsha_office'},
+  {id:22,name:'中島 來夢',dept:'設計課',base:'honsha_office'},
+  {id:25,name:'松木 建太郎',dept:'設計課',base:'honsha_office'},
+  {id:30,name:'茨 泰憲',  dept:'設計課',base:'honsha_office'},
+  {id:32,name:'広瀬 靖志',dept:'設計課',base:'honsha_office'},
+  {id:33,name:'TRAN PHONG VU',dept:'設計課',base:'honsha_office'},
+  {id:36,name:'深見 健太',dept:'設計課',base:'honsha_office'},
+  {id:39,name:'伊串 希',  dept:'設計課',base:'honsha_office'},
+  {id:40,name:'近藤 あゆみ',dept:'設計課',base:'honsha_office'},
+  {id:42,name:'米津 友里',dept:'設計課',base:'honsha_office'},
+  {id:56,name:'加藤 絢',  dept:'設計課',base:'honsha_office'},
+  {id:58,name:'小松 亜澄',dept:'設計課',base:'honsha_office'},
+  {id:60,name:'廣瀬 昇',  dept:'設計課',base:'honsha_office'},
+  {id:70,name:'荒川 真緒',dept:'設計課',base:'honsha_office'},
+  {id:7, name:'成田 健',  dept:'電気課',base:'honsha_office'},
+  {id:8, name:'中島 正隆',dept:'電気課',base:'honsha_office'},
+  {id:18,name:'加藤 幸浩',dept:'電気課',base:'honsha_office'},
+  {id:24,name:'坂本 英一',dept:'電気課',base:'honsha_office'},
+  {id:27,name:'宇野 孝祐',dept:'電気課',base:'honsha_office'},
+  {id:35,name:'城 重光',  dept:'電気課',base:'honsha_office'},
+  {id:43,name:'當眞 一聖',dept:'電気課',base:'honsha_office'},
+  {id:45,name:'山田 護',  dept:'電気課',base:'honsha_office'},
+  {id:61,name:'船木 勇作',dept:'電気課',base:'honsha_office'},
+  {id:66,name:'坂下 優',  dept:'電気課',base:'honsha_office'},
+  {id:67,name:'NGUYEN THI TUYET MAI',dept:'電気課',base:'honsha_office'},
+  {id:73,name:'NGUYEN HOANG PHUC AN',dept:'電気課',base:'honsha_office'},
+  {id:77,name:'牧内 宗真',dept:'電気課',base:'honsha_office'},
+  {id:78,name:'中村 尚幹',dept:'電気課',base:'honsha_office'},
+  {id:83,name:'荒木 萌々花',dept:'電気課',base:'honsha_office'},
+  {id:1, name:'川村 隆浩',dept:'加工課',base:'nezaki'},
+  {id:3, name:'柏田 祐介',dept:'加工課',base:'honsha_office'},
+  {id:11,name:'青山 薫',  dept:'加工課',base:'nezaki'},
+  {id:12,name:'中島 学',  dept:'加工課',base:'honsha_office'},
+  {id:14,name:'野村 昌史',dept:'加工課',base:'nezaki'},
+  {id:15,name:'大出 直明',dept:'加工課',base:'nezaki'},
+  {id:16,name:'小池 佑介',dept:'加工課',base:'nezaki'},
+  {id:28,name:'NGUYEN VAN LANH',dept:'加工課',base:'nezaki'},
+  {id:31,name:'川口 信夫',dept:'加工課',base:'nezaki'},
+  {id:34,name:'TRAN VAN THAN',dept:'加工課',base:'nezaki'},
+  {id:37,name:'NGUYEN HOANG AN',dept:'加工課',base:'nezaki'},
+  {id:44,name:'川端 英裕',dept:'加工課',base:'nezaki'},
+  {id:47,name:'太田 安彦',dept:'加工課',base:'nezaki'},
+  {id:55,name:'加古 武',  dept:'加工課',base:'nezaki'},
+  {id:57,name:'佐藤 佳宏',dept:'加工課',base:'nezaki'},
+  {id:59,name:'NGUYEN THANH NHANH',dept:'加工課',base:'nezaki'},
+  {id:62,name:'石田 昌也',dept:'加工課',base:'nezaki'},
+  {id:65,name:'坂本 和貴',dept:'加工課',base:'nezaki'},
+  {id:68,name:'TRAN KIM TUYEN',dept:'加工課',base:'nezaki'},
+  {id:79,name:'TRAN CHI TAM',dept:'加工課',base:'nezaki'},
+  {id:80,name:'神谷 翼',  dept:'加工課',base:'nezaki'},
+  {id:82,name:'今泉 崇',  dept:'加工課',base:'nezaki'},
+  {id:0, name:'塩澤 真治',dept:'組付課',base:'nezaki2'},
+  {id:2, name:'吉田 一英',dept:'組付課',base:'nezaki2'},
+  {id:4, name:'渡瀬 一美',dept:'組付課',base:'nezaki2'},
+  {id:9, name:'竹内 和人',dept:'組付課',base:'nezaki2'},
+  {id:21,name:'大村 秀樹',dept:'組付課',base:'nezaki2'},
+  {id:23,name:'渡辺 健一',dept:'組付課',base:'nezaki2'},
+  {id:26,name:'坂野 公彦',dept:'組付課',base:'nezaki2'},
+  {id:46,name:'近藤 隼次',dept:'組付課',base:'nezaki2'},
+  {id:50,name:'尾崎 佑和',dept:'組付課',base:'nezaki2'},
+  {id:53,name:'松尾 康平',dept:'組付課',base:'nezaki2'},
+  {id:72,name:'髙木 和幸',dept:'組付課',base:'nezaki2'},
+  {id:74,name:'BIEN VAN MINH',dept:'組付課',base:'nezaki2'},
+  {id:76,name:'富樫 至史',dept:'組付課',base:'nezaki2'},
+  {id:81,name:'真栄田 義斗',dept:'組付課',base:'nezaki2'},
+  {id:84,name:'加藤 翼',  dept:'組付課',base:'nezaki2'},
+  {id:87,name:'澤田 隆昭',dept:'組付課',base:'nezaki2'},
+];
+
+let selDept = null, selStaff = null, selStatus = null;
+
+function init() { renderDepts(); }
+
+function renderDepts() {
+  const depts = DEPT_ORDER.filter(d => STAFF_MASTER.some(s => s.dept === d));
+  document.getElementById('deptGrid').innerHTML = depts.map(d =>
+    `<button class="sel-btn ${selDept===d?'selected':''}" onclick="selectDept('${d}')">${d}</button>`
+  ).join('');
+}
+
+function selectDept(dept) { selDept = dept; selStaff = null; selStatus = null; goStep(2); }
+
+function renderNames() {
+  const members = STAFF_MASTER.filter(s => s.dept === selDept);
+  document.getElementById('step2Label').textContent = `${selDept}の方を選んでください`;
+  document.getElementById('nameList').innerHTML = members.map(s =>
+    `<button class="name-btn ${selStaff&&selStaff.id===s.id?'selected':''}" onclick="selectName(${s.id})">
+      <span>${s.name}</span><span class="check">✓</span>
+    </button>`
+  ).join('');
+}
+
+function selectName(id) { selStaff = STAFF_MASTER.find(s => s.id === id); selStatus = null; goStep(3); }
+
+function renderStatus() {
+  document.getElementById('step3Label').textContent = `${selStaff.name}さんの居場所を選んでください`;
+  if (!selStatus) selStatus = selStaff.base;
+  const isNonDefault = selStatus !== selStaff.base;
+  const defaultLabel = STATUS_MAP[selStaff.base]?.label || '';
+
+  let badge = document.getElementById('nonDefaultBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'nonDefaultBadge';
+    badge.style.cssText = 'margin-bottom:12px;padding:8px 14px;border-radius:10px;background:#FFF3E0;border:1.5px solid #FFA028;color:#7A4000;font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px;';
+    document.getElementById('statusGrid').before(badge);
+  }
+  badge.style.display = isNonDefault ? 'flex' : 'none';
+  badge.textContent = isNonDefault ? `⚠ 通常の居場所（${defaultLabel}）と異なります` : '';
+
+  document.getElementById('statusGrid').innerHTML = STATUSES.map(st => {
+    const isDefault = st.key === selStaff.base;
+    return `<button class="sel-btn status-btn ${selStatus===st.key?'sel-'+st.key:''}" onclick="selectStatus('${st.key}')">
+      <div class="status-icon">${st.icon}</div>
+      <div>${st.label}</div>
+      ${isDefault ? '<div style="font-size:9px;opacity:0.5;margin-top:2px;">通常</div>' : ''}
+    </button>`;
+  }).join('');
+  document.getElementById('submitBtn').disabled = !selStatus;
+
+  // メモ欄（外出/出張のみ）
+  let memoWrap = document.getElementById('memoWrap');
+  if (!memoWrap) {
+    memoWrap = document.createElement('div');
+    memoWrap.id = 'memoWrap';
+    memoWrap.style.cssText = 'margin-bottom:16px;';
+    memoWrap.innerHTML = `
+      <div class="section-label" style="margin-bottom:6px;">行先・メモ（任意）</div>
+      <input id="memoInput" type="text" placeholder="例：豊田市役所、東京出張など"
+        style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:var(--surface);color:var(--text);">
+    `;
+    document.getElementById('submitBtn').before(memoWrap);
+  }
+  memoWrap.style.display = selStatus === 'gaishutsu' ? 'block' : 'none';
+
+  // 長期休暇欄（休みのみ）
+  let leaveWrap = document.getElementById('leaveWrap');
+  if (!leaveWrap) {
+    leaveWrap = document.createElement('div');
+    leaveWrap.id = 'leaveWrap';
+    leaveWrap.style.cssText = 'margin-bottom:16px;';
+    const today = new Date().toISOString().split('T')[0];
+    leaveWrap.innerHTML = `
+      <div class="section-label" style="margin-bottom:6px;">長期休暇の期間（任意）</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <input id="leaveStart" type="date" value="${today}"
+          style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:var(--surface);color:var(--text);">
+        <span style="font-size:13px;color:var(--text-sub);">〜</span>
+        <input id="leaveEnd" type="date" value="${today}"
+          style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:var(--surface);color:var(--text);">
+      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:6px;">期間を設定すると毎朝の自動リセットがスキップされます</div>
+    `;
+    document.getElementById('submitBtn').before(leaveWrap);
+  }
+  leaveWrap.style.display = selStatus === 'yasumi' ? 'block' : 'none';
+}
+
+function selectStatus(key) { selStatus = key; renderStatus(); }
+
+function goStep(n) {
+  document.getElementById('step1').classList.toggle('hidden', n!==1);
+  document.getElementById('step2').classList.toggle('hidden', n!==2);
+  document.getElementById('step3').classList.toggle('hidden', n!==3);
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('stepEl'+i);
+    el.className = 'step' + (i<n?' done':i===n?' active':'');
+  });
+  if (n===2) renderNames();
+  if (n===3) renderStatus();
+  window.scrollTo(0,0);
+}
+
+async function submit() {
+  if (!selStaff || !selStatus) return;
+  const now = new Date();
+  const updatedStr = now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + '更新';
+  const memo = document.getElementById('memoInput') ? document.getElementById('memoInput').value.trim() : '';
+  const leaveStart = document.getElementById('leaveStart') ? document.getElementById('leaveStart').value : '';
+  const leaveEnd   = document.getElementById('leaveEnd')   ? document.getElementById('leaveEnd').value   : '';
+  document.getElementById('savingOverlay').classList.add('show');
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({id:selStaff.id, name:selStaff.name, dept:selStaff.dept, status:selStatus, updated:updatedStr, memo, leaveStart, leaveEnd})
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    const s = STATUS_MAP[selStatus];
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step3').classList.add('hidden');
+    document.getElementById('stepIndicator').classList.add('hidden');
+    document.getElementById('resultSub').textContent = `${selStaff.name}さん（${selStaff.dept}）の居場所を登録しました`;
+    document.getElementById('resultBadge').style.cssText = `background:${s.bg};color:${s.fg};`;
+    document.getElementById('resultBadge').innerHTML = `<span class="result-dot" style="background:${s.dot}"></span>${s.label}`;
+    document.getElementById('resultScreen').style.display = 'block';
+    window.scrollTo(0,0);
+  } catch(e) {
+    alert('登録に失敗しました。もう一度お試しください。');
+  } finally {
+    document.getElementById('savingOverlay').classList.remove('show');
+  }
+}
+
+function reset() {
+  selDept=null; selStaff=null; selStatus=null;
+  document.getElementById('resultScreen').style.display='none';
+  document.getElementById('stepIndicator').classList.remove('hidden');
+  renderDepts(); goStep(1);
+}
+
+init();
+</script>
+</body>
+</html>
