@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>昼食注文</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f4f2; --surface: #ffffff; --border: #e2e0db;
+    --text: #1a1a1a; --text-sub: #6b6965; --text-hint: #a09d99;
+    --green: #1D9E75; --green-bg: #e8f5f0; --green-fg: #0f6e56;
+    --red: #E24B4A; --red-bg: #fdecea; --red-fg: #8b1a19;
+    --orange: #BA7517; --orange-bg: #faeeda; --orange-fg: #633806;
+  }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-logo {
+    width: 34px; height: 34px; border-radius: 9px; background: #1a1a1a;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .header-logo svg { width: 18px; height: 18px; fill: #fff; }
+  .header-title { font-size: 16px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .deadline-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 999px;
+    background: var(--orange-bg); color: var(--orange-fg); font-weight: 500;
+  }
+
+  .main { padding: 20px; max-width: 480px; margin: 0 auto; }
+
+  /* TABS */
+  .tabs {
+    display: flex; gap: 4px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px; padding: 3px;
+    margin-bottom: 20px;
+  }
+  .tab-btn {
+    flex: 1; padding: 8px; border-radius: 8px; border: none;
+    font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+    background: transparent; color: var(--text-sub); transition: all .15s;
+  }
+  .tab-btn.active { background: var(--surface); color: var(--text); }
+
+  /* STAFF SELECTOR */
+  .section-label { font-size: 12px; font-weight: 700; color: var(--text-hint); letter-spacing: 0.6px; margin-bottom: 8px; }
+
+  .dept-select, .name-select {
+    width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 15px; font-family: inherit;
+    background: var(--surface); color: var(--text); outline: none; margin-bottom: 16px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  /* DATE SELECTOR */
+  .date-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
+  .date-btn {
+    border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 4px;
+    text-align: center; font-size: 12px; cursor: pointer; background: var(--surface);
+    font-family: inherit; transition: all .15s;
+  }
+  .date-btn .d-day { font-weight: 700; font-size: 15px; }
+  .date-btn .d-week { font-size: 10px; color: var(--text-hint); margin-top: 2px; }
+  .date-btn.selected { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
+  .date-btn.selected .d-week { color: rgba(255,255,255,0.6); }
+  .date-btn.today .d-day { color: var(--green); }
+  .date-btn.holiday { opacity: 0.4; pointer-events: none; }
+
+  /* ORDER BUTTONS */
+  .order-section { margin-bottom: 20px; }
+  .order-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 10px; }
+
+  .order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .order-btn {
+    border: 2px solid var(--border); border-radius: 14px; padding: 20px 10px;
+    text-align: center; font-size: 28px; cursor: pointer; background: var(--surface);
+    font-family: inherit; transition: all .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .order-btn .order-label { font-size: 13px; font-weight: 700; color: var(--text-sub); }
+  .order-btn .order-sub { font-size: 11px; color: var(--text-hint); }
+  .order-btn:active { transform: scale(0.97); }
+  .order-btn.sel-futsuu { border-color: var(--green); background: var(--green-bg); }
+  .order-btn.sel-futsuu .order-label { color: var(--green-fg); }
+  .order-btn.sel-oomori { border-color: #0e7fa8; background: #e0f4fa; }
+  .order-btn.sel-oomori .order-label { color: #084f6a; }
+  .order-btn.sel-nashi { border-color: var(--red); background: var(--red-bg); }
+  .order-btn.sel-nashi .order-label { color: var(--red-fg); }
+
+  .ng-note {
+    font-size: 12px; color: var(--orange-fg); background: var(--orange-bg);
+    border: 1px solid #f0c060; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+  }
+
+  /* BULK MODE */
+  .bulk-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .bulk-table th { font-size: 11px; color: var(--text-hint); padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--border); }
+  .bulk-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--border); }
+  .bulk-table td:first-child { text-align: left; font-size: 13px; font-weight: 500; padding-left: 0; }
+  .bulk-table td:first-child .bulk-week { font-size: 10px; color: var(--text-hint); }
+
+  .bulk-btn {
+    width: 100%; padding: 6px 4px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+    background: var(--surface); font-family: inherit; transition: all .15s;
+  }
+  .bulk-btn.sel-futsuu { border-color: var(--green); background: var(--green-bg); color: var(--green-fg); }
+  .bulk-btn.sel-oomori { border-color: #0e7fa8; background: #e0f4fa; color: #084f6a; }
+  .bulk-btn.sel-nashi  { border-color: var(--red); background: var(--red-bg); color: var(--red-fg); }
+
+  .bulk-all-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .bulk-all-btn {
+    flex: 1; padding: 10px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 13px; font-weight: 700; cursor: pointer; background: var(--surface);
+    font-family: inherit; transition: all .15s; text-align: center;
+  }
+  .bulk-all-btn.all-futsuu { border-color: var(--green); background: var(--green-bg); color: var(--green-fg); }
+  .bulk-all-btn.all-oomori { border-color: #0e7fa8; background: #e0f4fa; color: #084f6a; }
+  .bulk-all-btn.all-nashi  { border-color: var(--red); background: var(--red-bg); color: var(--red-fg); }
+
+  /* SUBMIT */
+  .submit-btn {
+    width: 100%; padding: 16px; background: #1a1a1a; color: #fff;
+    border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
+    cursor: pointer; font-family: inherit; margin-top: 8px;
+    transition: opacity .15s;
+  }
+  .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* MENU VIEWER */
+  .menu-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px; display: flex; align-items: center;
+    justify-content: space-between;
+  }
+  .menu-month { font-size: 15px; font-weight: 700; }
+  .menu-link {
+    padding: 8px 16px; background: #1a1a1a; color: #fff; border-radius: 8px;
+    font-size: 13px; font-weight: 500; text-decoration: none;
+  }
+  .no-menu { text-align: center; padding: 40px; color: var(--text-hint); font-size: 14px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 999px;
+    font-size: 13px; z-index: 300; opacity: 0; transition: opacity .3s;
+    pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* LOADING */
+  .loading-overlay {
+    position: fixed; inset: 0; z-index: 400; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+  }
+  .loading-spinner {
+    width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--green);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text-sub); }
+
+  .hidden { display: none !important; }
+
+  /* DEADLINE PASSED */
+  .deadline-passed {
+    background: var(--red-bg); border: 1px solid #f5c0bf; border-radius: 12px;
+    padding: 16px; text-align: center; margin-bottom: 16px;
+    font-size: 14px; color: var(--red-fg); font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">読み込み中...</div>
+</div>
+
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24"><path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05zM1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1zm15.03-7c0-2.56-1.36-3.78-5.01-4.35v-.64c0-.55-.45-1-1.01-1s-1.01.45-1.01 1v.64C5.36 11.21 4 12.43 4 14.99v4H1v2h18.03v-2h-3V14.99z"/></svg>
+  </div>
+  <div>
+    <div class="header-title">昼食注文</div>
+    <div class="header-sub">Nakashima Manufacturing</div>
+  </div>
+  <div class="header-right">
+    <span class="deadline-badge" id="deadlineBadge">締切 --:--</span>
+  </div>
+</header>
+
+<div class="main">
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('single')">1日入力</button>
+    <button class="tab-btn" onclick="switchTab('bulk')">まとめて入力</button>
+    <button class="tab-btn" onclick="switchTab('menu')">メニュー</button>
+  </div>
+
+  <!-- STAFF SELECTOR -->
+  <div id="staffSelector">
+    <div class="section-label">部署</div>
+    <select class="dept-select" id="deptSelect" onchange="onDeptChange()">
+      <option value="">-- 部署を選択 --</option>
+    </select>
+    <div class="section-label">氏名</div>
+    <select class="name-select" id="nameSelect" onchange="onNameChange()">
+      <option value="">-- 氏名を選択 --</option>
+    </select>
+  </div>
+
+  <!-- SINGLE TAB -->
+  <div id="singleTab">
+    <div id="deadlinePassed" class="deadline-passed hidden">
+      ⚠ 本日の締切（<span id="deadlineTime"></span>）を過ぎています
+    </div>
+    <div class="section-label">日付</div>
+    <div class="date-grid" id="dateGrid"></div>
+    <div id="ngNote" class="ng-note hidden">※ この方は永久×設定ですが変更可能です</div>
+    <div class="order-section">
+      <div class="order-title">注文を選んでください</div>
+      <div class="order-grid">
+        <button class="order-btn" id="btnFutsuu" onclick="selectOrder('futsuu')">
+          <span>○</span>
+          <span class="order-label">普通</span>
+        </button>
+        <button class="order-btn" id="btnOomori" onclick="selectOrder('oomori')">
+          <span>○</span>
+          <span class="order-label">大盛</span>
+          <span class="order-sub">+1</span>
+        </button>
+      </div>
+      <div class="order-grid">
+        <button class="order-btn" id="btnNashi" onclick="selectOrder('nashi')" style="grid-column:1/-1;">
+          <span>×</span>
+          <span class="order-label">食べない</span>
+        </button>
+      </div>
+    </div>
+    <button class="submit-btn" id="submitSingle" onclick="submitSingle()" disabled>登録する</button>
+  </div>
+
+  <!-- BULK TAB -->
+  <div id="bulkTab" class="hidden">
+    <div class="section-label">期間</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+      <select id="bulkPeriod" onchange="renderBulkTable()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:var(--surface);outline:none;">
+        <option value="week">今週</option>
+        <option value="nextweek">来週</option>
+        <option value="month">今月</option>
+      </select>
+    </div>
+    <div class="section-label">一括設定</div>
+    <div class="bulk-all-row">
+      <button class="bulk-all-btn" onclick="setAllBulk('futsuu')">全日 ○普通</button>
+      <button class="bulk-all-btn" onclick="setAllBulk('oomori')">全日 ○大盛</button>
+      <button class="bulk-all-btn" onclick="setAllBulk('nashi')">全日 ×</button>
+    </div>
+    <div class="section-label">日別設定</div>
+    <table class="bulk-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;">日付</th>
+          <th>○普通</th>
+          <th>○大盛</th>
+          <th>×</th>
+        </tr>
+      </thead>
+      <tbody id="bulkTableBody"></tbody>
+    </table>
+    <button class="submit-btn" id="submitBulk" onclick="submitBulk()" disabled>まとめて登録</button>
+  </div>
+
+  <!-- MENU TAB -->
+  <div id="menuTab" class="hidden">
+    <div id="menuList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwADKRSZHd0Tpiv3X3v7PRNfRccM6H-y3L8mnJF3CulCB_T3zKK_faBccYx0ZI-LFGYGw/exec';
+
+const DEPT_ORDER = ['社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
+const STAFF_MASTER = [
+  {id:88,name:'中島 基木',dept:'社長'},
+  {id:89,name:'笹倉 俊彦',dept:'役員'},
+  {id:90,name:'石川 明雄',dept:'役員'},
+  {id:91,name:'中島 大',  dept:'役員'},
+  {id:13,name:'加藤 愛子',dept:'総務部'},
+  {id:38,name:'石原 知佳',dept:'総務部'},
+  {id:41,name:'澤井 裕司',dept:'総務部'},
+  {id:49,name:'山口 奈奈美',dept:'総務部'},
+  {id:52,name:'加藤 友那',dept:'総務部'},
+  {id:63,name:'江嵜 嘉浩',dept:'総務部'},
+  {id:85,name:'田島 靖子',dept:'総務部'},
+  {id:54,name:'有江 達夫',dept:'営業部'},
+  {id:64,name:'古田 毅',  dept:'営業部'},
+  {id:69,name:'小野田 隆弘',dept:'営業部'},
+  {id:86,name:'稲吉 一春',dept:'営業部'},
+  {id:48,name:'鶴永 将人',dept:'購買課'},
+  {id:51,name:'内木 緑',  dept:'購買課'},
+  {id:71,name:'宮川 哲平',dept:'購買課'},
+  {id:75,name:'安藤 奈津子',dept:'購買課'},
+  {id:17,name:'鄒 永',    dept:'第一製造部'},
+  {id:5, name:'平井 三洋',dept:'設計課'},
+  {id:6, name:'寺本 豊',  dept:'設計課'},
+  {id:10,name:'鈴木 桂',  dept:'設計課'},
+  {id:22,name:'中島 來夢',dept:'設計課'},
+  {id:25,name:'松木 建太郎',dept:'設計課'},
+  {id:30,name:'茨 泰憲',  dept:'設計課'},
+  {id:32,name:'広瀬 靖志',dept:'設計課'},
+  {id:33,name:'TRAN PHONG VU',dept:'設計課'},
+  {id:36,name:'深見 健太',dept:'設計課'},
+  {id:39,name:'伊串 希',  dept:'設計課'},
+  {id:40,name:'近藤 あゆみ',dept:'設計課'},
+  {id:42,name:'米津 友里',dept:'設計課'},
+  {id:56,name:'加藤 絢',  dept:'設計課'},
+  {id:58,name:'小松 亜澄',dept:'設計課'},
+  {id:60,name:'廣瀬 昇',  dept:'設計課'},
+  {id:70,name:'荒川 真緒',dept:'設計課'},
+  {id:7, name:'成田 健',  dept:'電気課'},
+  {id:8, name:'中島 正隆',dept:'電気課'},
+  {id:18,name:'加藤 幸浩',dept:'電気課'},
+  {id:24,name:'坂本 英一',dept:'電気課'},
+  {id:27,name:'宇野 孝祐',dept:'電気課'},
+  {id:35,name:'城 重光',  dept:'電気課'},
+  {id:43,name:'當眞 一聖',dept:'電気課'},
+  {id:45,name:'山田 護',  dept:'電気課'},
+  {id:61,name:'船木 勇作',dept:'電気課'},
+  {id:66,name:'坂下 優',  dept:'電気課'},
+  {id:67,name:'NGUYEN THI TUYET MAI',dept:'電気課'},
+  {id:73,name:'NGUYEN HOANG PHUC AN',dept:'電気課'},
+  {id:77,name:'牧内 宗真',dept:'電気課'},
+  {id:78,name:'中村 尚幹',dept:'電気課'},
+  {id:83,name:'荒木 萌々花',dept:'電気課'},
+  {id:1, name:'川村 隆浩',dept:'加工課'},
+  {id:3, name:'柏田 祐介',dept:'加工課'},
+  {id:11,name:'青山 薫',  dept:'加工課'},
+  {id:12,name:'中島 学',  dept:'加工課'},
+  {id:14,name:'野村 昌史',dept:'加工課'},
+  {id:15,name:'大出 直明',dept:'加工課'},
+  {id:16,name:'小池 佑介',dept:'加工課'},
+  {id:28,name:'NGUYEN VAN LANH',dept:'加工課'},
+  {id:31,name:'川口 信夫',dept:'加工課'},
+  {id:34,name:'TRAN VAN THAN',dept:'加工課'},
+  {id:37,name:'NGUYEN HOANG AN',dept:'加工課'},
+  {id:44,name:'川端 英裕',dept:'加工課'},
+  {id:47,name:'太田 安彦',dept:'加工課'},
+  {id:55,name:'加古 武',  dept:'加工課'},
+  {id:57,name:'佐藤 佳宏',dept:'加工課'},
+  {id:59,name:'NGUYEN THANH NHANH',dept:'加工課'},
+  {id:62,name:'石田 昌也',dept:'加工課'},
+  {id:65,name:'坂本 和貴',dept:'加工課'},
+  {id:68,name:'TRAN KIM TUYEN',dept:'加工課'},
+  {id:79,name:'TRAN CHI TAM',dept:'加工課'},
+  {id:80,name:'神谷 翼',  dept:'加工課'},
+  {id:82,name:'今泉 崇',  dept:'加工課'},
+  {id:0, name:'塩澤 真治',dept:'組付課'},
+  {id:2, name:'吉田 一英',dept:'組付課'},
+  {id:4, name:'渡瀬 一美',dept:'組付課'},
+  {id:9, name:'竹内 和人',dept:'組付課'},
+  {id:21,name:'大村 秀樹',dept:'組付課'},
+  {id:23,name:'渡辺 健一',dept:'組付課'},
+  {id:26,name:'坂野 公彦',dept:'組付課'},
+  {id:46,name:'近藤 隼次',dept:'組付課'},
+  {id:50,name:'尾崎 佑和',dept:'組付課'},
+  {id:53,name:'松尾 康平',dept:'組付課'},
+  {id:72,name:'髙木 和幸',dept:'組付課'},
+  {id:74,name:'BIEN VAN MINH',dept:'組付課'},
+  {id:76,name:'富樫 至史',dept:'組付課'},
+  {id:81,name:'真栄田 義斗',dept:'組付課'},
+  {id:84,name:'加藤 翼',  dept:'組付課'},
+  {id:87,name:'澤田 隆昭',dept:'組付課'},
+];
+
+let deadline = '08:30';
+let permanentNG = {};
+let selStaff = null;
+let selDate = null;
+let selOrder = null;
+let bulkOrders = {}; // date -> order
+let currentTab = 'single';
+
+// ===== UTILS =====
+function fmtDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtDateJa(d) {
+  const days = ['日','月','火','水','木','金','土'];
+  return (d.getMonth()+1) + '/' + d.getDate() + '(' + days[d.getDay()] + ')';
+}
+function isWeekend(d) { return d.getDay() === 0 || d.getDay() === 6; }
+function isDeadlinePassed() {
+  const now = new Date();
+  const [h, m] = deadline.split(':').map(Number);
+  const dl = new Date(); dl.setHours(h, m, 0, 0);
+  return now > dl;
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== INIT =====
+async function init() {
+  renderDeptSelect();
+  renderDateGrid();
+  try {
+    const res = await fetch(GAS_URL + '?action=getSettings&t=' + Date.now());
+    const json = await res.json();
+    if (json.ok) {
+      deadline = json.settings.deadline || '08:30';
+      // 永久×設定を読み込む
+      Object.keys(json.settings).forEach(k => {
+        if (k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k];
+      });
+    }
+  } catch(e) {}
+  document.getElementById('deadlineBadge').textContent = '締切 ' + deadline;
+  checkDeadline();
+  document.getElementById('loadingOverlay').style.display = 'none';
+  loadMenu();
+}
+
+function checkDeadline() {
+  const passed = isDeadlinePassed();
+  document.getElementById('deadlinePassed').classList.toggle('hidden', !passed);
+  document.getElementById('deadlineTime').textContent = deadline;
+}
+
+// ===== DEPT/NAME SELECT =====
+function renderDeptSelect() {
+  const sel = document.getElementById('deptSelect');
+  const depts = DEPT_ORDER.filter(d => STAFF_MASTER.some(s => s.dept === d));
+  sel.innerHTML = '<option value="">-- 部署を選択 --</option>' +
+    depts.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+
+function onDeptChange() {
+  const dept = document.getElementById('deptSelect').value;
+  const sel = document.getElementById('nameSelect');
+  if (!dept) { sel.innerHTML = '<option value="">-- 氏名を選択 --</option>'; selStaff = null; return; }
+  const members = STAFF_MASTER.filter(s => s.dept === dept);
+  sel.innerHTML = '<option value="">-- 氏名を選択 --</option>' +
+    members.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  selStaff = null;
+  updateNGNote();
+}
+
+function onNameChange() {
+  const id = document.getElementById('nameSelect').value;
+  selStaff = STAFF_MASTER.find(s => s.id == id) || null;
+  selOrder = null;
+  updateNGNote();
+  updateOrderButtons();
+  document.getElementById('submitSingle').disabled = !selStaff || !selDate || !selOrder;
+  document.getElementById('submitBulk').disabled = !selStaff || Object.keys(bulkOrders).length === 0;
+  if (selStaff && permanentNG[selStaff.id]) {
+    selOrder = 'nashi';
+    updateOrderButtons();
+  }
+}
+
+function updateNGNote() {
+  const show = selStaff && permanentNG[selStaff.id];
+  document.getElementById('ngNote').classList.toggle('hidden', !show);
+}
+
+// ===== DATE GRID =====
+function renderDateGrid() {
+  const grid = document.getElementById('dateGrid');
+  const today = new Date();
+  const dates = [];
+  // 今日から5営業日
+  let d = new Date(today);
+  while (dates.length < 5) {
+    if (!isWeekend(d)) dates.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+  const days = ['日','月','火','水','木','金','土'];
+  grid.innerHTML = dates.map(dt => {
+    const dateStr = fmtDate(dt);
+    const isToday = fmtDate(dt) === fmtDate(today);
+    return `<button class="date-btn ${isToday?'today':''} ${selDate===dateStr?'selected':''}"
+      onclick="selectDate('${dateStr}')">
+      <div class="d-day">${dt.getDate()}</div>
+      <div class="d-week">${days[dt.getDay()]}</div>
+    </button>`;
+  }).join('');
+  if (!selDate) { selDate = fmtDate(dates[0]); renderDateGrid(); }
+}
+
+function selectDate(dateStr) {
+  selDate = dateStr;
+  selOrder = null;
+  updateOrderButtons();
+  renderDateGrid();
+  document.getElementById('submitSingle').disabled = true;
+}
+
+// ===== ORDER BUTTONS =====
+function selectOrder(order) {
+  selOrder = order;
+  updateOrderButtons();
+  document.getElementById('submitSingle').disabled = !selStaff || !selDate;
+}
+
+function updateOrderButtons() {
+  ['futsuu','oomori','nashi'].forEach(o => {
+    const btn = document.getElementById('btn' + o.charAt(0).toUpperCase() + o.slice(1));
+    if (btn) btn.className = 'order-btn' + (selOrder === o ? ' sel-' + o : '');
+  });
+}
+
+// ===== SUBMIT SINGLE =====
+async function submitSingle() {
+  if (!selStaff || !selDate || !selOrder) return;
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action:'saveOrder', date:selDate, id:selStaff.id, name:selStaff.name, dept:selStaff.dept, order:selOrder })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      const label = selOrder==='futsuu'?'○普通':selOrder==='oomori'?'○大盛':'×食べない';
+      showToast(`${selStaff.name} → ${label} を登録しました`);
+      selOrder = null; updateOrderButtons();
+      document.getElementById('submitSingle').disabled = true;
+    }
+  } catch(e) { showToast('登録に失敗しました'); }
+}
+
+// ===== BULK =====
+function renderBulkTable() {
+  const period = document.getElementById('bulkPeriod').value;
+  const today = new Date();
+  const dates = [];
+
+  if (period === 'week' || period === 'nextweek') {
+    const offset = period === 'nextweek' ? 7 : 0;
+    const monday = new Date(today);
+    const day = today.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    monday.setDate(today.getDate() + diff + offset);
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      if (!isWeekend(d)) dates.push(d);
+    }
+  } else {
+    const year = today.getFullYear(), month = today.getMonth();
+    const last = new Date(year, month + 1, 0).getDate();
+    for (let i = 1; i <= last; i++) {
+      const d = new Date(year, month, i);
+      if (!isWeekend(d)) dates.push(d);
+    }
+  }
+
+  const days = ['日','月','火','水','木','金','土'];
+  const tbody = document.getElementById('bulkTableBody');
+  tbody.innerHTML = dates.map(dt => {
+    const dateStr = fmtDate(dt);
+    const order = bulkOrders[dateStr] || '';
+    return `<tr>
+      <td><div>${(dt.getMonth()+1)+'/'+dt.getDate()}</div><div class="bulk-week">${days[dt.getDay()]}</div></td>
+      <td><button class="bulk-btn ${order==='futsuu'?'sel-futsuu':''}" onclick="setBulkOrder('${dateStr}','futsuu')">○普通</button></td>
+      <td><button class="bulk-btn ${order==='oomori'?'sel-oomori':''}" onclick="setBulkOrder('${dateStr}','oomori')">○大盛</button></td>
+      <td><button class="bulk-btn ${order==='nashi'?'sel-nashi':''}" onclick="setBulkOrder('${dateStr}','nashi')">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function setBulkOrder(dateStr, order) {
+  bulkOrders[dateStr] = order;
+  renderBulkTable();
+  document.getElementById('submitBulk').disabled = !selStaff || Object.keys(bulkOrders).length === 0;
+}
+
+function setAllBulk(order) {
+  const period = document.getElementById('bulkPeriod').value;
+  const today = new Date();
+  const dates = [];
+  if (period === 'week' || period === 'nextweek') {
+    const offset = period === 'nextweek' ? 7 : 0;
+    const monday = new Date(today);
+    const day = today.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    monday.setDate(today.getDate() + diff + offset);
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      if (!isWeekend(d)) dates.push(d);
+    }
+  } else {
+    const year = today.getFullYear(), month = today.getMonth();
+    const last = new Date(year, month + 1, 0).getDate();
+    for (let i = 1; i <= last; i++) {
+      const d = new Date(year, month, i);
+      if (!isWeekend(d)) dates.push(d);
+    }
+  }
+  dates.forEach(d => { bulkOrders[fmtDate(d)] = order; });
+  renderBulkTable();
+  document.getElementById('submitBulk').disabled = !selStaff;
+}
+
+async function submitBulk() {
+  if (!selStaff || Object.keys(bulkOrders).length === 0) return;
+  const orders = Object.entries(bulkOrders).map(([date, order]) => ({
+    action: 'saveOrder', date, id: selStaff.id, name: selStaff.name, dept: selStaff.dept, order
+  }));
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveOrders', orders })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      showToast(`${selStaff.name} の${orders.length}日分を登録しました`);
+      bulkOrders = {};
+      renderBulkTable();
+      document.getElementById('submitBulk').disabled = true;
+    }
+  } catch(e) { showToast('登録に失敗しました'); }
+}
+
+// ===== MENU =====
+async function loadMenu() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getMenu&t=' + Date.now());
+    const json = await res.json();
+    const list = document.getElementById('menuList');
+    if (!json.ok || json.menus.length === 0) {
+      list.innerHTML = '<div class="no-menu">現在メニューはありません</div>';
+      return;
+    }
+    list.innerHTML = json.menus.map(m =>
+      `<div class="menu-card">
+        <div class="menu-month">${m.month} のメニュー</div>
+        <a class="menu-link" href="${m.url}" target="_blank">PDFを見る</a>
+      </div>`
+    ).join('');
+  } catch(e) {}
+}
+
+// ===== TAB SWITCH =====
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['single','bulk','menu'][i] === tab);
+  });
+  document.getElementById('singleTab').classList.toggle('hidden', tab !== 'single');
+  document.getElementById('bulkTab').classList.toggle('hidden', tab !== 'bulk');
+  document.getElementById('menuTab').classList.toggle('hidden', tab !== 'menu');
+  document.getElementById('staffSelector').classList.toggle('hidden', tab === 'menu');
+  if (tab === 'bulk') renderBulkTable();
+}
+
+init();
+</script>
+</body>
+</html>
