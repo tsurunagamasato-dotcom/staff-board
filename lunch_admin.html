@@ -543,6 +543,21 @@ async function handleFile(file) {
   reader.readAsDataURL(file);
 }
 
+async function deleteMenu(month) {
+  if (!confirm(`${month} のメニューを削除しますか？`)) return;
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteMenu', month })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      showToast('削除しました');
+      await loadMenuAdmin();
+    }
+  } catch(e) { showToast('削除に失敗しました'); }
+}
+
 async function loadMenuAdmin() {
   try {
     const res = await fetch(GAS_URL + '?action=getMenu&t=' + Date.now());
@@ -552,13 +567,16 @@ async function loadMenuAdmin() {
       list.innerHTML = '<div style="color:var(--text-hint);font-size:13px;padding:16px 0;">登録済みメニューはありません</div>';
       return;
     }
-    list.innerHTML = json.menus.map(m =>
+    list.innerHTML = json.menus.map((m, idx) =>
       `<div class="menu-list-item">
         <div>
           <div style="font-weight:700;">${m.month}</div>
           <div style="font-size:12px;color:var(--text-sub);">${m.filename}</div>
         </div>
-        <a href="${m.url}" target="_blank" class="icon-btn">PDFを開く</a>
+        <div style="display:flex;gap:8px;">
+          <a href="${m.url}" target="_blank" class="icon-btn">PDFを開く</a>
+          <button class="icon-btn" style="color:#E24B4A;border-color:#f5c0bf;" onclick="deleteMenu('${m.month}')">削除</button>
+        </div>
       </div>`
     ).join('');
   } catch(e) {}
