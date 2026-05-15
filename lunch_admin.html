@@ -19,134 +19,101 @@
 
   .header {
     background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    padding: 12px 24px; display: flex; align-items: center; gap: 12px;
     position: sticky; top: 0; z-index: 100;
   }
-  .header-logo {
-    width: 32px; height: 32px; border-radius: 8px; background: #1a1a1a;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .header-logo svg { width: 18px; height: 18px; fill: #fff; }
-  .header-title { font-size: 16px; font-weight: 700; }
-  .header-sub { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
-  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .header-logo { width: 32px; height: 32px; border-radius: 8px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; }
+  .header-logo svg { width: 16px; height: 16px; fill: #fff; }
+  .header-title { font-size: 15px; font-weight: 700; }
+  .header-sub { font-size: 11px; color: var(--text-sub); }
+  .header-right { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 
-  .icon-btn {
-    display: flex; align-items: center; gap: 6px; padding: 7px 14px;
-    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
-    font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text);
-    font-family: inherit; transition: background .1s; white-space: nowrap;
-  }
+  .icon-btn { display: flex; align-items: center; gap: 5px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text); font-family: inherit; transition: background .1s; white-space: nowrap; }
   .icon-btn:hover { background: var(--bg); }
   .icon-btn.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
   .icon-btn.primary:hover { background: #333; }
 
-  .main { padding: 24px; max-width: 1000px; margin: 0 auto; }
+  .main { padding: 20px 24px; max-width: 1000px; margin: 0 auto; }
 
-  /* TABS */
-  .tabs { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; margin-bottom: 24px; width: fit-content; }
-  .tab-btn { padding: 8px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; background: transparent; color: var(--text-sub); transition: all .15s; }
+  .tabs { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; margin-bottom: 20px; width: fit-content; }
+  .tab-btn { padding: 7px 18px; border-radius: 7px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; background: transparent; color: var(--text-sub); transition: all .15s; }
   .tab-btn.active { background: var(--surface); color: var(--text); }
 
-  /* DATE SELECTOR */
-  .date-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-  .date-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--surface); outline: none; }
+  .date-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .date-input { padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--surface); outline: none; }
 
-  /* SUMMARY CARDS */
-  .summary-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-  .summary-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px 20px; flex: 1; min-width: 120px;
-  }
-  .summary-label { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; }
-  .summary-num { font-size: 28px; font-weight: 900; }
-  .summary-card.s-futsuu .summary-num { color: var(--green); }
-  .summary-card.s-oomori .summary-num { color: var(--blue); }
-  .summary-card.s-nashi  .summary-num { color: var(--red); }
-  .summary-card.s-total  .summary-num { color: var(--text); }
-  .summary-card.s-pending .summary-num { color: var(--orange); }
+  /* SUMMARY - 本社・根崎別 */
+  .location-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .loc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .loc-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .loc-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .loc-stat { text-align: center; flex: 1; min-width: 60px; }
+  .loc-stat .s-label { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; }
+  .loc-stat .s-num { font-size: 22px; font-weight: 900; }
+  .loc-stat.s-futsuu .s-num { color: var(--green); }
+  .loc-stat.s-oomori .s-num { color: var(--blue); }
+  .loc-stat.s-total  .s-num { color: var(--text); }
+  .loc-stat.s-pending .s-num { color: var(--orange); }
+
+  /* VISITOR SUMMARY */
+  .visitor-summary { background: var(--orange-bg); border: 1px solid #f0c060; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; }
+  .visitor-summary-title { font-weight: 700; color: var(--orange-fg); margin-bottom: 6px; }
 
   /* DEPT TABLE */
-  .dept-section { margin-bottom: 24px; }
-  .dept-label {
-    font-size: 11px; font-weight: 700; color: var(--text-hint); letter-spacing: 0.8px;
-    padding: 12px 0 8px; display: flex; align-items: center; gap: 8px;
-  }
+  .dept-section { margin-bottom: 20px; }
+  .dept-label { font-size: 11px; font-weight: 700; color: var(--text-hint); letter-spacing: 0.8px; padding: 10px 0 6px; display: flex; align-items: center; gap: 8px; }
   .dept-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-  .order-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 8px; }
-  .order-table th { background: #f8f8f6; font-size: 12px; color: var(--text-sub); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
-  .order-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .order-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 6px; }
+  .order-table th { background: #f8f8f6; font-size: 11px; color: var(--text-sub); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+  .order-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
   .order-table tr:last-child td { border-bottom: none; }
   .order-table tr:hover td { background: #fafaf8; }
 
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
-  }
+  .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
   .badge-futsuu { background: var(--green-bg); color: var(--green-fg); }
-  .badge-oomori  { background: var(--blue-bg);  color: var(--blue-fg); }
-  .badge-nashi   { background: var(--red-bg);   color: var(--red-fg); }
+  .badge-oomori  { background: var(--blue-bg); color: var(--blue-fg); }
+  .badge-nashi   { background: var(--red-bg); color: var(--red-fg); }
   .badge-none    { background: var(--bg); color: var(--text-hint); }
+  .badge-visitor { background: var(--orange-bg); color: var(--orange-fg); }
 
   /* SETTINGS */
-  .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
-  .settings-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
-  .settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-  .settings-label { font-size: 13px; color: var(--text-sub); width: 120px; flex-shrink: 0; }
-  .settings-input { padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; background: var(--surface); }
-  .settings-input:focus { border-color: #888; }
+  .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .settings-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+  .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .settings-label { font-size: 13px; color: var(--text-sub); width: 110px; flex-shrink: 0; }
+  .settings-input { padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; background: var(--surface); }
 
-  /* NG TABLE */
   .ng-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
-  .ng-table th { background: #f8f8f6; font-size: 12px; color: var(--text-sub); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
-  .ng-table td { padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .ng-table th { background: #f8f8f6; font-size: 11px; color: var(--text-sub); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+  .ng-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
   .ng-table tr:last-child td { border-bottom: none; }
-
-  .toggle-btn {
-    padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--border);
-    font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
-    transition: all .15s;
-  }
+  .toggle-btn { padding: 4px 12px; border-radius: 999px; border: 1.5px solid var(--border); font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; }
   .toggle-btn.ng-on { background: var(--red-bg); color: var(--red-fg); border-color: var(--red); }
   .toggle-btn.ng-off { background: var(--bg); color: var(--text-hint); }
 
-  /* MENU UPLOAD */
-  .upload-area {
-    border: 2px dashed var(--border); border-radius: 12px; padding: 24px;
-    text-align: center; cursor: pointer; transition: border-color .15s;
-    background: var(--surface);
-  }
+  /* MENU */
+  .upload-area { border: 2px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: border-color .15s; background: var(--surface); }
   .upload-area:hover { border-color: #888; }
   .upload-area.dragover { border-color: var(--green); background: var(--green-bg); }
-  .upload-icon { font-size: 32px; margin-bottom: 8px; }
-  .upload-text { font-size: 14px; color: var(--text-sub); }
-  .upload-sub { font-size: 12px; color: var(--text-hint); margin-top: 4px; }
+  .menu-list-item { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
 
-  .menu-list-item {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 16px; margin-bottom: 8px;
-  }
-
-  /* LOADING */
-  .loading-overlay {
-    position: fixed; inset: 0; z-index: 400; background: var(--bg);
-    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
-  }
+  .loading-overlay { position: fixed; inset: 0; z-index: 400; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
   .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 999px; font-size: 13px; z-index: 300; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
   .hidden { display: none !important; }
+
+  @media (max-width: 600px) {
+    .location-summary { grid-template-columns: 1fr; }
+    .header { padding: 10px 16px; }
+    .main { padding: 16px; }
+  }
 </style>
 </head>
 <body>
 
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-spinner"></div>
-</div>
+<div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
 
 <header class="header">
   <div class="header-logo">
@@ -157,7 +124,7 @@
     <div class="header-sub">Nakashima Manufacturing</div>
   </div>
   <div class="header-right">
-    <button class="icon-btn primary" onclick="exportExcel()">📥 Excel出力</button>
+    <button class="icon-btn primary" onclick="exportCSV()">📥 Excel出力</button>
     <button class="icon-btn" onclick="loadOrders()">🔄 更新</button>
   </div>
 </header>
@@ -175,7 +142,8 @@
       <input type="date" class="date-input" id="targetDate" onchange="loadOrders()">
       <span style="font-size:13px;color:var(--text-sub);" id="dateLabel"></span>
     </div>
-    <div class="summary-row" id="summaryRow"></div>
+    <div class="location-summary" id="locationSummary"></div>
+    <div id="visitorSummary"></div>
     <div id="orderContent"></div>
   </div>
 
@@ -191,7 +159,7 @@
     </div>
     <div class="settings-card">
       <div class="settings-title">× 永久×設定</div>
-      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">ONにすると毎日デフォルトで×になります（本人が○に変更することも可能）</p>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:14px;">ONにすると毎日デフォルトで×になります（本人が○に変更することも可能）</p>
       <table class="ng-table">
         <thead><tr><th>氏名</th><th>部署</th><th>永久×</th></tr></thead>
         <tbody id="ngTableBody"></tbody>
@@ -203,17 +171,17 @@
   <div id="menuTab" class="hidden">
     <div class="settings-card">
       <div class="settings-title">📄 メニューPDF管理</div>
-      <div class="settings-row" style="margin-bottom:16px;">
+      <div class="settings-row" style="margin-bottom:14px;">
         <div class="settings-label">対象月</div>
         <input type="month" class="settings-input" id="menuMonth">
       </div>
       <div class="upload-area" id="uploadArea" onclick="document.getElementById('pdfInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-        <div class="upload-icon">📄</div>
-        <div class="upload-text">PDFをここにドラッグ＆ドロップ</div>
-        <div class="upload-sub">またはクリックしてファイルを選択</div>
+        <div style="font-size:28px;margin-bottom:6px;">📄</div>
+        <div style="font-size:14px;color:var(--text-sub);">PDFをここにドラッグ＆ドロップ</div>
+        <div style="font-size:12px;color:var(--text-hint);margin-top:4px;">またはクリックしてファイルを選択</div>
       </div>
       <input type="file" id="pdfInput" accept=".pdf" style="display:none;" onchange="onFileSelect(event)">
-      <div id="uploadStatus" style="margin-top:12px;font-size:13px;color:var(--text-sub);"></div>
+      <div id="uploadStatus" style="margin-top:10px;font-size:13px;color:var(--text-sub);"></div>
     </div>
     <div class="settings-card">
       <div class="settings-title">登録済みメニュー</div>
@@ -228,135 +196,91 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwADKRSZHd0Tpiv3X3v7PRNfRccM6H-y3L8mnJF3CulCB_T3zKK_faBccYx0ZI-LFGYGw/exec';
 
 const DEPT_ORDER = ['社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
+const HONSHA_DEPTS = ['社長','役員','総務部','営業部','設計課','電気課'];
+const NEZAKI_DEPTS  = ['加工課','組付課','購買課'];
+const NEZAKI_IDS    = [91];
+
 const STAFF_MASTER = [
-  {id:88,name:'中島 基木',dept:'社長'},
-  {id:89,name:'笹倉 俊彦',dept:'役員'},
-  {id:90,name:'石川 明雄',dept:'役員'},
-  {id:91,name:'中島 大',  dept:'役員'},
-  {id:13,name:'加藤 愛子',dept:'総務部'},
-  {id:38,name:'石原 知佳',dept:'総務部'},
-  {id:41,name:'澤井 裕司',dept:'総務部'},
-  {id:49,name:'山口 奈奈美',dept:'総務部'},
-  {id:52,name:'加藤 友那',dept:'総務部'},
-  {id:63,name:'江嵜 嘉浩',dept:'総務部'},
-  {id:85,name:'田島 靖子',dept:'総務部'},
-  {id:54,name:'有江 達夫',dept:'営業部'},
-  {id:64,name:'古田 毅',  dept:'営業部'},
-  {id:69,name:'小野田 隆弘',dept:'営業部'},
-  {id:86,name:'稲吉 一春',dept:'営業部'},
-  {id:48,name:'鶴永 将人',dept:'購買課'},
-  {id:51,name:'内木 緑',  dept:'購買課'},
-  {id:71,name:'宮川 哲平',dept:'購買課'},
-  {id:75,name:'安藤 奈津子',dept:'購買課'},
-  {id:17,name:'鄒 永',    dept:'第一製造部'},
-  {id:5, name:'平井 三洋',dept:'設計課'},
-  {id:6, name:'寺本 豊',  dept:'設計課'},
-  {id:10,name:'鈴木 桂',  dept:'設計課'},
-  {id:22,name:'中島 來夢',dept:'設計課'},
-  {id:25,name:'松木 建太郎',dept:'設計課'},
-  {id:30,name:'茨 泰憲',  dept:'設計課'},
-  {id:32,name:'広瀬 靖志',dept:'設計課'},
-  {id:33,name:'TRAN PHONG VU',dept:'設計課'},
-  {id:36,name:'深見 健太',dept:'設計課'},
-  {id:39,name:'伊串 希',  dept:'設計課'},
-  {id:40,name:'近藤 あゆみ',dept:'設計課'},
-  {id:42,name:'米津 友里',dept:'設計課'},
-  {id:56,name:'加藤 絢',  dept:'設計課'},
-  {id:58,name:'小松 亜澄',dept:'設計課'},
-  {id:60,name:'廣瀬 昇',  dept:'設計課'},
-  {id:70,name:'荒川 真緒',dept:'設計課'},
-  {id:7, name:'成田 健',  dept:'電気課'},
-  {id:8, name:'中島 正隆',dept:'電気課'},
-  {id:18,name:'加藤 幸浩',dept:'電気課'},
-  {id:24,name:'坂本 英一',dept:'電気課'},
-  {id:27,name:'宇野 孝祐',dept:'電気課'},
-  {id:35,name:'城 重光',  dept:'電気課'},
-  {id:43,name:'當眞 一聖',dept:'電気課'},
-  {id:45,name:'山田 護',  dept:'電気課'},
-  {id:61,name:'船木 勇作',dept:'電気課'},
-  {id:66,name:'坂下 優',  dept:'電気課'},
-  {id:67,name:'NGUYEN THI TUYET MAI',dept:'電気課'},
-  {id:73,name:'NGUYEN HOANG PHUC AN',dept:'電気課'},
-  {id:77,name:'牧内 宗真',dept:'電気課'},
-  {id:78,name:'中村 尚幹',dept:'電気課'},
-  {id:83,name:'荒木 萌々花',dept:'電気課'},
-  {id:1, name:'川村 隆浩',dept:'加工課'},
-  {id:3, name:'柏田 祐介',dept:'加工課'},
-  {id:11,name:'青山 薫',  dept:'加工課'},
-  {id:12,name:'中島 学',  dept:'加工課'},
-  {id:14,name:'野村 昌史',dept:'加工課'},
-  {id:15,name:'大出 直明',dept:'加工課'},
-  {id:16,name:'小池 佑介',dept:'加工課'},
-  {id:28,name:'NGUYEN VAN LANH',dept:'加工課'},
-  {id:31,name:'川口 信夫',dept:'加工課'},
-  {id:34,name:'TRAN VAN THAN',dept:'加工課'},
-  {id:37,name:'NGUYEN HOANG AN',dept:'加工課'},
-  {id:44,name:'川端 英裕',dept:'加工課'},
-  {id:47,name:'太田 安彦',dept:'加工課'},
-  {id:55,name:'加古 武',  dept:'加工課'},
-  {id:57,name:'佐藤 佳宏',dept:'加工課'},
-  {id:59,name:'NGUYEN THANH NHANH',dept:'加工課'},
-  {id:62,name:'石田 昌也',dept:'加工課'},
-  {id:65,name:'坂本 和貴',dept:'加工課'},
-  {id:68,name:'TRAN KIM TUYEN',dept:'加工課'},
-  {id:79,name:'TRAN CHI TAM',dept:'加工課'},
-  {id:80,name:'神谷 翼',  dept:'加工課'},
-  {id:82,name:'今泉 崇',  dept:'加工課'},
-  {id:0, name:'塩澤 真治',dept:'組付課'},
-  {id:2, name:'吉田 一英',dept:'組付課'},
-  {id:4, name:'渡瀬 一美',dept:'組付課'},
-  {id:9, name:'竹内 和人',dept:'組付課'},
-  {id:21,name:'大村 秀樹',dept:'組付課'},
-  {id:23,name:'渡辺 健一',dept:'組付課'},
-  {id:26,name:'坂野 公彦',dept:'組付課'},
-  {id:46,name:'近藤 隼次',dept:'組付課'},
-  {id:50,name:'尾崎 佑和',dept:'組付課'},
-  {id:53,name:'松尾 康平',dept:'組付課'},
-  {id:72,name:'髙木 和幸',dept:'組付課'},
-  {id:74,name:'BIEN VAN MINH',dept:'組付課'},
-  {id:76,name:'富樫 至史',dept:'組付課'},
-  {id:81,name:'真栄田 義斗',dept:'組付課'},
-  {id:84,name:'加藤 翼',  dept:'組付課'},
+  {id:88,name:'中島 基木',dept:'社長'},{id:89,name:'笹倉 俊彦',dept:'役員'},
+  {id:90,name:'石川 明雄',dept:'役員'},{id:91,name:'中島 大',dept:'役員'},
+  {id:13,name:'加藤 愛子',dept:'総務部'},{id:38,name:'石原 知佳',dept:'総務部'},
+  {id:41,name:'澤井 裕司',dept:'総務部'},{id:49,name:'山口 奈奈美',dept:'総務部'},
+  {id:52,name:'加藤 友那',dept:'総務部'},{id:63,name:'江嵜 嘉浩',dept:'総務部'},
+  {id:85,name:'田島 靖子',dept:'総務部'},{id:54,name:'有江 達夫',dept:'営業部'},
+  {id:64,name:'古田 毅',dept:'営業部'},{id:69,name:'小野田 隆弘',dept:'営業部'},
+  {id:86,name:'稲吉 一春',dept:'営業部'},{id:48,name:'鶴永 将人',dept:'購買課'},
+  {id:51,name:'内木 緑',dept:'購買課'},{id:71,name:'宮川 哲平',dept:'購買課'},
+  {id:75,name:'安藤 奈津子',dept:'購買課'},{id:17,name:'鄒 永',dept:'第一製造部'},
+  {id:5,name:'平井 三洋',dept:'設計課'},{id:6,name:'寺本 豊',dept:'設計課'},
+  {id:10,name:'鈴木 桂',dept:'設計課'},{id:22,name:'中島 來夢',dept:'設計課'},
+  {id:25,name:'松木 建太郎',dept:'設計課'},{id:30,name:'茨 泰憲',dept:'設計課'},
+  {id:32,name:'広瀬 靖志',dept:'設計課'},{id:33,name:'TRAN PHONG VU',dept:'設計課'},
+  {id:36,name:'深見 健太',dept:'設計課'},{id:39,name:'伊串 希',dept:'設計課'},
+  {id:40,name:'近藤 あゆみ',dept:'設計課'},{id:42,name:'米津 友里',dept:'設計課'},
+  {id:56,name:'加藤 絢',dept:'設計課'},{id:58,name:'小松 亜澄',dept:'設計課'},
+  {id:60,name:'廣瀬 昇',dept:'設計課'},{id:70,name:'荒川 真緒',dept:'設計課'},
+  {id:7,name:'成田 健',dept:'電気課'},{id:8,name:'中島 正隆',dept:'電気課'},
+  {id:18,name:'加藤 幸浩',dept:'電気課'},{id:24,name:'坂本 英一',dept:'電気課'},
+  {id:27,name:'宇野 孝祐',dept:'電気課'},{id:35,name:'城 重光',dept:'電気課'},
+  {id:43,name:'當眞 一聖',dept:'電気課'},{id:45,name:'山田 護',dept:'電気課'},
+  {id:61,name:'船木 勇作',dept:'電気課'},{id:66,name:'坂下 優',dept:'電気課'},
+  {id:67,name:'NGUYEN THI TUYET MAI',dept:'電気課'},{id:73,name:'NGUYEN HOANG PHUC AN',dept:'電気課'},
+  {id:77,name:'牧内 宗真',dept:'電気課'},{id:78,name:'中村 尚幹',dept:'電気課'},
+  {id:83,name:'荒木 萌々花',dept:'電気課'},{id:1,name:'川村 隆浩',dept:'加工課'},
+  {id:3,name:'柏田 祐介',dept:'加工課'},{id:11,name:'青山 薫',dept:'加工課'},
+  {id:12,name:'中島 学',dept:'加工課'},{id:14,name:'野村 昌史',dept:'加工課'},
+  {id:15,name:'大出 直明',dept:'加工課'},{id:16,name:'小池 佑介',dept:'加工課'},
+  {id:28,name:'NGUYEN VAN LANH',dept:'加工課'},{id:31,name:'川口 信夫',dept:'加工課'},
+  {id:34,name:'TRAN VAN THAN',dept:'加工課'},{id:37,name:'NGUYEN HOANG AN',dept:'加工課'},
+  {id:44,name:'川端 英裕',dept:'加工課'},{id:47,name:'太田 安彦',dept:'加工課'},
+  {id:55,name:'加古 武',dept:'加工課'},{id:57,name:'佐藤 佳宏',dept:'加工課'},
+  {id:59,name:'NGUYEN THANH NHANH',dept:'加工課'},{id:62,name:'石田 昌也',dept:'加工課'},
+  {id:65,name:'坂本 和貴',dept:'加工課'},{id:68,name:'TRAN KIM TUYEN',dept:'加工課'},
+  {id:79,name:'TRAN CHI TAM',dept:'加工課'},{id:80,name:'神谷 翼',dept:'加工課'},
+  {id:82,name:'今泉 崇',dept:'加工課'},{id:0,name:'塩澤 真治',dept:'組付課'},
+  {id:2,name:'吉田 一英',dept:'組付課'},{id:4,name:'渡瀬 一美',dept:'組付課'},
+  {id:9,name:'竹内 和人',dept:'組付課'},{id:21,name:'大村 秀樹',dept:'組付課'},
+  {id:23,name:'渡辺 健一',dept:'組付課'},{id:26,name:'坂野 公彦',dept:'組付課'},
+  {id:46,name:'近藤 隼次',dept:'組付課'},{id:50,name:'尾崎 佑和',dept:'組付課'},
+  {id:53,name:'松尾 康平',dept:'組付課'},{id:72,name:'髙木 和幸',dept:'組付課'},
+  {id:74,name:'BIEN VAN MINH',dept:'組付課'},{id:76,name:'富樫 至史',dept:'組付課'},
+  {id:81,name:'真栄田 義斗',dept:'組付課'},{id:84,name:'加藤 翼',dept:'組付課'},
   {id:87,name:'澤田 隆昭',dept:'組付課'},
 ];
 
+function getDefaultPlace(staff) {
+  if (NEZAKI_IDS.includes(staff.id)) return 'nezaki';
+  if (NEZAKI_DEPTS.includes(staff.dept)) return 'nezaki';
+  return 'honsha';
+}
+
 let permanentNG = {};
 let ordersData = [];
+let visitorData = [];
 let toastTimer;
 
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
 }
+function fmtDate(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
-function fmtDate(d) {
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-
-// ===== INIT =====
 async function init() {
   const today = new Date();
   document.getElementById('targetDate').value = fmtDate(today);
-  document.getElementById('menuMonth').value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
-
+  document.getElementById('menuMonth').value = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0');
   try {
-    const res = await fetch(GAS_URL + '?action=getSettings&t=' + Date.now());
+    const res = await fetch(GAS_URL+'?action=getSettings&t='+Date.now());
     const json = await res.json();
     if (json.ok) {
-      document.getElementById('deadlineInput').value = json.settings.deadline || '08:30';
-      Object.keys(json.settings).forEach(k => {
-        if (k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k];
-      });
+      document.getElementById('deadlineInput').value = json.settings.deadline||'08:30';
+      Object.keys(json.settings).forEach(k => { if(k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k]; });
     }
   } catch(e) {}
-
   renderNGTable();
   await loadOrders();
   await loadMenuAdmin();
-  document.getElementById('loadingOverlay').style.display = 'none';
+  document.getElementById('loadingOverlay').style.display='none';
 }
 
 // ===== ORDERS =====
@@ -364,97 +288,134 @@ async function loadOrders() {
   const date = document.getElementById('targetDate').value;
   if (!date) return;
   const d = new Date(date);
-  const days = ['日','月','火','水','木','金','土'];
-  document.getElementById('dateLabel').textContent =
-    (d.getMonth()+1) + '月' + d.getDate() + '日（' + days[d.getDay()] + '）';
+  const days=['日','月','火','水','木','金','土'];
+  document.getElementById('dateLabel').textContent = (d.getMonth()+1)+'月'+d.getDate()+'日（'+days[d.getDay()]+'）';
   try {
-    const res = await fetch(GAS_URL + '?action=getOrders&date=' + date + '&t=' + Date.now());
+    const res = await fetch(GAS_URL+'?action=getOrders&date='+date+'&t='+Date.now());
     const json = await res.json();
     if (json.ok) {
-      ordersData = json.orders;
+      ordersData = json.orders.filter(o => !String(o.id).startsWith('visitor_'));
+      visitorData = json.orders.filter(o => String(o.id).startsWith('visitor_'));
       if (json.permanentNG) permanentNG = json.permanentNG;
-      renderSummary();
+      renderLocationSummary();
+      renderVisitorSummary();
       renderOrderTable();
     }
-  } catch(e) { showToast('データの取得に失敗しました'); }
+  } catch(e) { showToast('取得に失敗しました'); }
 }
 
 function getEffectiveOrder(staff) {
-  const found = ordersData.find(o => String(o.id) === String(staff.id));
-  if (found) return found.order;
-  if (permanentNG[staff.id]) return 'nashi';
-  return null;
+  const found = ordersData.find(o => String(o.id)===String(staff.id));
+  if (found) return {order:found.order, place:found.place||getDefaultPlace(staff)};
+  if (permanentNG[staff.id]) return {order:'nashi', place:getDefaultPlace(staff)};
+  return {order:null, place:getDefaultPlace(staff)};
 }
 
-function renderSummary() {
-  let futsuu = 0, oomori = 0, nashi = 0, pending = 0;
+function renderLocationSummary() {
+  const honsha = {futsuu:0, oomori:0, pending:0};
+  const nezaki  = {futsuu:0, oomori:0, pending:0};
+
   STAFF_MASTER.forEach(s => {
-    const order = getEffectiveOrder(s);
-    if (order === 'futsuu') futsuu++;
-    else if (order === 'oomori') oomori++;
-    else if (order === 'nashi') nashi++;
-    else pending++;
+    const {order, place} = getEffectiveOrder(s);
+    const loc = place==='nezaki' ? nezaki : honsha;
+    if (order==='futsuu') loc.futsuu++;
+    else if (order==='oomori') loc.oomori++;
+    else if (order!=='nashi') loc.pending++;
   });
-  document.getElementById('summaryRow').innerHTML = `
-    <div class="summary-card s-total"><div class="summary-label">合計注文</div><div class="summary-num">${futsuu+oomori}</div></div>
-    <div class="summary-card s-futsuu"><div class="summary-label">○ 普通</div><div class="summary-num">${futsuu}</div></div>
-    <div class="summary-card s-oomori"><div class="summary-label">○ 大盛</div><div class="summary-num">${oomori}</div></div>
-    <div class="summary-card s-nashi"><div class="summary-label">× 食べない</div><div class="summary-num">${nashi}</div></div>
-    <div class="summary-card s-pending"><div class="summary-label">未回答</div><div class="summary-num">${pending}</div></div>
-  `;
+
+  const card = (title, icon, data) => `
+    <div class="loc-card">
+      <div class="loc-title">${icon} ${title}</div>
+      <div class="loc-row">
+        <div class="loc-stat s-futsuu"><div class="s-label">○ 普通</div><div class="s-num">${data.futsuu}</div></div>
+        <div class="loc-stat s-oomori"><div class="s-label">○ 大盛</div><div class="s-num">${data.oomori}</div></div>
+        <div class="loc-stat s-total"><div class="s-label">合計</div><div class="s-num">${data.futsuu+data.oomori}</div></div>
+        <div class="loc-stat s-pending"><div class="s-label">未回答</div><div class="s-num">${data.pending}</div></div>
+      </div>
+    </div>`;
+
+  document.getElementById('locationSummary').innerHTML =
+    card('本社','🏢',honsha) + card('根崎','🏭',nezaki);
+}
+
+function renderVisitorSummary() {
+  if (visitorData.length===0) { document.getElementById('visitorSummary').innerHTML=''; return; }
+  const rows = visitorData.map(v => {
+    const count = v.count||1;
+    const label = v.order==='futsuu'?'普通':'大盛';
+    const place = v.place==='nezaki'?'根崎':'本社';
+    return `<div>${v.name}：${label} ${count}名（${place}）</div>`;
+  }).join('');
+  document.getElementById('visitorSummary').innerHTML =
+    `<div class="visitor-summary"><div class="visitor-summary-title">👤 来訪者注文</div>${rows}</div>`;
 }
 
 function renderOrderTable() {
   const container = document.getElementById('orderContent');
   const grouped = {};
-  DEPT_ORDER.forEach(d => { grouped[d] = []; });
-  STAFF_MASTER.forEach(s => { if (grouped[s.dept]) grouped[s.dept].push(s); });
+  DEPT_ORDER.forEach(d => { grouped[d]=[]; });
+  STAFF_MASTER.forEach(s => { if(grouped[s.dept]) grouped[s.dept].push(s); });
 
   container.innerHTML = DEPT_ORDER.map(dept => {
     const members = grouped[dept];
-    if (members.length === 0) return '';
+    if (!members||members.length===0) return '';
     const rows = members.map(s => {
-      const order = getEffectiveOrder(s);
+      const {order, place} = getEffectiveOrder(s);
       const badgeClass = order==='futsuu'?'badge-futsuu':order==='oomori'?'badge-oomori':order==='nashi'?'badge-nashi':'badge-none';
       const label = order==='futsuu'?'○ 普通':order==='oomori'?'○ 大盛':order==='nashi'?'× 食べない':'未回答';
-      return `<tr>
-        <td>${s.name}</td>
-        <td><span class="badge ${badgeClass}">${label}</span></td>
-      </tr>`;
+      const placeLabel = place==='nezaki'?'根崎':'本社';
+      return `<tr><td>${s.name}</td><td><span class="badge ${badgeClass}">${label}</span></td><td style="font-size:12px;color:var(--text-sub);">${placeLabel}</td></tr>`;
     }).join('');
-    const futsuu = members.filter(s => getEffectiveOrder(s)==='futsuu').length;
-    const oomori = members.filter(s => getEffectiveOrder(s)==='oomori').length;
+    const futsuu = members.filter(s=>getEffectiveOrder(s).order==='futsuu').length;
+    const oomori = members.filter(s=>getEffectiveOrder(s).order==='oomori').length;
     return `<div class="dept-section">
-      <div class="dept-label">${dept} <span style="font-weight:400;font-size:11px;color:var(--text-sub);">普通${futsuu} 大盛${oomori}</span></div>
+      <div class="dept-label">${dept} <span style="font-weight:400;color:var(--text-sub);">普通${futsuu} 大盛${oomori}</span></div>
       <table class="order-table">
-        <thead><tr><th>氏名</th><th>注文</th></tr></thead>
+        <thead><tr><th>氏名</th><th>注文</th><th>場所</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
   }).join('');
 }
 
-// ===== EXCEL EXPORT =====
-function exportExcel() {
+// ===== EXPORT =====
+function exportCSV() {
   const date = document.getElementById('targetDate').value;
   if (!date) return;
 
-  // CSVとして出力（Excelで開ける）
-  const rows = [['日付','部署','氏名','注文']];
+  const honsha={futsuu:0,oomori:0}, nezaki={futsuu:0,oomori:0};
+  const rows = [['日付','部署','氏名','注文','場所']];
+
   DEPT_ORDER.forEach(dept => {
-    STAFF_MASTER.filter(s => s.dept === dept).forEach(s => {
-      const order = getEffectiveOrder(s);
+    STAFF_MASTER.filter(s=>s.dept===dept).forEach(s => {
+      const {order,place} = getEffectiveOrder(s);
       const label = order==='futsuu'?'普通':order==='oomori'?'大盛':order==='nashi'?'食べない':'未回答';
-      rows.push([date, dept, s.name, label]);
+      const placeLabel = place==='nezaki'?'根崎':'本社';
+      rows.push([date, dept, s.name, label, placeLabel]);
+      if (place==='honsha') { if(order==='futsuu') honsha.futsuu++; else if(order==='oomori') honsha.oomori++; }
+      else { if(order==='futsuu') nezaki.futsuu++; else if(order==='oomori') nezaki.oomori++; }
     });
   });
 
-  const BOM = '\uFEFF';
-  const csv = BOM + rows.map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `昼食注文_${date}.csv`;
+  // 来訪者
+  visitorData.forEach(v => {
+    const label = v.order==='futsuu'?'普通':'大盛';
+    const placeLabel = v.place==='nezaki'?'根崎':'本社';
+    rows.push([date, '来訪者', v.name, label+'×'+(v.count||1), placeLabel]);
+  });
+
+  // 集計行
+  rows.push([]);
+  rows.push(['【集計】']);
+  rows.push(['本社', '普通', honsha.futsuu, '大盛', honsha.oomori, '合計', honsha.futsuu+honsha.oomori]);
+  rows.push(['根崎', '普通', nezaki.futsuu, '大盛', nezaki.oomori, '合計', nezaki.futsuu+nezaki.oomori]);
+
+  const BOM='\uFEFF';
+  const csv=BOM+rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`昼食注文_${date}.csv`;
   a.click(); URL.revokeObjectURL(url);
   showToast('CSVをダウンロードしました');
 }
@@ -463,41 +424,26 @@ function exportExcel() {
 async function saveDeadline() {
   const value = document.getElementById('deadlineInput').value;
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveSettings', key: 'deadline', value })
-    });
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveSettings',key:'deadline',value})});
     const json = await res.json();
     if (json.ok) showToast('締切時刻を保存しました');
   } catch(e) { showToast('保存に失敗しました'); }
 }
 
 function renderNGTable() {
-  const tbody = document.getElementById('ngTableBody');
-  tbody.innerHTML = STAFF_MASTER.map(s => {
+  document.getElementById('ngTableBody').innerHTML = STAFF_MASTER.map(s => {
     const isNG = !!permanentNG[s.id];
-    return `<tr>
-      <td>${s.name}</td>
-      <td style="color:var(--text-sub);">${s.dept}</td>
-      <td><button class="toggle-btn ${isNG?'ng-on':'ng-off'}" onclick="toggleNG(${s.id})">${isNG?'ON（×固定）':'OFF'}</button></td>
-    </tr>`;
+    return `<tr><td>${s.name}</td><td style="color:var(--text-sub);">${s.dept}</td>
+      <td><button class="toggle-btn ${isNG?'ng-on':'ng-off'}" onclick="toggleNG(${s.id})">${isNG?'ON（×固定）':'OFF'}</button></td></tr>`;
   }).join('');
 }
 
 async function toggleNG(id) {
-  const current = !!permanentNG[id];
-  const newVal = !current;
+  const newVal = !permanentNG[id];
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'savePermanentNG', id, value: newVal })
-    });
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'savePermanentNG',id,value:newVal})});
     const json = await res.json();
-    if (json.ok) {
-      permanentNG[id] = newVal;
-      renderNGTable();
-      showToast(newVal ? '永久×に設定しました' : '永久×を解除しました');
-    }
+    if (json.ok) { permanentNG[id]=newVal; renderNGTable(); showToast(newVal?'永久×に設定':'永久×を解除'); }
   } catch(e) { showToast('保存に失敗しました'); }
 }
 
@@ -508,37 +454,19 @@ function onDrop(e) { e.preventDefault(); document.getElementById('uploadArea').c
 function onFileSelect(e) { handleFile(e.target.files[0]); }
 
 async function handleFile(file) {
-  if (!file || file.type !== 'application/pdf') { showToast('PDFファイルを選択してください'); return; }
+  if (!file||file.type!=='application/pdf') { showToast('PDFを選択してください'); return; }
   const month = document.getElementById('menuMonth').value;
   if (!month) { showToast('対象月を選択してください'); return; }
-
-  document.getElementById('uploadStatus').textContent = 'アップロード中...';
-
-  // Google DriveへアップロードするためにGASに送信（Base64）
+  document.getElementById('uploadStatus').textContent='アップロード中...';
   const reader = new FileReader();
   reader.onload = async (e) => {
     const base64 = e.target.result.split(',')[1];
     try {
-      const res = await fetch(GAS_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'uploadPDF',
-          month,
-          filename: file.name,
-          base64
-        })
-      });
+      const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'uploadPDF',month,filename:file.name,base64})});
       const json = await res.json();
-      if (json.ok) {
-        document.getElementById('uploadStatus').textContent = '✅ アップロード完了！';
-        showToast('メニューをアップロードしました');
-        await loadMenuAdmin();
-      } else {
-        document.getElementById('uploadStatus').textContent = '❌ アップロード失敗';
-      }
-    } catch(e) {
-      document.getElementById('uploadStatus').textContent = '❌ アップロード失敗';
-    }
+      if (json.ok) { document.getElementById('uploadStatus').textContent='✅ アップロード完了！'; showToast('メニューをアップロードしました'); await loadMenuAdmin(); }
+      else { document.getElementById('uploadStatus').textContent='❌ 失敗しました'; }
+    } catch(e) { document.getElementById('uploadStatus').textContent='❌ 失敗しました'; }
   };
   reader.readAsDataURL(file);
 }
@@ -546,50 +474,32 @@ async function handleFile(file) {
 async function deleteMenu(month) {
   if (!confirm(`${month} のメニューを削除しますか？`)) return;
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'deleteMenu', month })
-    });
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'deleteMenu',month})});
     const json = await res.json();
-    if (json.ok) {
-      showToast('削除しました');
-      await loadMenuAdmin();
-    }
+    if (json.ok) { showToast('削除しました'); await loadMenuAdmin(); }
   } catch(e) { showToast('削除に失敗しました'); }
 }
 
 async function loadMenuAdmin() {
   try {
-    const res = await fetch(GAS_URL + '?action=getMenu&t=' + Date.now());
+    const res = await fetch(GAS_URL+'?action=getMenu&t='+Date.now());
     const json = await res.json();
     const list = document.getElementById('menuListAdmin');
-    if (!json.ok || json.menus.length === 0) {
-      list.innerHTML = '<div style="color:var(--text-hint);font-size:13px;padding:16px 0;">登録済みメニューはありません</div>';
-      return;
-    }
-    list.innerHTML = json.menus.map((m, idx) =>
+    if (!json.ok||json.menus.length===0) { list.innerHTML='<div style="color:var(--text-hint);font-size:13px;padding:12px 0;">登録済みメニューはありません</div>'; return; }
+    list.innerHTML = json.menus.map(m=>
       `<div class="menu-list-item">
-        <div>
-          <div style="font-weight:700;">${m.month}</div>
-          <div style="font-size:12px;color:var(--text-sub);">${m.filename}</div>
-        </div>
+        <div><div style="font-weight:700;">${m.month}</div><div style="font-size:12px;color:var(--text-sub);">${m.filename}</div></div>
         <div style="display:flex;gap:8px;">
           <a href="${m.url}" target="_blank" class="icon-btn">PDFを開く</a>
           <button class="icon-btn" style="color:#E24B4A;border-color:#f5c0bf;" onclick="deleteMenu('${m.month}')">削除</button>
         </div>
-      </div>`
-    ).join('');
+      </div>`).join('');
   } catch(e) {}
 }
 
-// ===== TAB =====
 function switchTab(tab) {
-  ['orders','settings','menu'].forEach(t => {
-    document.getElementById(t+'Tab').classList.toggle('hidden', t !== tab);
-  });
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    b.classList.toggle('active', ['orders','settings','menu'][i] === tab);
-  });
+  ['orders','settings','menu'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu'][i]===tab));
 }
 
 init();

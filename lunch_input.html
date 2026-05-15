@@ -8,177 +8,148 @@
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f4f4f2; --surface: #ffffff; --border: #e2e0db;
+    --bg: #f4f4f2; --surface: #fff; --border: #e2e0db;
     --text: #1a1a1a; --text-sub: #6b6965; --text-hint: #a09d99;
     --green: #1D9E75; --green-bg: #e8f5f0; --green-fg: #0f6e56;
     --red: #E24B4A; --red-bg: #fdecea; --red-fg: #8b1a19;
+    --blue: #185FA5; --blue-bg: #e6f1fb; --blue-fg: #0c447c;
     --orange: #BA7517; --orange-bg: #faeeda; --orange-fg: #633806;
+    --purple: #534AB7; --purple-bg: #eeedfe; --purple-fg: #3c3489;
   }
   body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
   .header {
     background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px; display: flex; align-items: center; gap: 10px;
     position: sticky; top: 0; z-index: 100;
   }
-  .header-logo {
-    width: 34px; height: 34px; border-radius: 9px; background: #1a1a1a;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .header-logo svg { width: 18px; height: 18px; fill: #fff; }
-  .header-title { font-size: 16px; font-weight: 700; }
-  .header-sub { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
-  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-  .deadline-badge {
-    font-size: 11px; padding: 3px 10px; border-radius: 999px;
-    background: var(--orange-bg); color: var(--orange-fg); font-weight: 500;
-  }
+  .header-logo { width: 32px; height: 32px; border-radius: 8px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .header-logo svg { width: 16px; height: 16px; fill: #fff; }
+  .header-title { font-size: 15px; font-weight: 700; }
+  .header-sub { font-size: 11px; color: var(--text-sub); }
+  .header-right { margin-left: auto; }
+  .deadline-badge { font-size: 11px; padding: 3px 10px; border-radius: 999px; background: var(--orange-bg); color: var(--orange-fg); font-weight: 500; }
 
-  .main { padding: 20px; max-width: 480px; margin: 0 auto; }
+  .main { padding: 16px 20px 48px; max-width: 480px; margin: 0 auto; }
 
   /* TABS */
-  .tabs {
-    display: flex; gap: 4px; background: var(--bg);
-    border: 1px solid var(--border); border-radius: 10px; padding: 3px;
-    margin-bottom: 20px;
-  }
-  .tab-btn {
-    flex: 1; padding: 8px; border-radius: 8px; border: none;
-    font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
-    background: transparent; color: var(--text-sub); transition: all .15s;
-  }
+  .tabs { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; margin-bottom: 16px; }
+  .tab-btn { flex: 1; padding: 7px 4px; border-radius: 7px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; background: transparent; color: var(--text-sub); transition: all .15s; }
   .tab-btn.active { background: var(--surface); color: var(--text); }
 
-  /* STAFF SELECTOR */
-  .section-label { font-size: 12px; font-weight: 700; color: var(--text-hint); letter-spacing: 0.6px; margin-bottom: 8px; }
+  /* MODE TOGGLE */
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+  .mode-btn {
+    flex: 1; padding: 10px; border-radius: 10px; border: 1.5px solid var(--border);
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    background: var(--surface); color: var(--text-sub); text-align: center; transition: all .15s;
+  }
+  .mode-btn.active-self { border-color: var(--green); background: var(--green-bg); color: var(--green-fg); }
+  .mode-btn.active-proxy { border-color: var(--purple); background: var(--purple-bg); color: var(--purple-fg); }
 
-  .dept-select, .name-select {
-    width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
-    border-radius: 10px; font-size: 15px; font-family: inherit;
-    background: var(--surface); color: var(--text); outline: none; margin-bottom: 16px;
+  /* STAFF SELECTOR */
+  .section-label { font-size: 11px; font-weight: 700; color: var(--text-hint); letter-spacing: 0.6px; margin-bottom: 6px; }
+  .sel-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .dept-select, .name-select, .place-select {
+    width: 100%; padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: inherit; background: var(--surface); color: var(--text); outline: none;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 14px center;
-    padding-right: 36px;
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
   }
+  .proxy-note { font-size: 12px; color: var(--purple-fg); background: var(--purple-bg); border: 1px solid #b0acec; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
 
-  /* DATE SELECTOR */
-  .date-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
-  .date-btn {
-    border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 4px;
-    text-align: center; font-size: 12px; cursor: pointer; background: var(--surface);
-    font-family: inherit; transition: all .15s;
-  }
-  .date-btn .d-day { font-weight: 700; font-size: 15px; }
-  .date-btn .d-week { font-size: 10px; color: var(--text-hint); margin-top: 2px; }
+  /* DATE GRID */
+  .date-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 14px; }
+  .date-btn { border: 1.5px solid var(--border); border-radius: 9px; padding: 7px 4px; text-align: center; font-size: 11px; cursor: pointer; background: var(--surface); font-family: inherit; transition: all .15s; }
+  .date-btn .d-day { font-weight: 700; font-size: 14px; }
+  .date-btn .d-week { font-size: 9px; color: var(--text-hint); margin-top: 1px; }
+  .date-btn .d-order { font-size: 9px; margin-top: 2px; font-weight: 700; }
   .date-btn.selected { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
-  .date-btn.selected .d-week { color: rgba(255,255,255,0.6); }
+  .date-btn.selected .d-week { color: rgba(255,255,255,0.5); }
+  .date-btn.selected .d-order { color: rgba(255,255,255,0.8); }
   .date-btn.today .d-day { color: var(--green); }
-  .date-btn.holiday { opacity: 0.4; pointer-events: none; }
+  .date-btn.has-futsuu .d-order { color: var(--green); }
+  .date-btn.has-oomori .d-order { color: var(--blue); }
+  .date-btn.has-nashi .d-order { color: var(--text-hint); }
 
   /* ORDER BUTTONS */
-  .order-section { margin-bottom: 20px; }
-  .order-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 10px; }
-
-  .order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .order-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
   .order-btn {
-    border: 2px solid var(--border); border-radius: 14px; padding: 20px 10px;
-    text-align: center; font-size: 28px; cursor: pointer; background: var(--surface);
+    border: 2px solid var(--border); border-radius: 12px; padding: 16px 8px;
+    text-align: center; font-size: 24px; cursor: pointer; background: var(--surface);
     font-family: inherit; transition: all .15s;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
   }
-  .order-btn .order-label { font-size: 13px; font-weight: 700; color: var(--text-sub); }
-  .order-btn .order-sub { font-size: 11px; color: var(--text-hint); }
+  .order-btn .order-label { font-size: 12px; font-weight: 700; color: var(--text-sub); }
   .order-btn:active { transform: scale(0.97); }
   .order-btn.sel-futsuu { border-color: var(--green); background: var(--green-bg); }
   .order-btn.sel-futsuu .order-label { color: var(--green-fg); }
-  .order-btn.sel-oomori { border-color: #0e7fa8; background: #e0f4fa; }
-  .order-btn.sel-oomori .order-label { color: #084f6a; }
+  .order-btn.sel-oomori { border-color: var(--blue); background: var(--blue-bg); }
+  .order-btn.sel-oomori .order-label { color: var(--blue-fg); }
   .order-btn.sel-nashi { border-color: var(--red); background: var(--red-bg); }
   .order-btn.sel-nashi .order-label { color: var(--red-fg); }
+  .nashi-btn { display: block; width: 100%; }
 
-  .ng-note {
-    font-size: 12px; color: var(--orange-fg); background: var(--orange-bg);
-    border: 1px solid #f0c060; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+  /* PLACE SELECT */
+  .place-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .place-btn {
+    flex: 1; padding: 9px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    background: var(--surface); color: var(--text-sub); text-align: center; transition: all .15s;
   }
+  .place-btn.sel-honsha { border-color: var(--green); background: var(--green-bg); color: var(--green-fg); }
+  .place-btn.sel-nezaki { border-color: var(--blue); background: var(--blue-bg); color: var(--blue-fg); }
 
-  /* BULK MODE */
-  .bulk-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-  .bulk-table th { font-size: 11px; color: var(--text-hint); padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--border); }
-  .bulk-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--border); }
-  .bulk-table td:first-child { text-align: left; font-size: 13px; font-weight: 500; padding-left: 0; }
-  .bulk-table td:first-child .bulk-week { font-size: 10px; color: var(--text-hint); }
+  .ng-note { font-size: 12px; color: var(--orange-fg); background: var(--orange-bg); border: 1px solid #f0c060; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
 
-  .bulk-btn {
-    width: 100%; padding: 6px 4px; border: 1.5px solid var(--border);
-    border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
-    background: var(--surface); font-family: inherit; transition: all .15s;
-  }
+  /* HISTORY */
+  .history-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 16px; }
+  .history-table th { background: #f8f8f6; font-size: 11px; color: var(--text-sub); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+  .history-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .history-table tr:last-child td { border-bottom: none; }
+
+  /* BULK */
+  .bulk-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+  .bulk-table th { font-size: 10px; color: var(--text-hint); padding: 5px 3px; text-align: center; border-bottom: 1px solid var(--border); }
+  .bulk-table td { padding: 5px 3px; text-align: center; border-bottom: 1px solid var(--border); }
+  .bulk-table td:first-child { text-align: left; font-size: 12px; font-weight: 500; }
+  .bulk-btn { width: 100%; padding: 5px 2px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; background: var(--surface); font-family: inherit; transition: all .15s; }
   .bulk-btn.sel-futsuu { border-color: var(--green); background: var(--green-bg); color: var(--green-fg); }
-  .bulk-btn.sel-oomori { border-color: #0e7fa8; background: #e0f4fa; color: #084f6a; }
+  .bulk-btn.sel-oomori { border-color: var(--blue); background: var(--blue-bg); color: var(--blue-fg); }
   .bulk-btn.sel-nashi  { border-color: var(--red); background: var(--red-bg); color: var(--red-fg); }
+  .bulk-all-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .bulk-all-btn { flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; background: var(--surface); font-family: inherit; text-align: center; }
 
-  .bulk-all-row { display: flex; gap: 8px; margin-bottom: 16px; }
-  .bulk-all-btn {
-    flex: 1; padding: 10px; border: 1.5px solid var(--border); border-radius: 10px;
-    font-size: 13px; font-weight: 700; cursor: pointer; background: var(--surface);
-    font-family: inherit; transition: all .15s; text-align: center;
-  }
-  .bulk-all-btn.all-futsuu { border-color: var(--green); background: var(--green-bg); color: var(--green-fg); }
-  .bulk-all-btn.all-oomori { border-color: #0e7fa8; background: #e0f4fa; color: #084f6a; }
-  .bulk-all-btn.all-nashi  { border-color: var(--red); background: var(--red-bg); color: var(--red-fg); }
+  /* VISITOR */
+  .visitor-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .visitor-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .visitor-input { flex: 1; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; background: var(--surface); }
+  .visitor-input:focus { border-color: #888; }
+  .visitor-count { display: flex; align-items: center; gap: 8px; }
+  .count-btn { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--surface); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+  .count-num { font-size: 18px; font-weight: 700; min-width: 24px; text-align: center; }
+  .add-visitor-btn { width: 100%; padding: 10px; border: 1.5px dashed var(--border); border-radius: 10px; background: transparent; font-size: 13px; color: var(--text-hint); cursor: pointer; font-family: inherit; }
+  .del-visitor-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); color: var(--text-hint); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
   /* SUBMIT */
-  .submit-btn {
-    width: 100%; padding: 16px; background: #1a1a1a; color: #fff;
-    border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
-    cursor: pointer; font-family: inherit; margin-top: 8px;
-    transition: opacity .15s;
-  }
+  .submit-btn { width: 100%; padding: 14px; background: #1a1a1a; color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 8px; transition: opacity .15s; }
   .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-  /* MENU VIEWER */
-  .menu-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-    padding: 16px; margin-bottom: 12px; display: flex; align-items: center;
-    justify-content: space-between;
-  }
-  .menu-month { font-size: 15px; font-weight: 700; }
-  .menu-link {
-    padding: 8px 16px; background: #1a1a1a; color: #fff; border-radius: 8px;
-    font-size: 13px; font-weight: 500; text-decoration: none;
-  }
-  .no-menu { text-align: center; padding: 40px; color: var(--text-hint); font-size: 14px; }
+  /* MENU */
+  .menu-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .menu-link { padding: 7px 14px; background: #1a1a1a; color: #fff; border-radius: 8px; font-size: 12px; font-weight: 500; text-decoration: none; }
+  .no-menu { text-align: center; padding: 32px; color: var(--text-hint); font-size: 13px; }
 
-  /* TOAST */
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 999px;
-    font-size: 13px; z-index: 300; opacity: 0; transition: opacity .3s;
-    pointer-events: none; white-space: nowrap;
-  }
+  /* TOAST / LOADING */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 999px; font-size: 13px; z-index: 300; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
-
-  /* LOADING */
-  .loading-overlay {
-    position: fixed; inset: 0; z-index: 400; background: var(--bg);
-    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
-  }
-  .loading-spinner {
-    width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--green);
-    border-radius: 50%; animation: spin 0.8s linear infinite;
-  }
+  .loading-overlay { position: fixed; inset: 0; z-index: 400; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text { font-size: 13px; color: var(--text-sub); }
-
   .hidden { display: none !important; }
-
-  /* DEADLINE PASSED */
-  .deadline-passed {
-    background: var(--red-bg); border: 1px solid #f5c0bf; border-radius: 12px;
-    padding: 16px; text-align: center; margin-bottom: 16px;
-    font-size: 14px; color: var(--red-fg); font-weight: 500;
-  }
+  .deadline-passed { background: var(--red-bg); border: 1px solid #f5c0bf; border-radius: 10px; padding: 12px; text-align: center; margin-bottom: 14px; font-size: 13px; color: var(--red-fg); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -202,15 +173,25 @@
 </header>
 
 <div class="main">
-  <!-- TABS -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('single')">1日入力</button>
-    <button class="tab-btn" onclick="switchTab('bulk')">まとめて入力</button>
+    <button class="tab-btn active" onclick="switchTab('order')">注文</button>
+    <button class="tab-btn" onclick="switchTab('bulk')">まとめて</button>
+    <button class="tab-btn" onclick="switchTab('visitor')">来訪者</button>
+    <button class="tab-btn" onclick="switchTab('history')">履歴</button>
     <button class="tab-btn" onclick="switchTab('menu')">メニュー</button>
   </div>
 
-  <!-- STAFF SELECTOR -->
-  <div id="staffSelector">
+  <!-- 注文タブ -->
+  <div id="orderTab">
+    <!-- モード選択 -->
+    <div class="mode-toggle">
+      <button class="mode-btn active-self" id="modeSelf" onclick="setMode('self')">👤 自分で入力</button>
+      <button class="mode-btn" id="modeProxy" onclick="setMode('proxy')">👥 代行入力</button>
+    </div>
+
+    <div id="proxyNote" class="proxy-note hidden">📝 代行モード：他の方の注文を代わりに入力します</div>
+
+    <!-- スタッフ選択 -->
     <div class="section-label">部署</div>
     <select class="dept-select" id="deptSelect" onchange="onDeptChange()">
       <option value="">-- 部署を選択 --</option>
@@ -219,44 +200,54 @@
     <select class="name-select" id="nameSelect" onchange="onNameChange()">
       <option value="">-- 氏名を選択 --</option>
     </select>
-  </div>
 
-  <!-- SINGLE TAB -->
-  <div id="singleTab">
-    <div id="deadlinePassed" class="deadline-passed hidden">
-      ⚠ 本日の締切（<span id="deadlineTime"></span>）を過ぎています
-    </div>
+    <div id="deadlinePassed" class="deadline-passed hidden">⚠ 本日の締切（<span id="deadlineTime"></span>）を過ぎています</div>
+
+    <!-- 日付 -->
     <div class="section-label">日付</div>
     <div class="date-grid" id="dateGrid"></div>
-    <div id="ngNote" class="ng-note hidden">※ この方は永久×設定ですが変更可能です</div>
-    <div class="order-section">
-      <div class="order-title">注文を選んでください</div>
-      <div class="order-grid">
-        <button class="order-btn" id="btnFutsuu" onclick="selectOrder('futsuu')">
-          <span>○</span>
-          <span class="order-label">普通</span>
-        </button>
-        <button class="order-btn" id="btnOomori" onclick="selectOrder('oomori')">
-          <span>○</span>
-          <span class="order-label">大盛</span>
-          <span class="order-sub">+1</span>
-        </button>
-      </div>
-      <div class="order-grid">
-        <button class="order-btn" id="btnNashi" onclick="selectOrder('nashi')" style="grid-column:1/-1;">
-          <span>×</span>
-          <span class="order-label">食べない</span>
-        </button>
-      </div>
+
+    <!-- 食べる場所 -->
+    <div class="section-label">食べる場所</div>
+    <div class="place-row">
+      <button class="place-btn" id="placeHonsha" onclick="selectPlace('honsha')">🏢 本社</button>
+      <button class="place-btn" id="placeNezaki" onclick="selectPlace('nezaki')">🏭 根崎</button>
     </div>
+
+    <div id="ngNote" class="ng-note hidden">※ この方は永久×設定ですが変更可能です</div>
+
+    <!-- 注文ボタン -->
+    <div class="section-label">注文</div>
+    <div class="order-grid2">
+      <button class="order-btn" id="btnFutsuu" onclick="selectOrder('futsuu')">
+        <span>○</span><span class="order-label">普通</span>
+      </button>
+      <button class="order-btn" id="btnOomori" onclick="selectOrder('oomori')">
+        <span>○</span><span class="order-label">大盛</span>
+      </button>
+    </div>
+    <div class="order-grid2">
+      <button class="order-btn nashi-btn" id="btnNashi" onclick="selectOrder('nashi')" style="grid-column:1/-1;">
+        <span>×</span><span class="order-label">食べない</span>
+      </button>
+    </div>
+
     <button class="submit-btn" id="submitSingle" onclick="submitSingle()" disabled>登録する</button>
   </div>
 
-  <!-- BULK TAB -->
+  <!-- まとめてタブ -->
   <div id="bulkTab" class="hidden">
-    <div class="section-label">期間</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
-      <select id="bulkPeriod" onchange="renderBulkTable()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:var(--surface);outline:none;">
+    <div class="section-label">部署</div>
+    <select class="dept-select" id="bulkDeptSelect" onchange="onBulkDeptChange()">
+      <option value="">-- 部署を選択 --</option>
+    </select>
+    <div class="section-label">氏名</div>
+    <select class="name-select" id="bulkNameSelect" onchange="onBulkNameChange()">
+      <option value="">-- 氏名を選択 --</option>
+    </select>
+    <div class="section-label" style="margin-top:4px;">期間</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <select id="bulkPeriod" onchange="renderBulkTable()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--surface);outline:none;">
         <option value="week">今週</option>
         <option value="nextweek">来週</option>
         <option value="month">今月</option>
@@ -270,24 +261,43 @@
     </div>
     <div class="section-label">日別設定</div>
     <table class="bulk-table">
-      <thead>
-        <tr>
-          <th style="text-align:left;">日付</th>
-          <th>○普通</th>
-          <th>○大盛</th>
-          <th>×</th>
-        </tr>
-      </thead>
+      <thead><tr><th style="text-align:left;">日付</th><th>○普通</th><th>○大盛</th><th>×</th></tr></thead>
       <tbody id="bulkTableBody"></tbody>
     </table>
     <button class="submit-btn" id="submitBulk" onclick="submitBulk()" disabled>まとめて登録</button>
   </div>
 
-  <!-- MENU TAB -->
+  <!-- 来訪者タブ -->
+  <div id="visitorTab" class="hidden">
+    <div class="section-label" style="margin-bottom:10px;">来訪者の注文を入力してください</div>
+    <div id="visitorList"></div>
+    <button class="add-visitor-btn" onclick="addVisitor()">＋ 来訪者を追加</button>
+    <div style="height:12px;"></div>
+    <div class="section-label">食べる場所</div>
+    <div class="place-row">
+      <button class="place-btn" id="visitorPlaceHonsha" onclick="selectVisitorPlace('honsha')">🏢 本社</button>
+      <button class="place-btn" id="visitorPlaceNezaki" onclick="selectVisitorPlace('nezaki')">🏭 根崎</button>
+    </div>
+    <button class="submit-btn" id="submitVisitor" onclick="submitVisitor()">来訪者注文を登録</button>
+  </div>
+
+  <!-- 履歴タブ -->
+  <div id="historyTab" class="hidden">
+    <div class="section-label">部署</div>
+    <select class="dept-select" id="histDeptSelect" onchange="onHistDeptChange()">
+      <option value="">-- 部署を選択 --</option>
+    </select>
+    <div class="section-label">氏名</div>
+    <select class="name-select" id="histNameSelect" onchange="loadHistory()">
+      <option value="">-- 氏名を選択 --</option>
+    </select>
+    <div id="historyContent"></div>
+  </div>
+
+  <!-- メニュータブ -->
   <div id="menuTab" class="hidden">
     <div id="menuList"></div>
   </div>
-
 </div>
 
 <div class="toast" id="toast"></div>
@@ -296,382 +306,462 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwADKRSZHd0Tpiv3X3v7PRNfRccM6H-y3L8mnJF3CulCB_T3zKK_faBccYx0ZI-LFGYGw/exec';
 
 const DEPT_ORDER = ['社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
+const HONSHA_DEPTS = ['社長','役員','総務部','営業部','設計課','電気課'];
+const NEZAKI_DEPTS  = ['加工課','組付課','購買課'];
+const NEZAKI_IDS    = [91]; // 中島大
+
 const STAFF_MASTER = [
-  {id:88,name:'中島 基木',dept:'社長'},
-  {id:89,name:'笹倉 俊彦',dept:'役員'},
-  {id:90,name:'石川 明雄',dept:'役員'},
-  {id:91,name:'中島 大',  dept:'役員'},
-  {id:13,name:'加藤 愛子',dept:'総務部'},
-  {id:38,name:'石原 知佳',dept:'総務部'},
-  {id:41,name:'澤井 裕司',dept:'総務部'},
-  {id:49,name:'山口 奈奈美',dept:'総務部'},
-  {id:52,name:'加藤 友那',dept:'総務部'},
-  {id:63,name:'江嵜 嘉浩',dept:'総務部'},
-  {id:85,name:'田島 靖子',dept:'総務部'},
-  {id:54,name:'有江 達夫',dept:'営業部'},
-  {id:64,name:'古田 毅',  dept:'営業部'},
-  {id:69,name:'小野田 隆弘',dept:'営業部'},
-  {id:86,name:'稲吉 一春',dept:'営業部'},
-  {id:48,name:'鶴永 将人',dept:'購買課'},
-  {id:51,name:'内木 緑',  dept:'購買課'},
-  {id:71,name:'宮川 哲平',dept:'購買課'},
-  {id:75,name:'安藤 奈津子',dept:'購買課'},
-  {id:17,name:'鄒 永',    dept:'第一製造部'},
-  {id:5, name:'平井 三洋',dept:'設計課'},
-  {id:6, name:'寺本 豊',  dept:'設計課'},
-  {id:10,name:'鈴木 桂',  dept:'設計課'},
-  {id:22,name:'中島 來夢',dept:'設計課'},
-  {id:25,name:'松木 建太郎',dept:'設計課'},
-  {id:30,name:'茨 泰憲',  dept:'設計課'},
-  {id:32,name:'広瀬 靖志',dept:'設計課'},
-  {id:33,name:'TRAN PHONG VU',dept:'設計課'},
-  {id:36,name:'深見 健太',dept:'設計課'},
-  {id:39,name:'伊串 希',  dept:'設計課'},
-  {id:40,name:'近藤 あゆみ',dept:'設計課'},
-  {id:42,name:'米津 友里',dept:'設計課'},
-  {id:56,name:'加藤 絢',  dept:'設計課'},
-  {id:58,name:'小松 亜澄',dept:'設計課'},
-  {id:60,name:'廣瀬 昇',  dept:'設計課'},
-  {id:70,name:'荒川 真緒',dept:'設計課'},
-  {id:7, name:'成田 健',  dept:'電気課'},
-  {id:8, name:'中島 正隆',dept:'電気課'},
-  {id:18,name:'加藤 幸浩',dept:'電気課'},
-  {id:24,name:'坂本 英一',dept:'電気課'},
-  {id:27,name:'宇野 孝祐',dept:'電気課'},
-  {id:35,name:'城 重光',  dept:'電気課'},
-  {id:43,name:'當眞 一聖',dept:'電気課'},
-  {id:45,name:'山田 護',  dept:'電気課'},
-  {id:61,name:'船木 勇作',dept:'電気課'},
-  {id:66,name:'坂下 優',  dept:'電気課'},
-  {id:67,name:'NGUYEN THI TUYET MAI',dept:'電気課'},
-  {id:73,name:'NGUYEN HOANG PHUC AN',dept:'電気課'},
-  {id:77,name:'牧内 宗真',dept:'電気課'},
-  {id:78,name:'中村 尚幹',dept:'電気課'},
-  {id:83,name:'荒木 萌々花',dept:'電気課'},
-  {id:1, name:'川村 隆浩',dept:'加工課'},
-  {id:3, name:'柏田 祐介',dept:'加工課'},
-  {id:11,name:'青山 薫',  dept:'加工課'},
-  {id:12,name:'中島 学',  dept:'加工課'},
-  {id:14,name:'野村 昌史',dept:'加工課'},
-  {id:15,name:'大出 直明',dept:'加工課'},
-  {id:16,name:'小池 佑介',dept:'加工課'},
-  {id:28,name:'NGUYEN VAN LANH',dept:'加工課'},
-  {id:31,name:'川口 信夫',dept:'加工課'},
-  {id:34,name:'TRAN VAN THAN',dept:'加工課'},
-  {id:37,name:'NGUYEN HOANG AN',dept:'加工課'},
-  {id:44,name:'川端 英裕',dept:'加工課'},
-  {id:47,name:'太田 安彦',dept:'加工課'},
-  {id:55,name:'加古 武',  dept:'加工課'},
-  {id:57,name:'佐藤 佳宏',dept:'加工課'},
-  {id:59,name:'NGUYEN THANH NHANH',dept:'加工課'},
-  {id:62,name:'石田 昌也',dept:'加工課'},
-  {id:65,name:'坂本 和貴',dept:'加工課'},
-  {id:68,name:'TRAN KIM TUYEN',dept:'加工課'},
-  {id:79,name:'TRAN CHI TAM',dept:'加工課'},
-  {id:80,name:'神谷 翼',  dept:'加工課'},
-  {id:82,name:'今泉 崇',  dept:'加工課'},
-  {id:0, name:'塩澤 真治',dept:'組付課'},
-  {id:2, name:'吉田 一英',dept:'組付課'},
-  {id:4, name:'渡瀬 一美',dept:'組付課'},
-  {id:9, name:'竹内 和人',dept:'組付課'},
-  {id:21,name:'大村 秀樹',dept:'組付課'},
-  {id:23,name:'渡辺 健一',dept:'組付課'},
-  {id:26,name:'坂野 公彦',dept:'組付課'},
-  {id:46,name:'近藤 隼次',dept:'組付課'},
-  {id:50,name:'尾崎 佑和',dept:'組付課'},
-  {id:53,name:'松尾 康平',dept:'組付課'},
-  {id:72,name:'髙木 和幸',dept:'組付課'},
-  {id:74,name:'BIEN VAN MINH',dept:'組付課'},
-  {id:76,name:'富樫 至史',dept:'組付課'},
-  {id:81,name:'真栄田 義斗',dept:'組付課'},
-  {id:84,name:'加藤 翼',  dept:'組付課'},
+  {id:88,name:'中島 基木',dept:'社長'},{id:89,name:'笹倉 俊彦',dept:'役員'},
+  {id:90,name:'石川 明雄',dept:'役員'},{id:91,name:'中島 大',dept:'役員'},
+  {id:13,name:'加藤 愛子',dept:'総務部'},{id:38,name:'石原 知佳',dept:'総務部'},
+  {id:41,name:'澤井 裕司',dept:'総務部'},{id:49,name:'山口 奈奈美',dept:'総務部'},
+  {id:52,name:'加藤 友那',dept:'総務部'},{id:63,name:'江嵜 嘉浩',dept:'総務部'},
+  {id:85,name:'田島 靖子',dept:'総務部'},{id:54,name:'有江 達夫',dept:'営業部'},
+  {id:64,name:'古田 毅',dept:'営業部'},{id:69,name:'小野田 隆弘',dept:'営業部'},
+  {id:86,name:'稲吉 一春',dept:'営業部'},{id:48,name:'鶴永 将人',dept:'購買課'},
+  {id:51,name:'内木 緑',dept:'購買課'},{id:71,name:'宮川 哲平',dept:'購買課'},
+  {id:75,name:'安藤 奈津子',dept:'購買課'},{id:17,name:'鄒 永',dept:'第一製造部'},
+  {id:5,name:'平井 三洋',dept:'設計課'},{id:6,name:'寺本 豊',dept:'設計課'},
+  {id:10,name:'鈴木 桂',dept:'設計課'},{id:22,name:'中島 來夢',dept:'設計課'},
+  {id:25,name:'松木 建太郎',dept:'設計課'},{id:30,name:'茨 泰憲',dept:'設計課'},
+  {id:32,name:'広瀬 靖志',dept:'設計課'},{id:33,name:'TRAN PHONG VU',dept:'設計課'},
+  {id:36,name:'深見 健太',dept:'設計課'},{id:39,name:'伊串 希',dept:'設計課'},
+  {id:40,name:'近藤 あゆみ',dept:'設計課'},{id:42,name:'米津 友里',dept:'設計課'},
+  {id:56,name:'加藤 絢',dept:'設計課'},{id:58,name:'小松 亜澄',dept:'設計課'},
+  {id:60,name:'廣瀬 昇',dept:'設計課'},{id:70,name:'荒川 真緒',dept:'設計課'},
+  {id:7,name:'成田 健',dept:'電気課'},{id:8,name:'中島 正隆',dept:'電気課'},
+  {id:18,name:'加藤 幸浩',dept:'電気課'},{id:24,name:'坂本 英一',dept:'電気課'},
+  {id:27,name:'宇野 孝祐',dept:'電気課'},{id:35,name:'城 重光',dept:'電気課'},
+  {id:43,name:'當眞 一聖',dept:'電気課'},{id:45,name:'山田 護',dept:'電気課'},
+  {id:61,name:'船木 勇作',dept:'電気課'},{id:66,name:'坂下 優',dept:'電気課'},
+  {id:67,name:'NGUYEN THI TUYET MAI',dept:'電気課'},{id:73,name:'NGUYEN HOANG PHUC AN',dept:'電気課'},
+  {id:77,name:'牧内 宗真',dept:'電気課'},{id:78,name:'中村 尚幹',dept:'電気課'},
+  {id:83,name:'荒木 萌々花',dept:'電気課'},{id:1,name:'川村 隆浩',dept:'加工課'},
+  {id:3,name:'柏田 祐介',dept:'加工課'},{id:11,name:'青山 薫',dept:'加工課'},
+  {id:12,name:'中島 学',dept:'加工課'},{id:14,name:'野村 昌史',dept:'加工課'},
+  {id:15,name:'大出 直明',dept:'加工課'},{id:16,name:'小池 佑介',dept:'加工課'},
+  {id:28,name:'NGUYEN VAN LANH',dept:'加工課'},{id:31,name:'川口 信夫',dept:'加工課'},
+  {id:34,name:'TRAN VAN THAN',dept:'加工課'},{id:37,name:'NGUYEN HOANG AN',dept:'加工課'},
+  {id:44,name:'川端 英裕',dept:'加工課'},{id:47,name:'太田 安彦',dept:'加工課'},
+  {id:55,name:'加古 武',dept:'加工課'},{id:57,name:'佐藤 佳宏',dept:'加工課'},
+  {id:59,name:'NGUYEN THANH NHANH',dept:'加工課'},{id:62,name:'石田 昌也',dept:'加工課'},
+  {id:65,name:'坂本 和貴',dept:'加工課'},{id:68,name:'TRAN KIM TUYEN',dept:'加工課'},
+  {id:79,name:'TRAN CHI TAM',dept:'加工課'},{id:80,name:'神谷 翼',dept:'加工課'},
+  {id:82,name:'今泉 崇',dept:'加工課'},{id:0,name:'塩澤 真治',dept:'組付課'},
+  {id:2,name:'吉田 一英',dept:'組付課'},{id:4,name:'渡瀬 一美',dept:'組付課'},
+  {id:9,name:'竹内 和人',dept:'組付課'},{id:21,name:'大村 秀樹',dept:'組付課'},
+  {id:23,name:'渡辺 健一',dept:'組付課'},{id:26,name:'坂野 公彦',dept:'組付課'},
+  {id:46,name:'近藤 隼次',dept:'組付課'},{id:50,name:'尾崎 佑和',dept:'組付課'},
+  {id:53,name:'松尾 康平',dept:'組付課'},{id:72,name:'髙木 和幸',dept:'組付課'},
+  {id:74,name:'BIEN VAN MINH',dept:'組付課'},{id:76,name:'富樫 至史',dept:'組付課'},
+  {id:81,name:'真栄田 義斗',dept:'組付課'},{id:84,name:'加藤 翼',dept:'組付課'},
   {id:87,name:'澤田 隆昭',dept:'組付課'},
 ];
 
+function getDefaultPlace(staff) {
+  if (NEZAKI_IDS.includes(staff.id)) return 'nezaki';
+  if (NEZAKI_DEPTS.includes(staff.dept)) return 'nezaki';
+  return 'honsha';
+}
+
 let deadline = '08:30';
 let permanentNG = {};
-let selStaff = null;
-let selDate = null;
-let selOrder = null;
-let bulkOrders = {}; // date -> order
-let currentTab = 'single';
-
-// ===== UTILS =====
-function fmtDate(d) {
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-function fmtDateJa(d) {
-  const days = ['日','月','火','水','木','金','土'];
-  return (d.getMonth()+1) + '/' + d.getDate() + '(' + days[d.getDay()] + ')';
-}
-function isWeekend(d) { return d.getDay() === 0 || d.getDay() === 6; }
-function isDeadlinePassed() {
-  const now = new Date();
-  const [h, m] = deadline.split(':').map(Number);
-  const dl = new Date(); dl.setHours(h, m, 0, 0);
-  return now > dl;
-}
-
+let selStaff = null, selDate = null, selOrder = null, selPlace = null;
+let isProxy = false;
+let bulkStaff = null, bulkOrders = {};
+let visitorList = [];
+let visitorPlace = 'honsha';
+let monthOrders = {}; // date -> {id -> order}
 let toastTimer;
+
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+function fmtDate(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function isWeekend(d) { return d.getDay()===0||d.getDay()===6; }
+function isDeadlinePassed() {
+  const now = new Date();
+  const [h,m] = deadline.split(':').map(Number);
+  const dl = new Date(); dl.setHours(h,m,0,0);
+  return now > dl;
+}
+
 // ===== INIT =====
 async function init() {
-  renderDeptSelect();
+  renderDeptSelects();
   renderDateGrid();
   try {
-    const res = await fetch(GAS_URL + '?action=getSettings&t=' + Date.now());
+    const res = await fetch(GAS_URL+'?action=getSettings&t='+Date.now());
     const json = await res.json();
     if (json.ok) {
       deadline = json.settings.deadline || '08:30';
-      // 永久×設定を読み込む
       Object.keys(json.settings).forEach(k => {
         if (k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k];
       });
     }
   } catch(e) {}
   document.getElementById('deadlineBadge').textContent = '締切 ' + deadline;
-  checkDeadline();
-  document.getElementById('loadingOverlay').style.display = 'none';
-  loadMenu();
-}
-
-function checkDeadline() {
-  const passed = isDeadlinePassed();
-  document.getElementById('deadlinePassed').classList.toggle('hidden', !passed);
   document.getElementById('deadlineTime').textContent = deadline;
+  document.getElementById('deadlinePassed').classList.toggle('hidden', !isDeadlinePassed());
+  await loadMenu();
+  document.getElementById('loadingOverlay').style.display = 'none';
 }
 
-// ===== DEPT/NAME SELECT =====
-function renderDeptSelect() {
-  const sel = document.getElementById('deptSelect');
-  const depts = DEPT_ORDER.filter(d => STAFF_MASTER.some(s => s.dept === d));
-  sel.innerHTML = '<option value="">-- 部署を選択 --</option>' +
-    depts.map(d => `<option value="${d}">${d}</option>`).join('');
+function renderDeptSelects() {
+  const depts = DEPT_ORDER.filter(d => STAFF_MASTER.some(s => s.dept===d));
+  const opts = '<option value="">-- 部署を選択 --</option>' + depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+  ['deptSelect','bulkDeptSelect','histDeptSelect'].forEach(id => {
+    document.getElementById(id).innerHTML = opts;
+  });
 }
 
+// ===== MODE =====
+function setMode(mode) {
+  isProxy = mode === 'proxy';
+  document.getElementById('modeSelf').className = 'mode-btn' + (isProxy?'':' active-self');
+  document.getElementById('modeProxy').className = 'mode-btn' + (isProxy?' active-proxy':'');
+  document.getElementById('proxyNote').classList.toggle('hidden', !isProxy);
+}
+
+// ===== DEPT/NAME =====
 function onDeptChange() {
   const dept = document.getElementById('deptSelect').value;
   const sel = document.getElementById('nameSelect');
-  if (!dept) { sel.innerHTML = '<option value="">-- 氏名を選択 --</option>'; selStaff = null; return; }
-  const members = STAFF_MASTER.filter(s => s.dept === dept);
   sel.innerHTML = '<option value="">-- 氏名を選択 --</option>' +
-    members.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  selStaff = null;
-  updateNGNote();
+    (dept ? STAFF_MASTER.filter(s=>s.dept===dept).map(s=>`<option value="${s.id}">${s.name}</option>`).join('') : '');
+  selStaff = null; selOrder = null; selPlace = null;
+  updateOrderButtons(); updatePlaceButtons();
 }
 
 function onNameChange() {
   const id = document.getElementById('nameSelect').value;
-  selStaff = STAFF_MASTER.find(s => s.id == id) || null;
+  selStaff = STAFF_MASTER.find(s=>s.id==id) || null;
   selOrder = null;
-  updateNGNote();
-  updateOrderButtons();
-  document.getElementById('submitSingle').disabled = !selStaff || !selDate || !selOrder;
-  document.getElementById('submitBulk').disabled = !selStaff || Object.keys(bulkOrders).length === 0;
-  if (selStaff && permanentNG[selStaff.id]) {
-    selOrder = 'nashi';
-    updateOrderButtons();
+  if (selStaff) {
+    selPlace = getDefaultPlace(selStaff);
+    if (permanentNG[selStaff.id]) selOrder = 'nashi';
   }
+  updateNGNote(); updateOrderButtons(); updatePlaceButtons();
+  updateDateGrid();
+  document.getElementById('submitSingle').disabled = !selStaff || !selDate || !selOrder;
 }
 
 function updateNGNote() {
-  const show = selStaff && permanentNG[selStaff.id];
-  document.getElementById('ngNote').classList.toggle('hidden', !show);
+  document.getElementById('ngNote').classList.toggle('hidden', !(selStaff && permanentNG[selStaff.id]));
 }
 
 // ===== DATE GRID =====
-function renderDateGrid() {
-  const grid = document.getElementById('dateGrid');
-  const today = new Date();
-  const dates = [];
-  // 今日から5営業日
+function getWorkDates(count=5) {
+  const today = new Date(); const dates = [];
   let d = new Date(today);
-  while (dates.length < 5) {
+  while (dates.length < count) {
     if (!isWeekend(d)) dates.push(new Date(d));
-    d.setDate(d.getDate() + 1);
+    d.setDate(d.getDate()+1);
   }
+  return dates;
+}
+
+function renderDateGrid() {
+  const dates = getWorkDates(5);
+  const today = new Date();
   const days = ['日','月','火','水','木','金','土'];
+  if (!selDate) selDate = fmtDate(dates[0]);
+  const grid = document.getElementById('dateGrid');
   grid.innerHTML = dates.map(dt => {
-    const dateStr = fmtDate(dt);
-    const isToday = fmtDate(dt) === fmtDate(today);
-    return `<button class="date-btn ${isToday?'today':''} ${selDate===dateStr?'selected':''}"
-      onclick="selectDate('${dateStr}')">
+    const ds = fmtDate(dt);
+    const isToday = ds === fmtDate(today);
+    const order = selStaff && monthOrders[ds] ? monthOrders[ds][selStaff.id] : null;
+    const orderClass = order==='futsuu'?' has-futsuu':order==='oomori'?' has-oomori':order?'has-nashi':'';
+    const orderLabel = order==='futsuu'?'○普':order==='oomori'?'○大':order==='nashi'?'×':'';
+    return `<button class="date-btn${isToday?' today':''}${ds===selDate?' selected':''}${orderClass}" onclick="selectDate('${ds}')">
       <div class="d-day">${dt.getDate()}</div>
       <div class="d-week">${days[dt.getDay()]}</div>
+      <div class="d-order">${orderLabel}</div>
     </button>`;
   }).join('');
-  if (!selDate) { selDate = fmtDate(dates[0]); renderDateGrid(); }
 }
 
-function selectDate(dateStr) {
-  selDate = dateStr;
-  selOrder = null;
-  updateOrderButtons();
-  renderDateGrid();
-  document.getElementById('submitSingle').disabled = true;
+function updateDateGrid() { renderDateGrid(); }
+
+function selectDate(ds) {
+  selDate = ds; selOrder = null;
+  // 既存注文があれば自動セット
+  if (selStaff && monthOrders[ds] && monthOrders[ds][selStaff.id]) {
+    selOrder = monthOrders[ds][selStaff.id];
+  } else if (selStaff && permanentNG[selStaff.id]) {
+    selOrder = 'nashi';
+  }
+  updateOrderButtons(); renderDateGrid();
+  document.getElementById('submitSingle').disabled = !selStaff || !selOrder;
 }
 
-// ===== ORDER BUTTONS =====
+// ===== PLACE =====
+function selectPlace(place) {
+  selPlace = place; updatePlaceButtons();
+}
+function updatePlaceButtons() {
+  document.getElementById('placeHonsha').className = 'place-btn' + (selPlace==='honsha'?' sel-honsha':'');
+  document.getElementById('placeNezaki').className = 'place-btn' + (selPlace==='nezaki'?' sel-nezaki':'');
+}
+
+// ===== ORDER =====
 function selectOrder(order) {
-  selOrder = order;
-  updateOrderButtons();
+  selOrder = order; updateOrderButtons();
   document.getElementById('submitSingle').disabled = !selStaff || !selDate;
 }
-
 function updateOrderButtons() {
   ['futsuu','oomori','nashi'].forEach(o => {
-    const btn = document.getElementById('btn' + o.charAt(0).toUpperCase() + o.slice(1));
-    if (btn) btn.className = 'order-btn' + (selOrder === o ? ' sel-' + o : '');
+    const btn = document.getElementById('btn'+o.charAt(0).toUpperCase()+o.slice(1));
+    if (btn) btn.className = 'order-btn'+(o==='nashi'?' nashi-btn':'')+(selOrder===o?' sel-'+o:'');
   });
 }
 
 // ===== SUBMIT SINGLE =====
 async function submitSingle() {
-  if (!selStaff || !selDate || !selOrder) return;
+  if (!selStaff||!selDate||!selOrder) return;
   try {
     const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action:'saveOrder', date:selDate, id:selStaff.id, name:selStaff.name, dept:selStaff.dept, order:selOrder })
+      method:'POST',
+      body: JSON.stringify({action:'saveOrder', date:selDate, id:selStaff.id, name:selStaff.name, dept:selStaff.dept, order:selOrder, place:selPlace||getDefaultPlace(selStaff), proxy:isProxy})
     });
     const json = await res.json();
     if (json.ok) {
+      if (!monthOrders[selDate]) monthOrders[selDate] = {};
+      monthOrders[selDate][selStaff.id] = selOrder;
       const label = selOrder==='futsuu'?'○普通':selOrder==='oomori'?'○大盛':'×食べない';
-      showToast(`${selStaff.name} → ${label} を登録しました`);
+      showToast(`${isProxy?'[代行] ':''}${selStaff.name} → ${label}`);
       selOrder = null; updateOrderButtons();
       document.getElementById('submitSingle').disabled = true;
+      renderDateGrid();
     }
   } catch(e) { showToast('登録に失敗しました'); }
 }
 
 // ===== BULK =====
-function renderBulkTable() {
-  const period = document.getElementById('bulkPeriod').value;
-  const today = new Date();
-  const dates = [];
+let bulkSelStaff = null;
+function onBulkDeptChange() {
+  const dept = document.getElementById('bulkDeptSelect').value;
+  document.getElementById('bulkNameSelect').innerHTML = '<option value="">-- 氏名を選択 --</option>' +
+    (dept ? STAFF_MASTER.filter(s=>s.dept===dept).map(s=>`<option value="${s.id}">${s.name}</option>`).join('') : '');
+  bulkSelStaff = null; bulkOrders = {};
+  document.getElementById('submitBulk').disabled = true;
+}
+function onBulkNameChange() {
+  const id = document.getElementById('bulkNameSelect').value;
+  bulkSelStaff = STAFF_MASTER.find(s=>s.id==id) || null;
+  bulkOrders = {};
+  renderBulkTable();
+  document.getElementById('submitBulk').disabled = true;
+}
 
-  if (period === 'week' || period === 'nextweek') {
-    const offset = period === 'nextweek' ? 7 : 0;
+function getBulkDates() {
+  const period = document.getElementById('bulkPeriod').value;
+  const today = new Date(); const dates = [];
+  if (period==='week'||period==='nextweek') {
+    const offset = period==='nextweek'?7:0;
     const monday = new Date(today);
     const day = today.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    monday.setDate(today.getDate() + diff + offset);
-    for (let i = 0; i < 5; i++) {
-      const d = new Date(monday); d.setDate(monday.getDate() + i);
-      if (!isWeekend(d)) dates.push(d);
-    }
+    const diff = day===0?-6:1-day;
+    monday.setDate(today.getDate()+diff+offset);
+    for (let i=0;i<5;i++) { const d=new Date(monday); d.setDate(monday.getDate()+i); if(!isWeekend(d)) dates.push(d); }
   } else {
-    const year = today.getFullYear(), month = today.getMonth();
-    const last = new Date(year, month + 1, 0).getDate();
-    for (let i = 1; i <= last; i++) {
-      const d = new Date(year, month, i);
-      if (!isWeekend(d)) dates.push(d);
-    }
+    const year=today.getFullYear(), month=today.getMonth();
+    const last=new Date(year,month+1,0).getDate();
+    for(let i=1;i<=last;i++){const d=new Date(year,month,i);if(!isWeekend(d))dates.push(d);}
   }
+  return dates;
+}
 
-  const days = ['日','月','火','水','木','金','土'];
-  const tbody = document.getElementById('bulkTableBody');
-  tbody.innerHTML = dates.map(dt => {
-    const dateStr = fmtDate(dt);
-    const order = bulkOrders[dateStr] || '';
+function renderBulkTable() {
+  const dates = getBulkDates();
+  const days=['日','月','火','水','木','金','土'];
+  document.getElementById('bulkTableBody').innerHTML = dates.map(dt=>{
+    const ds=fmtDate(dt); const order=bulkOrders[ds]||'';
     return `<tr>
-      <td><div>${(dt.getMonth()+1)+'/'+dt.getDate()}</div><div class="bulk-week">${days[dt.getDay()]}</div></td>
-      <td><button class="bulk-btn ${order==='futsuu'?'sel-futsuu':''}" onclick="setBulkOrder('${dateStr}','futsuu')">○普通</button></td>
-      <td><button class="bulk-btn ${order==='oomori'?'sel-oomori':''}" onclick="setBulkOrder('${dateStr}','oomori')">○大盛</button></td>
-      <td><button class="bulk-btn ${order==='nashi'?'sel-nashi':''}" onclick="setBulkOrder('${dateStr}','nashi')">×</button></td>
+      <td><div>${(dt.getMonth()+1)+'/'+dt.getDate()}</div><div style="font-size:9px;color:var(--text-hint);">${days[dt.getDay()]}</div></td>
+      <td><button class="bulk-btn ${order==='futsuu'?'sel-futsuu':''}" onclick="setBulkOrder('${ds}','futsuu')">○普通</button></td>
+      <td><button class="bulk-btn ${order==='oomori'?'sel-oomori':''}" onclick="setBulkOrder('${ds}','oomori')">○大盛</button></td>
+      <td><button class="bulk-btn ${order==='nashi'?'sel-nashi':''}" onclick="setBulkOrder('${ds}','nashi')">×</button></td>
     </tr>`;
   }).join('');
 }
 
-function setBulkOrder(dateStr, order) {
-  bulkOrders[dateStr] = order;
-  renderBulkTable();
-  document.getElementById('submitBulk').disabled = !selStaff || Object.keys(bulkOrders).length === 0;
+function setBulkOrder(ds,order) {
+  bulkOrders[ds]=order; renderBulkTable();
+  document.getElementById('submitBulk').disabled = !bulkSelStaff||Object.keys(bulkOrders).length===0;
 }
 
 function setAllBulk(order) {
-  const period = document.getElementById('bulkPeriod').value;
-  const today = new Date();
-  const dates = [];
-  if (period === 'week' || period === 'nextweek') {
-    const offset = period === 'nextweek' ? 7 : 0;
-    const monday = new Date(today);
-    const day = today.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    monday.setDate(today.getDate() + diff + offset);
-    for (let i = 0; i < 5; i++) {
-      const d = new Date(monday); d.setDate(monday.getDate() + i);
-      if (!isWeekend(d)) dates.push(d);
-    }
-  } else {
-    const year = today.getFullYear(), month = today.getMonth();
-    const last = new Date(year, month + 1, 0).getDate();
-    for (let i = 1; i <= last; i++) {
-      const d = new Date(year, month, i);
-      if (!isWeekend(d)) dates.push(d);
-    }
-  }
-  dates.forEach(d => { bulkOrders[fmtDate(d)] = order; });
+  getBulkDates().forEach(d=>{ bulkOrders[fmtDate(d)]=order; });
   renderBulkTable();
-  document.getElementById('submitBulk').disabled = !selStaff;
+  document.getElementById('submitBulk').disabled = !bulkSelStaff;
 }
 
 async function submitBulk() {
-  if (!selStaff || Object.keys(bulkOrders).length === 0) return;
-  const orders = Object.entries(bulkOrders).map(([date, order]) => ({
-    action: 'saveOrder', date, id: selStaff.id, name: selStaff.name, dept: selStaff.dept, order
+  if (!bulkSelStaff||Object.keys(bulkOrders).length===0) return;
+  const place = getDefaultPlace(bulkSelStaff);
+  const orders = Object.entries(bulkOrders).map(([date,order])=>({
+    action:'saveOrder', date, id:bulkSelStaff.id, name:bulkSelStaff.name, dept:bulkSelStaff.dept, order, place, proxy:false
   }));
   try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveOrders', orders })
-    });
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveOrders',orders})});
     const json = await res.json();
     if (json.ok) {
-      showToast(`${selStaff.name} の${orders.length}日分を登録しました`);
-      bulkOrders = {};
-      renderBulkTable();
-      document.getElementById('submitBulk').disabled = true;
+      showToast(`${bulkSelStaff.name} の${orders.length}日分を登録`);
+      bulkOrders={}; renderBulkTable();
+      document.getElementById('submitBulk').disabled=true;
     }
   } catch(e) { showToast('登録に失敗しました'); }
+}
+
+// ===== VISITOR =====
+let visitorIdCounter = 0;
+function selectVisitorPlace(place) {
+  visitorPlace = place;
+  document.getElementById('visitorPlaceHonsha').className='place-btn'+(place==='honsha'?' sel-honsha':'');
+  document.getElementById('visitorPlaceNezaki').className='place-btn'+(place==='nezaki'?' sel-nezaki':'');
+}
+selectVisitorPlace('honsha');
+
+function addVisitor() {
+  visitorIdCounter++;
+  const id = visitorIdCounter;
+  visitorList.push({id, name:'', count:1, order:'futsuu'});
+  renderVisitorList();
+}
+
+function renderVisitorList() {
+  const list = document.getElementById('visitorList');
+  if (visitorList.length===0) {
+    list.innerHTML='<div style="color:var(--text-hint);font-size:13px;text-align:center;padding:16px 0;">来訪者を追加してください</div>';
+    return;
+  }
+  list.innerHTML = visitorList.map(v=>`
+    <div class="visitor-card">
+      <div class="visitor-row">
+        <input class="visitor-input" type="text" placeholder="来訪者名（会社名など）" value="${v.name}"
+          oninput="updateVisitor(${v.id},'name',this.value)" />
+        <button class="del-visitor-btn" onclick="removeVisitor(${v.id})">×</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="visitor-count">
+          <button class="count-btn" onclick="updateVisitor(${v.id},'count',${v.count-1})">−</button>
+          <span class="count-num">${v.count}</span>
+          <button class="count-btn" onclick="updateVisitor(${v.id},'count',${v.count+1})">＋</button>
+          <span style="font-size:12px;color:var(--text-sub);">名</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="bulk-btn ${v.order==='futsuu'?'sel-futsuu':''}" style="padding:6px 12px;" onclick="updateVisitor(${v.id},'order','futsuu')">○普通</button>
+          <button class="bulk-btn ${v.order==='oomori'?'sel-oomori':''}" style="padding:6px 12px;" onclick="updateVisitor(${v.id},'order','oomori')">○大盛</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function updateVisitor(id, key, val) {
+  const v = visitorList.find(v=>v.id===id);
+  if (!v) return;
+  if (key==='count') v.count = Math.max(1, parseInt(val)||1);
+  else v[key] = val;
+  renderVisitorList();
+}
+
+function removeVisitor(id) {
+  visitorList = visitorList.filter(v=>v.id!==id);
+  renderVisitorList();
+}
+
+async function submitVisitor() {
+  if (visitorList.length===0) { showToast('来訪者を追加してください'); return; }
+  const today = fmtDate(new Date());
+  const orders = visitorList.map(v=>({
+    action:'saveOrder', date:today, id:'visitor_'+v.id,
+    name: v.name||'来訪者', dept:'来訪者', order:v.order,
+    place:visitorPlace, count:v.count, proxy:false
+  }));
+  try {
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveOrders',orders})});
+    const json = await res.json();
+    if (json.ok) {
+      showToast(`来訪者${visitorList.length}件を登録しました`);
+      visitorList=[]; renderVisitorList();
+    }
+  } catch(e) { showToast('登録に失敗しました'); }
+}
+
+// ===== HISTORY =====
+function onHistDeptChange() {
+  const dept = document.getElementById('histDeptSelect').value;
+  document.getElementById('histNameSelect').innerHTML = '<option value="">-- 氏名を選択 --</option>' +
+    (dept ? STAFF_MASTER.filter(s=>s.dept===dept).map(s=>`<option value="${s.id}">${s.name}</option>`).join('') : '');
+  document.getElementById('historyContent').innerHTML='';
+}
+
+async function loadHistory() {
+  const id = document.getElementById('histNameSelect').value;
+  if (!id) return;
+  const staff = STAFF_MASTER.find(s=>s.id==id);
+  if (!staff) return;
+  const container = document.getElementById('historyContent');
+  container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-hint);font-size:13px;">読み込み中...</div>';
+  try {
+    const today = new Date();
+    const year = today.getFullYear(), month = today.getMonth();
+    const last = new Date(year,month+1,0).getDate();
+    const results = [];
+    for (let i=1;i<=last;i++) {
+      const d = new Date(year,month,i);
+      if (isWeekend(d)) continue;
+      const ds = fmtDate(d);
+      const res = await fetch(GAS_URL+`?action=getOrders&date=${ds}&t=${Date.now()}`);
+      const json = await res.json();
+      if (json.ok) {
+        const found = json.orders.find(o=>String(o.id)===String(staff.id));
+        results.push({date:ds, day:d, order:found?found.order:null});
+      }
+    }
+    const days=['日','月','火','水','木','金','土'];
+    const orderLabel = o => o==='futsuu'?'<span style="color:var(--green-fg);font-weight:700;">○ 普通</span>':o==='oomori'?'<span style="color:var(--blue-fg);font-weight:700;">○ 大盛</span>':o==='nashi'?'<span style="color:var(--text-hint);">× 食べない</span>':'<span style="color:var(--text-hint);">未回答</span>';
+    container.innerHTML = `<div style="font-size:12px;color:var(--text-sub);margin:8px 0 6px;">${staff.name}さんの今月の注文履歴</div>
+      <table class="history-table">
+        <thead><tr><th>日付</th><th>注文</th></tr></thead>
+        <tbody>${results.map(r=>`<tr>
+          <td>${(r.day.getMonth()+1)+'/'+r.day.getDate()+'('+days[r.day.getDay()]+')'}</td>
+          <td>${orderLabel(r.order)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  } catch(e) {
+    container.innerHTML='<div style="padding:16px;text-align:center;color:var(--red-fg);font-size:13px;">取得に失敗しました</div>';
+  }
 }
 
 // ===== MENU =====
 async function loadMenu() {
   try {
-    const res = await fetch(GAS_URL + '?action=getMenu&t=' + Date.now());
+    const res = await fetch(GAS_URL+'?action=getMenu&t='+Date.now());
     const json = await res.json();
     const list = document.getElementById('menuList');
-    if (!json.ok || json.menus.length === 0) {
-      list.innerHTML = '<div class="no-menu">現在メニューはありません</div>';
-      return;
-    }
-    list.innerHTML = json.menus.map(m =>
+    if (!json.ok||json.menus.length===0) { list.innerHTML='<div class="no-menu">現在メニューはありません</div>'; return; }
+    list.innerHTML = json.menus.map(m=>
       `<div class="menu-card">
-        <div class="menu-month">${m.month} のメニュー</div>
+        <div><div style="font-weight:700;">${m.month}</div><div style="font-size:11px;color:var(--text-sub);">${m.filename}</div></div>
         <a class="menu-link" href="${m.url}" target="_blank">PDFを見る</a>
-      </div>`
-    ).join('');
+      </div>`).join('');
   } catch(e) {}
 }
 
-// ===== TAB SWITCH =====
+// ===== TAB =====
 function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    b.classList.toggle('active', ['single','bulk','menu'][i] === tab);
+  ['order','bulk','visitor','history','menu'].forEach(t=>{
+    document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab);
   });
-  document.getElementById('singleTab').classList.toggle('hidden', tab !== 'single');
-  document.getElementById('bulkTab').classList.toggle('hidden', tab !== 'bulk');
-  document.getElementById('menuTab').classList.toggle('hidden', tab !== 'menu');
-  document.getElementById('staffSelector').classList.toggle('hidden', tab === 'menu');
-  if (tab === 'bulk') renderBulkTable();
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active',['order','bulk','visitor','history','menu'][i]===tab);
+  });
 }
 
 init();
