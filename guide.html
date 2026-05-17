@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>使い方ガイド — Nakashima Manufacturing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=DM+Sans:wght@400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: #e2e0da;
+    --text: #1a1a18;
+    --text-sub: #6b6960;
+    --text-hint: #a09d94;
+    --green: #1D9E75;
+    --green-bg: #e8f5f0;
+    --blue: #185FA5;
+    --orange: #BA7517;
+    --orange-bg: #faeeda;
+    --accent: #1a1a18;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  /* ===== HEADER ===== */
+  .site-header {
+    background: var(--accent);
+    color: #fff;
+    padding: 48px 24px 40px;
+    text-align: center;
+  }
+  .site-header .company { font-size: 12px; letter-spacing: 2px; opacity: 0.5; margin-bottom: 10px; font-family: 'DM Sans', sans-serif; }
+  .site-header h1 { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 10px; }
+  .site-header p { font-size: 14px; opacity: 0.6; }
+
+  /* ===== NAV ===== */
+  .nav-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-bar a {
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-hint);
+    text-decoration: none;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+  }
+  .nav-bar a:hover { color: var(--text); }
+  .nav-bar a.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* ===== MAIN ===== */
+  .main { max-width: 720px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ===== SECTION ===== */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .section-icon.green { background: var(--green-bg); }
+  .section-icon.dark { background: #1a1a18; }
+  .section-title { font-size: 18px; font-weight: 900; }
+  .section-sub { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+
+  /* ===== STEPS ===== */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; padding-bottom: 0; }
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .step-content { flex: 1; }
+  .step-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .step-desc { font-size: 13px; color: var(--text-sub); line-height: 1.6; }
+
+  /* MOCK SCREENS */
+  .mock-screen {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin: 12px 0;
+    font-size: 12px;
+  }
+  .mock-header {
+    background: #1a1a18; color: #fff; border-radius: 8px;
+    padding: 8px 12px; margin-bottom: 10px;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mock-tabs {
+    display: flex; gap: 4px; margin-bottom: 10px;
+  }
+  .mock-tab {
+    padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-sub);
+  }
+  .mock-tab.active { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+
+  .mock-select {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); font-size: 12px; margin-bottom: 6px; color: var(--text-sub);
+  }
+  .mock-order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+  .mock-order-btn {
+    border: 2px solid var(--border); border-radius: 10px; padding: 10px 6px;
+    text-align: center; background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .mock-order-btn .big { font-size: 18px; }
+  .mock-order-btn .lbl { font-size: 10px; font-weight: 700; color: var(--text-sub); }
+  .mock-order-btn.sel-o { border-color: var(--green); background: var(--green-bg); }
+  .mock-order-btn.sel-o .lbl { color: var(--green); }
+  .mock-order-btn.sel-x { border-color: #E24B4A; background: #fdecea; }
+  .mock-order-btn.sel-x .lbl { color: #8b1a19; }
+
+  .mock-btn {
+    width: 100%; padding: 10px; background: #1a1a18; color: #fff;
+    border: none; border-radius: 10px; font-size: 13px; font-weight: 700; text-align: center;
+  }
+  .mock-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .badge-g { background: var(--green-bg); color: #0f6e56; }
+  .badge-o { background: var(--orange-bg); color: var(--orange); }
+  .badge-r { background: #fdecea; color: #8b1a19; }
+
+  .mock-mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .mock-mode-btn { flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 11px; font-weight: 700; text-align: center; background: var(--surface); color: var(--text-sub); }
+  .mock-mode-btn.active { border-color: var(--green); background: var(--green-bg); color: #0f6e56; }
+
+  .mock-place-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .mock-place-btn { flex: 1; padding: 7px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 11px; font-weight: 700; text-align: center; background: var(--surface); color: var(--text-sub); }
+  .mock-place-btn.active-h { border-color: var(--green); background: var(--green-bg); color: #0f6e56; }
+  .mock-place-btn.active-n { border-color: var(--blue); background: #e6f1fb; color: #0c447c; }
+
+  /* MONITOR MOCK */
+  .mock-monitor {
+    background: #0d3d2e; border-radius: 12px; padding: 16px; margin: 12px 0; color: #fff;
+  }
+  .mock-monitor-title { font-size: 22px; font-weight: 900; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .mock-monitor-dot { width: 12px; height: 12px; border-radius: 50%; background: #1D9E75; }
+  .mock-monitor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .mock-monitor-card { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; font-size: 11px; }
+  .mock-monitor-name { font-weight: 700; margin-bottom: 2px; }
+  .mock-monitor-dept { opacity: 0.5; font-size: 10px; }
+
+  /* SUMMARY MOCK */
+  .mock-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .mock-sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .mock-sum-title { font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+  .mock-sum-row { display: flex; gap: 10px; }
+  .mock-sum-stat { text-align: center; }
+  .mock-sum-stat .n { font-size: 20px; font-weight: 900; }
+  .mock-sum-stat .l { font-size: 10px; color: var(--text-sub); }
+  .n-g { color: var(--green); }
+  .n-b { color: var(--blue); }
+  .n-k { color: var(--text); }
+
+  /* URL CARD */
+  .url-card {
+    background: #1a1a18; color: #fff;
+    border-radius: 12px; padding: 16px 18px;
+    margin: 16px 0;
+  }
+  .url-label { font-size: 11px; opacity: 0.5; margin-bottom: 4px; font-family: 'DM Sans', sans-serif; letter-spacing: 1px; }
+  .url-text { font-size: 13px; font-family: monospace; word-break: break-all; opacity: 0.9; }
+  .url-copy-btn {
+    margin-top: 10px; padding: 7px 16px; background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 7px;
+    color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: background .15s;
+  }
+  .url-copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+  /* TIP */
+  .tip {
+    background: var(--orange-bg);
+    border: 1px solid #f0c878;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #633806;
+    margin: 12px 0;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .tip-icon { flex-shrink: 0; font-size: 16px; }
+
+  /* CHAPTER HEADER */
+  .chapter {
+    margin: 32px 0 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .chapter-num {
+    background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+    padding: 3px 10px; border-radius: 999px; letter-spacing: 1px;
+  }
+  .chapter-title { font-size: 20px; font-weight: 900; }
+
+  /* FEATURE LIST */
+  .feature-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+  .feature-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg); border-radius: 10px;
+    font-size: 13px;
+  }
+  .feature-icon { font-size: 18px; flex-shrink: 0; }
+  .feature-text { flex: 1; }
+  .feature-title { font-weight: 700; margin-bottom: 2px; }
+  .feature-desc { font-size: 12px; color: var(--text-sub); }
+
+  /* TABLE */
+  .info-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .info-table th { background: var(--bg); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-sub); font-weight: 700; }
+  .info-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  .info-table tr:last-child td { border-bottom: none; }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 32px 24px; font-size: 12px; color: var(--text-hint); }
+
+  @media (max-width: 480px) {
+    .mock-monitor-grid { grid-template-columns: repeat(3, 1fr); }
+    .section { padding: 20px; }
+    .site-header h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="company">NAKASHIMA MANUFACTURING</div>
+  <h1>📱 アプリ使い方ガイド</h1>
+  <p>所在地ボード・昼食注文システムの操作説明</p>
+</header>
+
+<nav class="nav-bar" id="navBar">
+  <a href="#location" class="active">📍 所在地ボード</a>
+  <a href="#lunch">🍱 昼食注文</a>
+  <a href="#admin">⚙️ 管理者向け</a>
+  <a href="#urls">🔗 URLまとめ</a>
+</nav>
+
+<div class="main">
+
+  <!-- ===== 所在地ボード ===== -->
+  <div class="chapter" id="location">
+    <span class="chapter-num">01</span>
+    <span class="chapter-title">所在地ボード</span>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon green">📍</div>
+      <div>
+        <div class="section-title">従業員の皆さんへ</div>
+        <div class="section-sub">毎朝出勤時に自分の居場所を登録してください</div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">URLを開く</div>
+          <div class="step-desc">ブラウザで所在地登録のURLを開きます。ホーム画面に追加しておくと便利です。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">部署を選ぶ</div>
+          <div class="step-desc">自分の所属部署をタップします。</div>
+          <div class="mock-screen">
+            <div class="mock-header">📍 所在地登録</div>
+            <div style="font-size:11px;color:var(--text-hint);margin-bottom:6px;">部署を選んでください</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+              <div style="padding:10px;background:var(--surface);border:1.5px solid #1a1a18;border-radius:8px;text-align:center;font-size:12px;font-weight:700;">購買課</div>
+              <div style="padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;text-align:center;font-size:12px;color:var(--text-sub);">設計課</div>
+              <div style="padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;text-align:center;font-size:12px;color:var(--text-sub);">電気課</div>
+              <div style="padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;text-align:center;font-size:12px;color:var(--text-sub);">加工課</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">自分の名前を選ぶ</div>
+          <div class="step-desc">部署を選ぶと自動的に名前一覧が表示されます。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">居場所を選んで「登録する」</div>
+          <div class="step-desc">今日の居場所を選んでタップするだけで完了です。</div>
+          <div class="mock-screen">
+            <div style="font-size:11px;color:var(--text-hint);margin-bottom:6px;">鶴永 将人さんの居場所を選んでください</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px;">
+              <div style="padding:8px 4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;text-align:center;font-size:11px;color:var(--text-sub);">🏢<br><b>本社事務所</b></div>
+              <div style="padding:8px 4px;background:#e6f1fb;border:1.5px solid #185FA5;border-radius:8px;text-align:center;font-size:11px;color:#0c447c;">🏭<br><b>根崎第2</b><br><span style="font-size:9px;opacity:0.6;">通常</span></div>
+              <div style="padding:8px 4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;text-align:center;font-size:11px;color:var(--text-sub);">🚗<br><b>外出/出張</b></div>
+            </div>
+            <div class="mock-btn">登録する</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">💡</span>
+      <span>通常と違う場所を選ぶと<b>「通常の居場所（根崎第2）と異なります」</b>という注意が表示されます。外出・出張時は行先メモも入力できます。</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon dark">📺</div>
+      <div>
+        <div class="section-title">モニター表示（事務所）</div>
+        <div class="section-sub">居場所別に自動スライド切り替えで表示されます</div>
+      </div>
+    </div>
+
+    <div class="mock-monitor">
+      <div class="mock-monitor-title">
+        <div class="mock-monitor-dot"></div>
+        本社事務所① <span style="font-size:14px;opacity:0.5;">12名</span>
+      </div>
+      <div class="mock-monitor-grid">
+        <div class="mock-monitor-card"><div class="mock-monitor-name">加藤 愛子</div><div class="mock-monitor-dept">総務部</div></div>
+        <div class="mock-monitor-card"><div class="mock-monitor-name">有江 達夫</div><div class="mock-monitor-dept">営業部</div></div>
+        <div class="mock-monitor-card" style="border:1.5px solid rgba(255,160,40,0.6);"><div class="mock-monitor-name">古田 毅</div><div class="mock-monitor-dept">営業部</div></div>
+        <div class="mock-monitor-card"><div class="mock-monitor-name">澤井 裕司</div><div class="mock-monitor-dept">総務部</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;opacity:0.4;">※オレンジ枠＝通常と異なる場所にいる人</div>
+    </div>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-text">
+          <div class="feature-title">自動スライド切り替え</div>
+          <div class="feature-desc">本社事務所①②③→根崎→根崎第2→外出/出張→在宅→休みの順に自動で切り替わります（8秒間隔）</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">⏱</div>
+        <div class="feature-title-wrapper">
+          <div class="feature-title">15秒ごとに自動更新</div>
+          <div class="feature-desc">誰かが登録すると最大15秒以内にモニターに反映されます</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">⌨️</div>
+        <div class="feature-text">
+          <div class="feature-title">キーボード操作</div>
+          <div class="feature-desc">← →キーでスライド切り替え、スペースキーで一時停止、Fキーでフルスクリーン</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 昼食注文 ===== -->
+  <div class="chapter" id="lunch">
+    <span class="chapter-num">02</span>
+    <span class="chapter-title">昼食注文</span>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon green">🍱</div>
+      <div>
+        <div class="section-title">従業員の皆さんへ</div>
+        <div class="section-sub">毎朝8:30までに注文してください</div>
+      </div>
+    </div>
+
+    <div class="mock-screen" style="margin-bottom:14px;">
+      <div class="mock-header">🍱 昼食注文</div>
+      <div class="mock-tabs">
+        <div class="mock-tab active">注文</div>
+        <div class="mock-tab">まとめて</div>
+        <div class="mock-tab">来訪者</div>
+        <div class="mock-tab">履歴</div>
+        <div class="mock-tab">メニュー</div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">部署・名前を選ぶ</div>
+          <div class="step-desc">まず部署を選び、次に自分の名前を選びます。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">日付を選ぶ</div>
+          <div class="step-desc">今日を含む5営業日が表示されます。過去の注文は色で確認できます。</div>
+          <div class="mock-screen">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;">
+              <div style="border:1.5px solid #1a1a18;background:#1a1a18;color:#fff;border-radius:8px;padding:6px 4px;text-align:center;font-size:11px;"><div style="font-weight:700;font-size:13px;">15</div><div style="opacity:0.5;font-size:9px;">木</div><div style="color:rgba(255,255,255,0.7);font-size:9px;">○普</div></div>
+              <div style="border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 4px;text-align:center;font-size:11px;color:var(--text-sub);"><div style="font-weight:700;font-size:13px;">16</div><div style="font-size:9px;">金</div></div>
+              <div style="border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 4px;text-align:center;font-size:11px;color:var(--text-sub);"><div style="font-weight:700;font-size:13px;">19</div><div style="font-size:9px;">月</div></div>
+              <div style="border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 4px;text-align:center;font-size:11px;color:var(--text-sub);"><div style="font-weight:700;font-size:13px;">20</div><div style="font-size:9px;">火</div></div>
+              <div style="border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 4px;text-align:center;font-size:11px;color:var(--text-sub);"><div style="font-weight:700;font-size:13px;">21</div><div style="font-size:9px;">水</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">食べる場所を選ぶ</div>
+          <div class="step-desc">本社か根崎かを選びます（デフォルトは所属拠点）。</div>
+          <div class="mock-screen">
+            <div class="mock-place-row">
+              <div class="mock-place-btn active-h">🏢 本社</div>
+              <div class="mock-place-btn">🏭 根崎</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">注文を選んで「登録する」</div>
+          <div class="step-desc">○普通・○大盛・×食べないの3択です。</div>
+          <div class="mock-screen">
+            <div class="mock-order-grid">
+              <div class="mock-order-btn sel-o"><div class="big">○</div><div class="lbl">普通</div></div>
+              <div class="mock-order-btn"><div class="big">○</div><div class="lbl">大盛</div></div>
+            </div>
+            <div class="mock-order-btn" style="margin-bottom:8px;"><div class="big">×</div><div class="lbl">食べない</div></div>
+            <div class="mock-btn">登録する</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">⏰</span>
+      <span>締切は<b>毎朝8:30</b>です。締切を過ぎると画面に警告が表示されますが、入力自体は可能です。</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon green">📅</div>
+      <div>
+        <div class="section-title">まとめて入力</div>
+        <div class="section-sub">1週間・1ヶ月分を一括で登録できます</div>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">「まとめて」タブを開く</div>
+          <div class="step-desc">部署・名前を選んだあと、期間（今週・来週・今月）を選びます。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">一括設定ボタンを使う</div>
+          <div class="step-desc">「全日 ○普通」「全日 ○大盛」「全日 ×」のボタンで全日まとめて設定できます。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">日別に変更して「まとめて登録」</div>
+          <div class="step-desc">特定の日だけ変えたい場合は個別に変更できます。最後に「まとめて登録」を押せば完了です。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon green">👥</div>
+      <div>
+        <div class="section-title">代行入力・来訪者注文</div>
+        <div class="section-sub">他の方の分も入力できます</div>
+      </div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">👤</div>
+        <div class="feature-text">
+          <div class="feature-title">代行入力</div>
+          <div class="feature-desc">「代行入力」モードに切り替えると、他の方の注文を代わりに登録できます。</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🏢</div>
+        <div class="feature-text">
+          <div class="feature-title">来訪者注文</div>
+          <div class="feature-desc">「来訪者」タブから来訪者の名前・人数・普通/大盛を登録できます。</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📋</div>
+        <div class="feature-text">
+          <div class="feature-title">履歴確認</div>
+          <div class="feature-desc">「履歴」タブから今月の自分の注文履歴を確認できます。「昨日何にしたっけ？」が解決します。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 管理者向け ===== -->
+  <div class="chapter" id="admin">
+    <span class="chapter-num">03</span>
+    <span class="chapter-title">管理者向け（総務部）</span>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon dark">⚙️</div>
+      <div>
+        <div class="section-title">昼食注文 管理画面</div>
+        <div class="section-sub">集計・設定・メニュー管理が行えます</div>
+      </div>
+    </div>
+
+    <div class="mock-summary">
+      <div class="mock-sum-card">
+        <div class="mock-sum-title">🏢 本社</div>
+        <div class="mock-sum-row">
+          <div class="mock-sum-stat"><div class="n n-g">18</div><div class="l">○普通</div></div>
+          <div class="mock-sum-stat"><div class="n n-b">5</div><div class="l">○大盛</div></div>
+          <div class="mock-sum-stat"><div class="n n-k">23</div><div class="l">合計</div></div>
+        </div>
+      </div>
+      <div class="mock-sum-card">
+        <div class="mock-sum-title">🏭 根崎</div>
+        <div class="mock-sum-row">
+          <div class="mock-sum-stat"><div class="n n-g">14</div><div class="l">○普通</div></div>
+          <div class="mock-sum-stat"><div class="n n-b">3</div><div class="l">○大盛</div></div>
+          <div class="mock-sum-stat"><div class="n n-k">17</div><div class="l">合計</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">📥</div>
+        <div class="feature-text">
+          <div class="feature-title">Excel出力</div>
+          <div class="feature-desc">「Excel出力」ボタンでCSVファイルをダウンロードできます。本社・根崎の集計行も含まれます。</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">⏰</div>
+        <div class="feature-text">
+          <div class="feature-title">締切時刻の変更</div>
+          <div class="feature-desc">「設定」タブから締切時刻を変更できます（デフォルト：8:30）。</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">×</div>
+        <div class="feature-text">
+          <div class="feature-title">永久×設定</div>
+          <div class="feature-desc">「設定」タブで特定の方を永久×（常に食べない）に設定できます。本人が○に変更することも可能です。</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📄</div>
+        <div class="feature-text">
+          <div class="feature-title">メニューPDFのアップロード</div>
+          <div class="feature-desc">「メニュー管理」タブから月ごとのPDFをアップロードできます。社員がスマホで閲覧できるようになります。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== URLまとめ ===== -->
+  <div class="chapter" id="urls">
+    <span class="chapter-num">04</span>
+    <span class="chapter-title">URLまとめ</span>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon green">🔗</div>
+      <div>
+        <div class="section-title">各ページのURL</div>
+        <div class="section-sub">ブックマーク登録しておくと便利です</div>
+      </div>
+    </div>
+
+    <div class="url-card">
+      <div class="url-label">📍 所在地登録（従業員用スマホ）</div>
+      <div class="url-text" id="url1">https://tsurunagamasato-dotcom.github.io/staff-board/staff_input.html</div>
+      <button class="url-copy-btn" onclick="copyUrl('url1',this)">コピー</button>
+    </div>
+
+    <div class="url-card">
+      <div class="url-label">📺 所在地モニター（事務所PC）</div>
+      <div class="url-text" id="url2">https://tsurunagamasato-dotcom.github.io/staff-board/staff_monitor.html</div>
+      <button class="url-copy-btn" onclick="copyUrl('url2',this)">コピー</button>
+    </div>
+
+    <div class="url-card">
+      <div class="url-label">🍱 昼食注文（従業員用スマホ）</div>
+      <div class="url-text" id="url3">https://tsurunagamasato-dotcom.github.io/staff-board/lunch_input.html</div>
+      <button class="url-copy-btn" onclick="copyUrl('url3',this)">コピー</button>
+    </div>
+
+    <div class="url-card">
+      <div class="url-label">⚙️ 昼食注文 管理画面（総務部PC）</div>
+      <div class="url-text" id="url4">https://tsurunagamasato-dotcom.github.io/staff-board/lunch_admin.html</div>
+      <button class="url-copy-btn" onclick="copyUrl('url4',this)">コピー</button>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">📱</span>
+      <span>スマホのブラウザでURLを開いて「ホーム画面に追加」しておくとアプリのように使えます。</span>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">部署ごとのデフォルト居場所</div>
+      <table class="info-table">
+        <thead><tr><th>部署</th><th>所在地デフォルト</th><th>昼食場所デフォルト</th></tr></thead>
+        <tbody>
+          <tr><td>社長・役員（中島大を除く）・総務・営業・設計・電気</td><td>本社事務所</td><td>本社</td></tr>
+          <tr><td>中島 大</td><td>根崎第2</td><td>根崎</td></tr>
+          <tr><td>加工課</td><td>根崎</td><td>根崎</td></tr>
+          <tr><td>組付課・購買課</td><td>根崎第2</td><td>根崎</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer">
+  Nakashima Manufacturing — 社内ツール使い方ガイド
+</footer>
+
+<script>
+function copyUrl(id, btn) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'コピーしました！';
+    setTimeout(() => { btn.textContent = 'コピー'; }, 2000);
+  });
+}
+
+// ナビのアクティブ制御
+const sections = ['location','lunch','admin','urls'];
+const navLinks = document.querySelectorAll('.nav-bar a');
+window.addEventListener('scroll', () => {
+  let current = 'location';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top < 80) current = id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+</body>
+</html>
