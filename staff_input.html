@@ -182,6 +182,58 @@
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwT7aSD1CmIOp_TlVa3yzUZr99b-yzMd5h_--kgweBABdyW8SnRMscd3cdWlTp6GsQzUQ/exec';
+const LUNCH_GAS_URL = 'https://script.google.com/macros/s/AKfycbwADKRSZHd0Tpiv3X3v7PRNfRccM6H-y3L8mnJF3CulCB_T3zKK_faBccYx0ZI-LFGYGw/exec';
+
+// 昼食×連携対象ステータス
+const LUNCH_NG_STATUSES = ['gaishutsu', 'yasumi', 'zaitaku'];
+
+// 日付フォーマット
+function fmtDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// 昼食注文に×を自動登録
+async function syncLunchNG(staff, status, leaveStart, leaveEnd) {
+  if (!LUNCH_NG_STATUSES.includes(status)) return;
+
+  const today = new Date();
+  const dates = [];
+
+  if (leaveStart && leaveEnd) {
+    // 期間が設定されている場合はその期間全日分
+    const start = new Date(leaveStart);
+    const end   = new Date(leaveEnd);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+      const day = d.getDay();
+      if (day !== 0 && day !== 6) dates.push(fmtDateStr(new Date(d)));
+    }
+  } else {
+    // 期間なしは当日分のみ
+    dates.push(fmtDateStr(today));
+  }
+
+  if (dates.length === 0) return;
+
+  const orders = dates.map(date => ({
+    action: 'saveOrder',
+    date,
+    id: staff.id,
+    name: staff.name,
+    dept: staff.dept,
+    order: 'nashi',
+    place: '',
+    proxy: false
+  }));
+
+  try {
+    await fetch(LUNCH_GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveOrders', orders })
+    });
+  } catch(e) {
+    console.log('昼食連携エラー:', e);
+  }
+}
 
 const STATUSES = [
   { key:'honsha_office',  label:'本社事務所', bg:'#e8f5f0', fg:'#0f6e56', dot:'#1D9E75', icon:'🏢' },
@@ -416,12 +468,18 @@ async function submit() {
     });
     const json = await res.json();
     if (!json.ok) throw new Error();
+    // 昼食注文への自動連携
+    await syncLunchNG(selStaff, selStatus, leaveStart, leaveEnd);
     const s = STATUS_MAP[selStatus];
     document.getElementById('step1').classList.add('hidden');
     document.getElementById('step2').classList.add('hidden');
     document.getElementById('step3').classList.add('hidden');
     document.getElementById('stepIndicator').classList.add('hidden');
-    document.getElementById('resultSub').textContent = `${selStaff.name}さん（${selStaff.dept}）の居場所を登録しました`;
+    const lunchSynced = LUNCH_NG_STATUSES.includes(selStatus);
+    const lunchMsg = lunchSynced
+      ? `\n🍱 昼食注文も自動で「×食べない」に登録しました`
+      : '';
+    document.getElementById('resultSub').textContent = `${selStaff.name}さん（${selStaff.dept}）の居場所を登録しました${lunchMsg}`;
     document.getElementById('resultBadge').style.cssText = `background:${s.bg};color:${s.fg};`;
     document.getElementById('resultBadge').innerHTML = `<span class="result-dot" style="background:${s.dot}"></span>${s.label}`;
     document.getElementById('resultScreen').style.display = 'block';
