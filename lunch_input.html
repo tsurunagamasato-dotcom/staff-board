@@ -181,6 +181,13 @@
     <button class="tab-btn" onclick="switchTab('menu')">メニュー</button>
   </div>
 
+  <!-- トピックス -->
+  <div id="topicsBanner" style="display:none;background:#fff8e8;border:1.5px solid #f0c060;border-radius:12px;padding:12px 16px;margin-bottom:14px;">
+    <div style="font-size:11px;font-weight:700;color:#BA7517;margin-bottom:4px;">📢 お知らせ</div>
+    <div id="topicsText" style="font-size:14px;color:#3d2000;font-weight:500;line-height:1.6;"></div>
+    <div id="topicsExpiry" style="font-size:11px;color:#a09d99;margin-top:4px;"></div>
+  </div>
+
   <!-- 注文タブ -->
   <div id="orderTab">
     <!-- モード選択 -->
@@ -408,6 +415,7 @@ async function init() {
   document.getElementById('deadlineTime').textContent = deadline;
   document.getElementById('deadlinePassed').classList.toggle('hidden', !isDeadlinePassed());
   await loadMenu();
+  await loadTopics();
   document.getElementById('loadingOverlay').style.display = 'none';
 }
 
@@ -762,6 +770,22 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
     b.classList.toggle('active',['order','bulk','visitor','history','menu'][i]===tab);
   });
+}
+
+async function loadTopics() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getTopics&t=' + Date.now());
+    const json = await res.json();
+    if (json.ok && json.text) {
+      document.getElementById('topicsBanner').style.display = 'block';
+      document.getElementById('topicsText').textContent = json.text;
+      const exp = json.expiry ? new Date(json.expiry) : null;
+      document.getElementById('topicsExpiry').textContent = exp
+        ? `掲載期限：${(exp.getMonth()+1)}/${exp.getDate()}まで` : '';
+    } else {
+      document.getElementById('topicsBanner').style.display = 'none';
+    }
+  } catch(e) {}
 }
 
 init();
