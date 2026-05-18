@@ -125,14 +125,19 @@
     <div class="section-label">研修名</div>
     <input class="form-input" type="text" id="applyTraining" placeholder="例：QC手法基礎研修">
 
-    <div class="section-label">研修日</div>
-    <input class="form-input" type="date" id="applyTrainingDate">
+    <div class="section-label">研修日（期間）</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <input class="form-input" type="date" id="applyTrainingDateStart" style="flex:1;">
+      <span style="font-size:13px;color:var(--text-sub);flex-shrink:0;">〜</span>
+      <input class="form-input" type="date" id="applyTrainingDateEnd" style="flex:1;">
+    </div>
+    <div style="font-size:11px;color:var(--text-hint);margin-top:4px;">1日の場合は開始日のみ入力してください</div>
 
     <div class="section-label">開催場所</div>
     <input class="form-input" type="text" id="applyPlace" placeholder="例：名古屋市中区・オンライン">
 
-    <div class="section-label">費用（円）</div>
-    <input class="form-input" type="number" id="applyCost" placeholder="例：30000">
+    <div class="section-label">費用（円）<span style="font-size:11px;color:var(--text-hint);margin-left:6px;">任意</span></div>
+    <input class="form-input" type="number" id="applyCost" placeholder="例：30000（未定の場合は空欄）">
 
     <div class="section-label">目的・理由</div>
     <textarea class="form-textarea" id="applyPurpose" placeholder="この研修に参加する目的や理由を記入してください"></textarea>
@@ -209,26 +214,29 @@ async function submitApply() {
   const dept = document.getElementById('applyDept').value;
   const name = document.getElementById('applyName').value;
   const training = document.getElementById('applyTraining').value.trim();
-  const training_date = document.getElementById('applyTrainingDate').value;
+  const dateStart = document.getElementById('applyTrainingDateStart').value;
+  const dateEnd   = document.getElementById('applyTrainingDateEnd').value;
+  const training_date = dateEnd && dateEnd !== dateStart ? dateStart + '〜' + dateEnd : dateStart;
   const place = document.getElementById('applyPlace').value.trim();
   const cost = document.getElementById('applyCost').value;
   const purpose = document.getElementById('applyPurpose').value.trim();
   const note = document.getElementById('applyNote').value.trim();
 
-  if (!dept||!name||!training||!training_date||!place||!cost||!purpose) {
+  const applyTrainingDateStart = document.getElementById('applyTrainingDateStart');
+  if (!dept||!name||!training||!applyTrainingDateStart.value||!place||!purpose) {
     showToast('必須項目をすべて入力してください'); return;
   }
 
   try {
     const res = await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({ action:'apply', dept, name, training, training_date, place, cost:Number(cost), purpose, note })
+      body: JSON.stringify({ action:'apply', dept, name, training, training_date, place, cost: cost ? Number(cost) : '', purpose, note })
     });
     const json = await res.json();
     if (json.ok) {
       showToast(`申請しました（${json.id}）`);
       // フォームリセット
-      ['applyDept','applyName','applyTraining','applyTrainingDate','applyPlace','applyCost','applyPurpose','applyNote'].forEach(id => {
+      ['applyDept','applyName','applyTraining','applyTrainingDateStart','applyTrainingDateEnd','applyPlace','applyCost','applyPurpose','applyNote'].forEach(id => {
         const el = document.getElementById(id);
         if (el.tagName==='SELECT') el.selectedIndex=0;
         else el.value='';

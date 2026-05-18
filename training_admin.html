@@ -216,7 +216,7 @@ function progressBar(status) {
 
 function appCard(a) {
   const st = STATUS_MAP[a.status] || { cls:'s-pending', label:a.status };
-  const cost = Number(a.cost).toLocaleString();
+  const cost = a.cost ? Number(a.cost).toLocaleString() : '未定';
   const tDate = a.training_date ? new Date(a.training_date).toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'}) : '';
   const comment = a.comment ? `<div class="app-comment">💬 上長コメント：${a.comment}</div>` : '';
 
