@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>研修申請 承認画面</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f4f2; --surface: #fff; --border: #e2e0db;
+    --text: #1a1a1a; --text-sub: #6b6965; --text-hint: #a09d99;
+    --green: #1D9E75; --green-bg: #e8f5f0; --green-fg: #0f6e56;
+    --red: #E24B4A; --red-bg: #fdecea; --red-fg: #8b1a19;
+    --blue: #185FA5; --blue-bg: #e6f1fb; --blue-fg: #0c447c;
+    --orange: #BA7517; --orange-bg: #faeeda; --orange-fg: #633806;
+  }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+  .header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-logo { width: 34px; height: 34px; border-radius: 9px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .header-logo svg { width: 18px; height: 18px; fill: #fff; }
+  .header-title { font-size: 16px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+  /* バッジ */
+  .badge-count {
+    background: var(--red); color: #fff;
+    border-radius: 999px; padding: 2px 8px;
+    font-size: 12px; font-weight: 700;
+  }
+
+  .main { padding: 20px 24px; max-width: 800px; margin: 0 auto; }
+
+  /* マネージャー選択 */
+  .manager-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .manager-label { font-size: 13px; color: var(--text-sub); }
+  .manager-select {
+    flex: 1; min-width: 200px; padding: 8px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+    background: var(--surface); outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+  }
+
+  /* フィルタ */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-btn { padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--border); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all .15s; }
+  .filter-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  /* 申請カード */
+  .app-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 12px; }
+  .app-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .app-id { font-size: 11px; color: var(--text-hint); font-family: monospace; }
+  .app-training { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .app-info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .app-info-item { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .app-info-label { font-size: 10px; color: var(--text-hint); margin-bottom: 2px; }
+  .app-info-value { font-size: 13px; font-weight: 500; }
+  .app-purpose { background: var(--bg); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; }
+
+  .action-area { border-top: 1px solid var(--border); padding-top: 12px; }
+  .comment-input { width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; margin-bottom: 10px; }
+  .comment-input:focus { border-color: #888; }
+  .action-btns { display: flex; gap: 8px; }
+  .approve-btn { flex: 1; padding: 10px; background: var(--green); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .15s; }
+  .approve-btn:hover { opacity: 0.85; }
+  .reject-btn { flex: 1; padding: 10px; background: var(--red); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .15s; }
+  .reject-btn:hover { opacity: 0.85; }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .s-pending  { background: var(--orange-bg); color: var(--orange-fg); }
+  .s-approved { background: var(--green-bg);  color: var(--green-fg); }
+  .s-rejected { background: var(--red-bg);    color: var(--red-fg); }
+  .s-received { background: var(--blue-bg);   color: var(--blue-fg); }
+  .s-paid     { background: #eeedfe; color: #3c3489; }
+
+  .app-comment { background: var(--orange-bg); border-radius: 8px; padding: 8px 12px; margin-top: 8px; font-size: 12px; color: var(--orange-fg); }
+
+  .empty-state { text-align: center; padding: 40px; color: var(--text-hint); font-size: 13px; }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 999px; font-size: 13px; z-index: 300; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+  .loading-overlay { position: fixed; inset: 0; z-index: 400; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+  </div>
+  <div>
+    <div class="header-title">研修申請 承認画面</div>
+    <div class="header-sub">Nakashima Manufacturing</div>
+  </div>
+  <div class="header-right">
+    <span id="pendingBadge" style="display:none;" class="badge-count">0件 承認待ち</span>
+  </div>
+</header>
+
+<div class="main">
+  <!-- 上長選択 -->
+  <div class="manager-card">
+    <span class="manager-label">👤 上長を選択：</span>
+    <select class="manager-select" id="managerSelect" onchange="onManagerChange()">
+      <option value="">-- 選択してください --</option>
+      <option value="63">江嵜 嘉浩（総務部）</option>
+      <option value="54">有江 達夫（営業部）</option>
+      <option value="30">茨 泰憲（設計課）</option>
+      <option value="27">宇野 孝祐（電気課）</option>
+      <option value="48">鶴永 将人（購買課）</option>
+      <option value="26">坂野 公彦（組付課）</option>
+      <option value="14">野村 昌史（加工課）</option>
+    </select>
+  </div>
+
+  <!-- フィルタ -->
+  <div class="filter-row" id="filterRow" style="display:none;">
+    <button class="filter-btn active" onclick="setFilter('申請中')">⏳ 承認待ち</button>
+    <button class="filter-btn" onclick="setFilter('all')">すべて</button>
+    <button class="filter-btn" onclick="setFilter('上長承認済')">✅ 承認済</button>
+    <button class="filter-btn" onclick="setFilter('否認')">❌ 否認</button>
+  </div>
+
+  <div id="appList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwUL3Vo5hM3qiWkGIdHtcy8i000fppgvzQ6x4VT1g1oEe5I-rlYosztLXCdz6uuQVbg/exec';
+
+const STATUS_MAP = {
+  '申請中':    { cls:'s-pending',  label:'⏳ 申請中' },
+  '上長承認済': { cls:'s-approved', label:'✅ 上長承認済' },
+  '否認':      { cls:'s-rejected', label:'❌ 否認' },
+  '受付済':    { cls:'s-received', label:'📋 受付済' },
+  '支払完了':  { cls:'s-paid',     label:'💰 支払完了' },
+};
+
+let currentManagerId = null;
+let currentFilter = '申請中';
+let allApps = [];
+let toastTimer;
+
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+async function onManagerChange() {
+  currentManagerId = document.getElementById('managerSelect').value;
+  if (!currentManagerId) { document.getElementById('appList').innerHTML=''; document.getElementById('filterRow').style.display='none'; return; }
+  document.getElementById('filterRow').style.display='flex';
+  await loadApps();
+  await updateBadge();
+}
+
+async function updateBadge() {
+  if (!currentManagerId) return;
+  try {
+    const res = await fetch(GAS_URL + '?action=getBadge&managerId=' + currentManagerId + '&t=' + Date.now());
+    const json = await res.json();
+    const badge = document.getElementById('pendingBadge');
+    if (json.ok && json.count > 0) {
+      badge.style.display = 'inline';
+      badge.textContent = json.count + '件 承認待ち';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+async function loadApps() {
+  const params = new URLSearchParams({ action:'getApplications', managerId: currentManagerId });
+  const container = document.getElementById('appList');
+  container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-hint);">読み込み中...</div>';
+  try {
+    const res = await fetch(GAS_URL + '?' + params.toString() + '&t=' + Date.now());
+    const json = await res.json();
+    allApps = json.ok ? json.applications : [];
+    renderApps();
+  } catch(e) { container.innerHTML = '<div class="empty-state">取得に失敗しました</div>'; }
+}
+
+function setFilter(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderApps();
+}
+
+function renderApps() {
+  const filtered = currentFilter === 'all' ? allApps : allApps.filter(a => a.status === currentFilter);
+  const container = document.getElementById('appList');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>該当する申請はありません</div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(a => appCard(a)).join('');
+}
+
+function appCard(a) {
+  const st = STATUS_MAP[a.status] || { cls:'s-pending', label:a.status };
+  const cost = Number(a.cost).toLocaleString();
+  const tDate = a.training_date ? new Date(a.training_date).toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric'}) : '';
+  const isPending = a.status === '申請中';
+  const comment = a.comment ? `<div class="app-comment">💬 ${a.comment}</div>` : '';
+
+  return `<div class="app-card" id="card-${a.id}">
+    <div class="app-card-header">
+      <span class="app-id">${a.id}</span>
+      <span class="status-badge ${st.cls}">${st.label}</span>
+    </div>
+    <div class="app-training">${a.training}</div>
+    <div class="app-info-grid">
+      <div class="app-info-item"><div class="app-info-label">申請者</div><div class="app-info-value">${a.dept}・${a.name}</div></div>
+      <div class="app-info-item"><div class="app-info-label">研修日</div><div class="app-info-value">${tDate}</div></div>
+      <div class="app-info-item"><div class="app-info-label">開催場所</div><div class="app-info-value">${a.place}</div></div>
+      <div class="app-info-item"><div class="app-info-label">費用</div><div class="app-info-value">¥${cost}</div></div>
+    </div>
+    <div class="app-purpose">${a.purpose}</div>
+    ${a.note ? `<div style="font-size:12px;color:var(--text-sub);margin-bottom:12px;">備考：${a.note}</div>` : ''}
+    ${comment}
+    <div class="app-date" style="font-size:11px;color:var(--text-hint);margin-top:8px;margin-bottom:${isPending?'12px':'0'};">申請日：${a.date}</div>
+    ${isPending ? `
+    <div class="action-area">
+      <input class="comment-input" type="text" id="comment-${a.id}" placeholder="コメント（任意）">
+      <div class="action-btns">
+        <button class="approve-btn" onclick="approve('${a.id}')">✅ 承認する</button>
+        <button class="reject-btn" onclick="reject('${a.id}')">❌ 否認する</button>
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+async function approve(id) {
+  const comment = document.getElementById('comment-'+id)?.value.trim() || '';
+  if (!confirm('この申請を承認しますか？')) return;
+  try {
+    const res = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({ action:'approve', id, comment }) });
+    const json = await res.json();
+    if (json.ok) { showToast('承認しました'); await loadApps(); await updateBadge(); }
+  } catch(e) { showToast('操作に失敗しました'); }
+}
+
+async function reject(id) {
+  const comment = document.getElementById('comment-'+id)?.value.trim() || '';
+  if (!confirm('この申請を否認しますか？')) return;
+  try {
+    const res = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({ action:'reject', id, comment }) });
+    const json = await res.json();
+    if (json.ok) { showToast('否認しました'); await loadApps(); await updateBadge(); }
+  } catch(e) { showToast('操作に失敗しました'); }
+}
+
+document.getElementById('loadingOverlay').style.display = 'none';
+</script>
+</body>
+</html>

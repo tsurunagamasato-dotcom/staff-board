@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>研修申請</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f4f2; --surface: #fff; --border: #e2e0db;
+    --text: #1a1a1a; --text-sub: #6b6965; --text-hint: #a09d99;
+    --green: #1D9E75; --green-bg: #e8f5f0; --green-fg: #0f6e56;
+    --red: #E24B4A; --red-bg: #fdecea; --red-fg: #8b1a19;
+    --blue: #185FA5; --blue-bg: #e6f1fb; --blue-fg: #0c447c;
+    --orange: #BA7517; --orange-bg: #faeeda; --orange-fg: #633806;
+  }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-logo { width: 34px; height: 34px; border-radius: 9px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .header-logo svg { width: 18px; height: 18px; fill: #fff; }
+  .header-title { font-size: 16px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
+
+  .main { padding: 20px; max-width: 520px; margin: 0 auto; }
+
+  .tabs { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; margin-bottom: 20px; }
+  .tab-btn { flex: 1; padding: 8px; border-radius: 7px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; background: transparent; color: var(--text-sub); transition: all .15s; }
+  .tab-btn.active { background: var(--surface); color: var(--text); }
+
+  .section-label { font-size: 12px; font-weight: 700; color: var(--text-hint); letter-spacing: 0.6px; margin-bottom: 6px; margin-top: 16px; }
+  .section-label:first-child { margin-top: 0; }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 14px; font-family: inherit;
+    background: var(--surface); color: var(--text); outline: none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #888; }
+  .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+  }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: flex; gap: 10px; }
+  .form-row .form-input { flex: 1; }
+
+  .submit-btn { width: 100%; padding: 14px; background: #1a1a1a; color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 20px; transition: opacity .15s; }
+  .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* 申請一覧 */
+  .app-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .app-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .app-id { font-size: 11px; color: var(--text-hint); font-family: monospace; }
+  .app-date { font-size: 11px; color: var(--text-hint); }
+  .app-training { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .app-detail { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
+  .app-comment { font-size: 12px; background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-top: 8px; color: var(--text-sub); }
+  .app-comment-label { font-weight: 700; color: var(--text); margin-bottom: 2px; }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .s-pending  { background: var(--orange-bg); color: var(--orange-fg); }
+  .s-approved { background: var(--green-bg);  color: var(--green-fg); }
+  .s-rejected { background: var(--red-bg);    color: var(--red-fg); }
+  .s-received { background: var(--blue-bg);   color: var(--blue-fg); }
+  .s-paid     { background: #eeedfe; color: #3c3489; }
+
+  .empty-state { text-align: center; padding: 40px; color: var(--text-hint); font-size: 13px; }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 999px; font-size: 13px; z-index: 300; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+
+  .loading-overlay { position: fixed; inset: 0; z-index: 400; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text-sub); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">読み込み中...</div>
+</div>
+
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+  </div>
+  <div>
+    <div class="header-title">研修申請</div>
+    <div class="header-sub">Nakashima Manufacturing</div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('apply')">新規申請</button>
+    <button class="tab-btn" onclick="switchTab('history')">申請履歴</button>
+  </div>
+
+  <!-- 新規申請 -->
+  <div id="applyTab">
+    <div class="section-label">部署</div>
+    <select class="form-select" id="applyDept" onchange="onDeptChange()">
+      <option value="">-- 部署を選択 --</option>
+      <option>総務部</option><option>営業部</option><option>購買課</option>
+      <option>第一製造部</option><option>設計課</option><option>電気課</option>
+      <option>加工課</option><option>組付課</option>
+    </select>
+
+    <div class="section-label">氏名</div>
+    <select class="form-select" id="applyName">
+      <option value="">-- 氏名を選択 --</option>
+    </select>
+
+    <div class="section-label">研修名</div>
+    <input class="form-input" type="text" id="applyTraining" placeholder="例：QC手法基礎研修">
+
+    <div class="section-label">研修日</div>
+    <input class="form-input" type="date" id="applyTrainingDate">
+
+    <div class="section-label">開催場所</div>
+    <input class="form-input" type="text" id="applyPlace" placeholder="例：名古屋市中区・オンライン">
+
+    <div class="section-label">費用（円）</div>
+    <input class="form-input" type="number" id="applyCost" placeholder="例：30000">
+
+    <div class="section-label">目的・理由</div>
+    <textarea class="form-textarea" id="applyPurpose" placeholder="この研修に参加する目的や理由を記入してください"></textarea>
+
+    <div class="section-label">備考（任意）</div>
+    <textarea class="form-textarea" id="applyNote" placeholder="その他特記事項があれば記入してください" style="min-height:60px;"></textarea>
+
+    <button class="submit-btn" onclick="submitApply()">申請する</button>
+  </div>
+
+  <!-- 申請履歴 -->
+  <div id="historyTab" class="hidden">
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <select class="form-select" id="histDept" onchange="onHistDeptChange()" style="flex:1;">
+        <option value="">-- 部署 --</option>
+        <option>総務部</option><option>営業部</option><option>購買課</option>
+        <option>第一製造部</option><option>設計課</option><option>電気課</option>
+        <option>加工課</option><option>組付課</option>
+      </select>
+      <select class="form-select" id="histName" style="flex:1;">
+        <option value="">-- 氏名 --</option>
+      </select>
+      <button class="tab-btn" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;" onclick="loadHistory()">検索</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwUL3Vo5hM3qiWkGIdHtcy8i000fppgvzQ6x4VT1g1oEe5I-rlYosztLXCdz6uuQVbg/exec';
+
+const DEPT_MEMBERS = {
+  '総務部':['加藤 愛子','石原 知佳','澤井 裕司','山口 奈奈美','加藤 友那','江嵜 嘉浩','田島 靖子'],
+  '営業部':['有江 達夫','古田 毅','小野田 隆弘','稲吉 一春'],
+  '購買課':['鶴永 将人','内木 緑','宮川 哲平','安藤 奈津子'],
+  '第一製造部':['鄒 永'],
+  '設計課':['平井 三洋','寺本 豊','鈴木 桂','中島 來夢','松木 建太郎','茨 泰憲','広瀬 靖志','TRAN PHONG VU','深見 健太','伊串 希','近藤 あゆみ','米津 友里','加藤 絢','小松 亜澄','廣瀬 昇','荒川 真緒'],
+  '電気課':['成田 健','中島 正隆','加藤 幸浩','坂本 英一','宇野 孝祐','城 重光','當眞 一聖','山田 護','船木 勇作','坂下 優','NGUYEN THI TUYET MAI','NGUYEN HOANG PHUC AN','牧内 宗真','中村 尚幹','荒木 萌々花'],
+  '加工課':['川村 隆浩','柏田 祐介','青山 薫','中島 学','野村 昌史','大出 直明','小池 佑介','NGUYEN VAN LANH','川口 信夫','TRAN VAN THAN','NGUYEN HOANG AN','川端 英裕','太田 安彦','加古 武','佐藤 佳宏','NGUYEN THANH NHANH','石田 昌也','坂本 和貴','TRAN KIM TUYEN','TRAN CHI TAM','神谷 翼','今泉 崇'],
+  '組付課':['塩澤 真治','吉田 一英','渡瀬 一美','竹内 和人','大村 秀樹','渡辺 健一','坂野 公彦','近藤 隼次','尾崎 佑和','松尾 康平','髙木 和幸','BIEN VAN MINH','富樫 至史','真栄田 義斗','加藤 翼','澤田 隆昭'],
+};
+
+const STATUS_MAP = {
+  '申請中':    { cls:'s-pending',  label:'⏳ 申請中' },
+  '上長承認済': { cls:'s-approved', label:'✅ 上長承認済' },
+  '否認':      { cls:'s-rejected', label:'❌ 否認' },
+  '受付済':    { cls:'s-received', label:'📋 受付済' },
+  '支払完了':  { cls:'s-paid',     label:'💰 支払完了' },
+};
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function onDeptChange() {
+  const dept = document.getElementById('applyDept').value;
+  const sel = document.getElementById('applyName');
+  sel.innerHTML = '<option value="">-- 氏名を選択 --</option>' +
+    (dept && DEPT_MEMBERS[dept] ? DEPT_MEMBERS[dept].map(n=>`<option>${n}</option>`).join('') : '');
+}
+
+function onHistDeptChange() {
+  const dept = document.getElementById('histDept').value;
+  const sel = document.getElementById('histName');
+  sel.innerHTML = '<option value="">-- 氏名 --</option>' +
+    (dept && DEPT_MEMBERS[dept] ? DEPT_MEMBERS[dept].map(n=>`<option>${n}</option>`).join('') : '');
+}
+
+async function submitApply() {
+  const dept = document.getElementById('applyDept').value;
+  const name = document.getElementById('applyName').value;
+  const training = document.getElementById('applyTraining').value.trim();
+  const training_date = document.getElementById('applyTrainingDate').value;
+  const place = document.getElementById('applyPlace').value.trim();
+  const cost = document.getElementById('applyCost').value;
+  const purpose = document.getElementById('applyPurpose').value.trim();
+  const note = document.getElementById('applyNote').value.trim();
+
+  if (!dept||!name||!training||!training_date||!place||!cost||!purpose) {
+    showToast('必須項目をすべて入力してください'); return;
+  }
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action:'apply', dept, name, training, training_date, place, cost:Number(cost), purpose, note })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      showToast(`申請しました（${json.id}）`);
+      // フォームリセット
+      ['applyDept','applyName','applyTraining','applyTrainingDate','applyPlace','applyCost','applyPurpose','applyNote'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el.tagName==='SELECT') el.selectedIndex=0;
+        else el.value='';
+      });
+    } else { showToast('申請に失敗しました'); }
+  } catch(e) { showToast('申請に失敗しました'); }
+}
+
+async function loadHistory() {
+  const dept = document.getElementById('histDept').value;
+  const name = document.getElementById('histName').value;
+  if (!dept && !name) { showToast('部署または氏名を選択してください'); return; }
+
+  const params = new URLSearchParams({ action:'getApplications' });
+  if (dept) params.append('dept', dept);
+  if (name) params.append('name', name);
+
+  const container = document.getElementById('historyList');
+  container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-hint);">読み込み中...</div>';
+
+  try {
+    const res = await fetch(GAS_URL + '?' + params.toString() + '&t=' + Date.now());
+    const json = await res.json();
+    if (!json.ok || json.applications.length === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div>申請履歴がありません</div>`;
+      return;
+    }
+    container.innerHTML = json.applications.map(a => appCard(a)).join('');
+  } catch(e) { container.innerHTML = '<div class="empty-state">取得に失敗しました</div>'; }
+}
+
+function appCard(a) {
+  const st = STATUS_MAP[a.status] || { cls:'s-pending', label:a.status };
+  const cost = Number(a.cost).toLocaleString();
+  const tDate = a.training_date ? new Date(a.training_date).toLocaleDateString('ja-JP',{month:'long',day:'numeric'}) : '';
+  const comment = a.comment ? `<div class="app-comment"><div class="app-comment-label">コメント</div>${a.comment}</div>` : '';
+  return `<div class="app-card">
+    <div class="app-card-header">
+      <span class="app-id">${a.id}</span>
+      <span class="status-badge ${st.cls}">${st.label}</span>
+    </div>
+    <div class="app-training">${a.training}</div>
+    <div class="app-detail">${a.dept}・${a.name} ／ ${tDate} ／ ${a.place} ／ ¥${cost}</div>
+    <div class="app-detail" style="margin-top:4px;">${a.purpose}</div>
+    ${comment}
+    <div class="app-date" style="font-size:11px;color:var(--text-hint);margin-top:8px;">申請日：${a.date}</div>
+  </div>`;
+}
+
+function switchTab(tab) {
+  document.getElementById('applyTab').classList.toggle('hidden', tab!=='apply');
+  document.getElementById('historyTab').classList.toggle('hidden', tab!=='history');
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['apply','history'][i]===tab));
+}
+
+async function init() {
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+init();
+</script>
+</body>
+</html>
