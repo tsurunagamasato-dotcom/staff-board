@@ -134,6 +134,7 @@
     <button class="tab-btn active" onclick="switchTab('orders')">注文集計</button>
     <button class="tab-btn" onclick="switchTab('settings')">設定</button>
     <button class="tab-btn" onclick="switchTab('menu')">メニュー管理</button>
+    <button class="tab-btn" onclick="switchTab('topics')">お知らせ</button>
   </div>
 
   <!-- 注文集計 -->
@@ -164,6 +165,36 @@
         <thead><tr><th>氏名</th><th>部署</th><th>永久×</th></tr></thead>
         <tbody id="ngTableBody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- お知らせ管理 -->
+  <div id="topicsTab" class="hidden">
+    <div class="settings-card">
+      <div class="settings-title">📢 お知らせ管理</div>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">従業員用画面のトップに表示されます。期限を過ぎると自動で非表示になります。</p>
+      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+        <div class="settings-label">お知らせ内容</div>
+        <textarea id="topicText" rows="4" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:vertical;"
+          placeholder="例：本日はAランチのみの提供です。"></textarea>
+      </div>
+      <div class="settings-row" style="margin-top:12px;">
+        <div class="settings-label">掲載期限</div>
+        <input type="date" class="settings-input" id="topicExpiry">
+        <button class="icon-btn primary" onclick="saveTopic()">保存・公開</button>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="icon-btn" style="color:#E24B4A;border-color:#f5c0bf;" onclick="deleteTopic()">お知らせを削除</button>
+      </div>
+      <div id="topicStatus" style="margin-top:10px;font-size:13px;color:var(--text-sub);"></div>
+    </div>
+    <div class="settings-card" id="topicPreview" style="display:none;">
+      <div class="settings-title">現在のお知らせ</div>
+      <div style="background:#fff8e8;border:1.5px solid #f0c060;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:11px;font-weight:700;color:#BA7517;margin-bottom:4px;">📢 お知らせ</div>
+        <div id="topicPreviewText" style="font-size:14px;color:#3d2000;font-weight:500;line-height:1.6;"></div>
+        <div id="topicPreviewExpiry" style="font-size:11px;color:#a09d99;margin-top:4px;"></div>
+      </div>
     </div>
   </div>
 
@@ -498,8 +529,62 @@ async function loadMenuAdmin() {
 }
 
 function switchTab(tab) {
-  ['orders','settings','menu'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu'][i]===tab));
+  ['orders','settings','menu','topics'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu','topics'][i]===tab));
+  if (tab==='topics') loadTopicAdmin();
+}
+
+async function loadTopicAdmin() {
+  try {
+    const res = await fetch(GAS_URL+'?action=getTopics&t='+Date.now());
+    const json = await res.json();
+    if (json.ok && json.text) {
+      document.getElementById('topicText').value = json.text;
+      document.getElementById('topicExpiry').value = json.expiry||'';
+      const exp = json.expiry ? new Date(json.expiry) : null;
+      document.getElementById('topicPreview').style.display = 'block';
+      document.getElementById('topicPreviewText').textContent = json.text;
+      document.getElementById('topicPreviewExpiry').textContent = exp
+        ? `掲載期限：${(exp.getMonth()+1)}/${exp.getDate()}まで` : '';
+    } else {
+      document.getElementById('topicPreview').style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+async function saveTopic() {
+  const text = document.getElementById('topicText').value.trim();
+  const expiry = document.getElementById('topicExpiry').value;
+  if (!text) { showToast('お知らせ内容を入力してください'); return; }
+  if (!expiry) { showToast('掲載期限を設定してください'); return; }
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveTopic', text, expiry })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      showToast('お知らせを公開しました');
+      loadTopicAdmin();
+    }
+  } catch(e) { showToast('保存に失敗しました'); }
+}
+
+async function deleteTopic() {
+  if (!confirm('お知らせを削除しますか？')) return;
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveTopic', text: '', expiry: '' })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      showToast('削除しました');
+      document.getElementById('topicText').value = '';
+      document.getElementById('topicExpiry').value = '';
+      document.getElementById('topicPreview').style.display = 'none';
+    }
+  } catch(e) { showToast('削除に失敗しました'); }
 }
 
 init();
