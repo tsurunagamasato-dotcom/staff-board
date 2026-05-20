@@ -104,6 +104,24 @@
   .toast.show { opacity: 1; }
   .hidden { display: none !important; }
 
+  /* Excel範囲指定モーダル */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.hidden { display: none !important; }
+  .modal-box { background: #fff; border-radius: 16px; width: 100%; max-width: 420px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,.18); }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
+  .modal-section { margin-bottom: 18px; }
+  .modal-section-title { font-size: 12px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .range-type-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .range-type-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid var(--border); background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--text-sub); transition: all .15s; }
+  .range-type-btn.active { border-color: var(--green); background: var(--green-bg); color: var(--green-fg); }
+  .modal-date-row { display: flex; align-items: center; gap: 8px; }
+  .modal-date-row input[type=date] { flex: 1; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; }
+  .modal-date-row span { font-size: 13px; color: var(--text-sub); flex-shrink: 0; }
+  .month-select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; }
+  .modal-footer { display: flex; gap: 8px; margin-top: 20px; }
+  .modal-cancel-btn { flex: 1; padding: 11px; border-radius: 10px; border: 1.5px solid var(--border); background: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .modal-export-btn { flex: 2; padding: 11px; border-radius: 10px; border: none; background: var(--green); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
   @media (max-width: 600px) {
     .location-summary { grid-template-columns: 1fr; }
     .header { padding: 10px 16px; }
@@ -115,6 +133,49 @@
 
 <div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
 
+<!-- Excel範囲指定モーダル -->
+<div class="modal-overlay hidden" id="exportModal">
+  <div class="modal-box">
+    <div class="modal-title">📥 Excel出力 — 範囲指定</div>
+
+    <div class="modal-section">
+      <div class="modal-section-title">出力方法</div>
+      <div class="range-type-tabs">
+        <button class="range-type-btn active" id="rtDay" onclick="setRangeType('day')">1日</button>
+        <button class="range-type-btn" id="rtRange" onclick="setRangeType('range')">期間指定</button>
+        <button class="range-type-btn" id="rtMonth" onclick="setRangeType('month')">月指定</button>
+      </div>
+    </div>
+
+    <!-- 1日 -->
+    <div class="modal-section" id="rtDaySection">
+      <div class="modal-section-title">日付</div>
+      <input type="date" class="month-select" id="exportSingleDate">
+    </div>
+
+    <!-- 期間 -->
+    <div class="modal-section hidden" id="rtRangeSection">
+      <div class="modal-section-title">期間</div>
+      <div class="modal-date-row">
+        <input type="date" id="exportStartDate">
+        <span>〜</span>
+        <input type="date" id="exportEndDate">
+      </div>
+    </div>
+
+    <!-- 月 -->
+    <div class="modal-section hidden" id="rtMonthSection">
+      <div class="modal-section-title">月</div>
+      <input type="month" class="month-select" id="exportMonth">
+    </div>
+
+    <div class="modal-footer">
+      <button class="modal-cancel-btn" onclick="closeExportModal()">キャンセル</button>
+      <button class="modal-export-btn" onclick="doExport()">📥 出力する</button>
+    </div>
+  </div>
+</div>
+
 <header class="header">
   <div class="header-logo">
     <svg viewBox="0 0 24 24"><path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05zM1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1zm15.03-7c0-2.56-1.36-3.78-5.01-4.35v-.64c0-.55-.45-1-1.01-1s-1.01.45-1.01 1v.64C5.36 11.21 4 12.43 4 14.99v4H1v2h18.03v-2h-3V14.99z"/></svg>
@@ -124,7 +185,7 @@
     <div class="header-sub">Nakashima Manufacturing</div>
   </div>
   <div class="header-right">
-    <button class="icon-btn primary" onclick="exportCSV()">📥 Excel出力</button>
+    <button class="icon-btn primary" onclick="openExportModal()">📥 Excel出力</button>
     <button class="icon-btn" onclick="loadOrders()">🔄 更新</button>
   </div>
 </header>
@@ -410,6 +471,147 @@ function renderOrderTable() {
 }
 
 // ===== EXPORT =====
+// ===== EXPORT MODAL =====
+let currentRangeType = 'day';
+
+function openExportModal() {
+  // デフォルトは現在表示中の日付
+  const today = document.getElementById('targetDate').value || new Date().toISOString().slice(0,10);
+  document.getElementById('exportSingleDate').value = today;
+  document.getElementById('exportStartDate').value = today;
+  document.getElementById('exportEndDate').value = today;
+  document.getElementById('exportMonth').value = today.slice(0,7);
+  setRangeType('day');
+  document.getElementById('exportModal').classList.remove('hidden');
+}
+
+function closeExportModal() {
+  document.getElementById('exportModal').classList.add('hidden');
+}
+
+function setRangeType(type) {
+  currentRangeType = type;
+  ['day','range','month'].forEach(t => {
+    document.getElementById('rt'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===type);
+    document.getElementById('rt'+t.charAt(0).toUpperCase()+t.slice(1)+'Section').classList.toggle('hidden', t!==type);
+  });
+}
+
+async function doExport() {
+  let dates = [];
+  if (currentRangeType === 'day') {
+    const d = document.getElementById('exportSingleDate').value;
+    if (!d) { showToast('日付を選択してください'); return; }
+    dates = [d];
+  } else if (currentRangeType === 'range') {
+    const s = document.getElementById('exportStartDate').value;
+    const e = document.getElementById('exportEndDate').value;
+    if (!s || !e) { showToast('期間を選択してください'); return; }
+    if (s > e) { showToast('開始日は終了日以前を選択してください'); return; }
+    const cur = new Date(s);
+    const end = new Date(e);
+    while (cur <= end) {
+      const dow = cur.getDay();
+      if (dow !== 0 && dow !== 6) dates.push(cur.toISOString().slice(0,10));
+      cur.setDate(cur.getDate()+1);
+    }
+    if (dates.length > 31) { showToast('出力範囲は31営業日以内にしてください'); return; }
+  } else {
+    const m = document.getElementById('exportMonth').value;
+    if (!m) { showToast('月を選択してください'); return; }
+    const [y, mo] = m.split('-').map(Number);
+    const last = new Date(y, mo, 0).getDate();
+    for (let i=1; i<=last; i++) {
+      const d = new Date(y, mo-1, i);
+      if (d.getDay()!==0 && d.getDay()!==6) dates.push(`${y}-${String(mo).padStart(2,'0')}-${String(i).padStart(2,'0')}`);
+    }
+  }
+
+  closeExportModal();
+  showToast('データ取得中...');
+
+  // 複数日のデータをGASから取得
+  const allOrders = {};
+  for (const date of dates) {
+    try {
+      const res = await fetch(GAS_URL + '?action=getOrders&date=' + date);
+      const json = await res.json();
+      if (json.ok) allOrders[date] = json.orders || [];
+    } catch(e) { allOrders[date] = []; }
+  }
+
+  exportRangeCSV(dates, allOrders);
+}
+
+function exportRangeCSV(dates, allOrders) {
+  const BOM = '\uFEFF';
+  const rows = [];
+
+  // ヘッダー
+  rows.push(['日付', '部署', '氏名', '注文', '場所']);
+
+  const summaryRows = [];
+
+  for (const date of dates) {
+    const orders = allOrders[date] || [];
+    const orderMap = {};
+    orders.forEach(o => { orderMap[String(o.id)] = o; });
+
+    const honsha = {futsuu:0, oomori:0};
+    const nezaki  = {futsuu:0, oomori:0};
+
+    // 社員明細
+    DEPT_ORDER.forEach(dept => {
+      STAFF_MASTER.filter(s => s.dept===dept).forEach(s => {
+        const rec = orderMap[String(s.id)];
+        const order = rec ? rec.order : (permanentNG[s.id] ? 'nashi' : '');
+        const place = rec ? rec.place : getDefaultPlace(s);
+        const label = order==='futsuu'?'普通': order==='oomori'?'大盛': order==='nashi'?'食べない':'未回答';
+        const placeLabel = place==='nezaki'?'根崎':'本社';
+        rows.push([date, dept, s.name, label, placeLabel]);
+        if (order==='futsuu'||order==='oomori') {
+          if (place==='nezaki') { if(order==='futsuu') nezaki.futsuu++; else nezaki.oomori++; }
+          else { if(order==='futsuu') honsha.futsuu++; else honsha.oomori++; }
+        }
+      });
+    });
+
+    // 来訪者
+    orders.filter(o => o.dept==='来訪者').forEach(v => {
+      const label = v.order==='futsuu'?'普通':'大盛';
+      const placeLabel = v.place==='nezaki'?'根崎':'本社';
+      rows.push([date, '来訪者', v.name||'来訪者', label+'×'+(v.count||1), placeLabel]);
+      const cnt = parseInt(v.count)||1;
+      if (v.place==='nezaki') { if(v.order==='futsuu') nezaki.futsuu+=cnt; else nezaki.oomori+=cnt; }
+      else { if(v.order==='futsuu') honsha.futsuu+=cnt; else honsha.oomori+=cnt; }
+    });
+
+    summaryRows.push([date, '本社', honsha.futsuu, honsha.oomori, honsha.futsuu+honsha.oomori, '根崎', nezaki.futsuu, nezaki.oomori, nezaki.futsuu+nezaki.oomori]);
+  }
+
+  // 集計セクション
+  rows.push([]);
+  rows.push(['【集計】']);
+  rows.push(['日付', '本社_普通', '本社_大盛', '本社_合計', '根崎_普通', '根崎_大盛', '根崎_合計', '全体合計']);
+  summaryRows.forEach(r => {
+    const [date,,hF,hO,hT,,nF,nO,nT] = r;
+    rows.push([date, hF, hO, hT, nF, nO, nT, hT+nT]);
+  });
+
+  // ファイル名
+  let filename;
+  if (dates.length === 1) filename = `昼食注文_${dates[0]}.csv`;
+  else filename = `昼食注文_${dates[0]}_${dates[dates.length-1]}.csv`;
+
+  const csv = BOM + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('Excelファイルをダウンロードしました');
+}
+
 function exportCSV() {
   const date = document.getElementById('targetDate').value;
   if (!date) return;
