@@ -573,8 +573,6 @@ async function submitSingle() {
         btn.disabled = true;
       }, 1500);
       showToast(`${isProxy?'[代行] ':''}${selStaff.name} → ${label}`);
-      // 昼食連携
-      await syncLunchNG(selStaff, selOrder, '', '');
       selOrder = null; updateOrderButtons();
       renderDateGrid();
     } else {
