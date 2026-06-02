@@ -195,6 +195,7 @@
     <button class="tab-btn" onclick="switchTab('settings')">設定</button>
     <button class="tab-btn" onclick="switchTab('menu')">メニュー管理</button>
     <button class="tab-btn" onclick="switchTab('topics')">お知らせ</button>
+    <button class="tab-btn" onclick="switchTab('staff')">社員マスタ</button>
   </div>
 
   <!-- 注文集計 -->
@@ -279,6 +280,39 @@
       <div id="menuListAdmin"></div>
     </div>
   </div>
+
+  <!-- 社員マスタ -->
+  <div id="staffTab" class="hidden">
+    <div class="settings-card">
+      <div class="settings-title">➕ 社員を追加</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <input type="text" id="newStaffName" class="settings-input" placeholder="氏名（例：山田 太郎）" style="flex:2;min-width:150px;">
+        <select id="newStaffDept" class="settings-input" style="flex:1;min-width:110px;"></select>
+        <select id="newStaffLoc" class="settings-input" style="flex:1;min-width:100px;">
+          <option value="">拠点：自動</option>
+          <option value="本社">本社</option>
+          <option value="根崎">根崎</option>
+        </select>
+        <button class="icon-btn primary" onclick="addStaff()">追加</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-hint);margin-top:8px;">拠点「自動」は部署から判定します（加工課・組付課・購買課＝根崎、それ以外＝本社）。例外の人だけ本社／根崎を指定してください。</p>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-title">👥 社員一覧</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+        <input type="text" id="staffSearch" class="settings-input" placeholder="氏名・部署で絞り込み" oninput="renderStaffMaster()" style="flex:1;min-width:140px;">
+        <label style="font-size:13px;color:var(--text-sub);display:flex;align-items:center;gap:5px;white-space:nowrap;">
+          <input type="checkbox" id="showRetired" onchange="renderStaffMaster()"> 退職者も表示
+        </label>
+      </div>
+      <div id="staffCount" style="font-size:12px;color:var(--text-hint);margin-bottom:8px;"></div>
+      <table class="ng-table">
+        <thead><tr><th>氏名</th><th>部署</th><th>拠点</th><th>状況</th><th style="text-align:right;">操作</th></tr></thead>
+        <tbody id="staffTableBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -291,7 +325,9 @@ const HONSHA_DEPTS = ['社長','役員','総務部','営業部','設計課','電
 const NEZAKI_DEPTS  = ['加工課','組付課','購買課'];
 const NEZAKI_IDS    = [91];
 
-const STAFF_MASTER = [
+// ↓ フォールバック用の初期データ。通常はGASのstaffシートから読み込んで上書きされます。
+let ALL_STAFF = [];          // 全社員（退職者含む。社員マスタ画面用）
+let STAFF_MASTER = [
   {id:88,name:'中島 基木',dept:'社長'},{id:89,name:'笹倉 俊彦',dept:'役員'},
   {id:90,name:'石川 明雄',dept:'役員'},{id:91,name:'中島 大',dept:'役員'},
   {id:13,name:'加藤 愛子',dept:'総務部'},{id:38,name:'石原 知佳',dept:'総務部'},
@@ -364,12 +400,22 @@ async function init() {
   // ローディング非表示（画面を即座に表示）
   document.getElementById('loadingOverlay').style.display = 'none';
 
-  // getSettings・loadOrders・loadMenuAdmin を並列実行
-  const [settingsResult] = await Promise.allSettled([
+  // getSettings・loadOrders・loadMenuAdmin・getStaff を並列実行
+  const [settingsResult, , , staffResult] = await Promise.allSettled([
     fetch(GAS_URL+'?action=getSettings&t='+Date.now()).then(r=>r.json()),
     loadOrders(),
-    loadMenuAdmin()
+    loadMenuAdmin(),
+    fetch(GAS_URL+'?action=getStaff&t='+Date.now()).then(r=>r.json())
   ]);
+
+  // 社員マスタ反映（在籍者のみを集計・NG表に使用）
+  if (staffResult && staffResult.status === 'fulfilled' && staffResult.value.ok
+      && Array.isArray(staffResult.value.staff) && staffResult.value.staff.length) {
+    ALL_STAFF = staffResult.value.staff.map(s => ({
+      id: Number(s.id), name: s.name, dept: s.dept, location: s.location || '', active: s.active || '在籍'
+    }));
+    refreshActiveStaff();
+  }
 
   // 設定反映
   if (settingsResult.status === 'fulfilled' && settingsResult.value.ok) {
@@ -706,6 +752,143 @@ async function toggleNG(id) {
   } catch(e) { showToast('保存に失敗しました'); }
 }
 
+// ===== 社員マスタ =====
+let editingStaffId = null;
+function escStaff(str){return String(str==null?'':str).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function refreshActiveStaff() {
+  if (!ALL_STAFF.length) return;
+  STAFF_MASTER = ALL_STAFF.filter(s => s.active !== '退職')
+    .map(s => ({ id: s.id, name: s.name, dept: s.dept, location: s.location || '' }));
+  renderNGTable();
+}
+
+function populateStaffDeptSelect(sel, selected) {
+  if (!sel) return;
+  sel.innerHTML = DEPT_ORDER.map(d => `<option value="${d}" ${d===selected?'selected':''}>${d}</option>`).join('');
+}
+
+async function loadStaffAdmin() {
+  populateStaffDeptSelect(document.getElementById('newStaffDept'), '');
+  if (!ALL_STAFF.length) {
+    try {
+      const res = await fetch(GAS_URL+'?action=getStaff&t='+Date.now());
+      const json = await res.json();
+      if (json.ok && Array.isArray(json.staff)) {
+        ALL_STAFF = json.staff.map(s => ({ id:Number(s.id), name:s.name, dept:s.dept, location:s.location||'', active:s.active||'在籍' }));
+        refreshActiveStaff();
+      }
+    } catch(e) { showToast('社員データの読み込みに失敗しました'); }
+  }
+  renderStaffMaster();
+}
+
+function renderStaffMaster() {
+  const q = (document.getElementById('staffSearch').value || '').trim();
+  const showRetired = document.getElementById('showRetired').checked;
+  const deptIndex = d => { const i = DEPT_ORDER.indexOf(d); return i<0?999:i; };
+  let list = ALL_STAFF.slice().sort((a,b)=> deptIndex(a.dept)-deptIndex(b.dept) || String(a.name).localeCompare(String(b.name),'ja'));
+  let filtered = list.filter(s => showRetired || s.active!=='退職');
+  if (q) filtered = filtered.filter(s => (s.name+' '+s.dept).indexOf(q) >= 0);
+  const activeCount = ALL_STAFF.filter(s=>s.active!=='退職').length;
+  const retiredCount = ALL_STAFF.length - activeCount;
+  document.getElementById('staffCount').textContent =
+    ALL_STAFF.length ? `在籍 ${activeCount}名 ／ 退職 ${retiredCount}名（表示 ${filtered.length}名）` : '';
+  const tbody = document.getElementById('staffTableBody');
+  if (!ALL_STAFF.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-sub);padding:16px;line-height:1.7;">社員データがまだありません。<br>GASエディタで関数 <b>seedStaff</b> を一度だけ実行してください（初回セットアップ）。</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(s => {
+    const retired = s.active==='退職';
+    if (editingStaffId === s.id) {
+      const deptOpts = DEPT_ORDER.map(d=>`<option value="${d}" ${d===s.dept?'selected':''}>${d}</option>`).join('');
+      const locOpts = [['','自動'],['本社','本社'],['根崎','根崎']].map(([v,l])=>`<option value="${v}" ${v===(s.location||'')?'selected':''}>${l}</option>`).join('');
+      return `<tr style="background:var(--green-bg);">
+        <td><input type="text" id="edit-name-${s.id}" class="settings-input" value="${escStaff(s.name)}" style="width:100%;min-width:88px;"></td>
+        <td><select id="edit-dept-${s.id}" class="settings-input">${deptOpts}</select></td>
+        <td><select id="edit-loc-${s.id}" class="settings-input">${locOpts}</select></td>
+        <td style="color:var(--text-sub);">${retired?'退職':'在籍'}</td>
+        <td><div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button class="icon-btn primary" onclick="saveEditStaff(${s.id})">保存</button>
+          <button class="icon-btn" onclick="cancelEditStaff()">取消</button>
+        </div></td></tr>`;
+    }
+    const locLabel = s.location ? s.location : '自動';
+    return `<tr ${retired?'style="opacity:.5;"':''}>
+      <td style="font-weight:500;">${escStaff(s.name)}</td>
+      <td style="color:var(--text-sub);">${escStaff(s.dept)}</td>
+      <td style="color:var(--text-sub);">${locLabel}</td>
+      <td>${retired?'<span style="color:var(--red);font-weight:700;">退職</span>':'<span style="color:var(--green-fg);font-weight:700;">在籍</span>'}</td>
+      <td><div style="display:flex;gap:6px;justify-content:flex-end;">
+        <button class="icon-btn" onclick="editStaff(${s.id})">編集</button>
+        <button class="icon-btn" onclick="toggleRetire(${s.id})">${retired?'復職':'退職'}</button>
+      </div></td></tr>`;
+  }).join('');
+}
+
+async function addStaff() {
+  const name = document.getElementById('newStaffName').value.trim();
+  const dept = document.getElementById('newStaffDept').value;
+  const loc  = document.getElementById('newStaffLoc').value;
+  if (!name) { showToast('氏名を入力してください'); return; }
+  if (!dept) { showToast('部署を選択してください'); return; }
+  if (ALL_STAFF.some(s => s.name===name && s.dept===dept && s.active!=='退職')) {
+    if (!confirm('同じ氏名・部署の在籍者がいます。追加しますか？')) return;
+  }
+  const newId = (ALL_STAFF.length ? Math.max(...ALL_STAFF.map(s=>s.id)) : -1) + 1;
+  const rec = { id:newId, name, dept, location:loc, active:'在籍' };
+  try {
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveStaff', id:rec.id, name:rec.name, dept:rec.dept, location:rec.location, active:rec.active})});
+    const json = await res.json();
+    if (json.ok) {
+      ALL_STAFF.push(rec);
+      document.getElementById('newStaffName').value='';
+      document.getElementById('newStaffLoc').value='';
+      refreshActiveStaff(); renderStaffMaster();
+      showToast(name+' さんを追加しました');
+    } else showToast('追加に失敗しました');
+  } catch(e){ showToast('追加に失敗しました'); }
+}
+
+function editStaff(id){ editingStaffId = id; renderStaffMaster(); }
+function cancelEditStaff(){ editingStaffId = null; renderStaffMaster(); }
+
+async function saveEditStaff(id) {
+  const s = ALL_STAFF.find(x=>x.id===id); if(!s) return;
+  const name = document.getElementById('edit-name-'+id).value.trim();
+  const dept = document.getElementById('edit-dept-'+id).value;
+  const loc  = document.getElementById('edit-loc-'+id).value;
+  if (!name){ showToast('氏名を入力してください'); return; }
+  const rec = { id, name, dept, location:loc, active:s.active||'在籍' };
+  try {
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveStaff', id:rec.id, name:rec.name, dept:rec.dept, location:rec.location, active:rec.active})});
+    const json = await res.json();
+    if (json.ok) {
+      Object.assign(s, rec);
+      editingStaffId = null;
+      refreshActiveStaff(); renderStaffMaster();
+      showToast('保存しました');
+    } else showToast('保存に失敗しました');
+  } catch(e){ showToast('保存に失敗しました'); }
+}
+
+async function toggleRetire(id) {
+  const s = ALL_STAFF.find(x=>x.id===id); if(!s) return;
+  const newActive = (s.active==='退職') ? '在籍' : '退職';
+  if (newActive==='退職' && !confirm(s.name+' さんを退職（非表示）にします。よろしいですか？\n※過去の注文記録は残ります。')) return;
+  const rec = { id, name:s.name, dept:s.dept, location:s.location||'', active:newActive };
+  try {
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveStaff', id:rec.id, name:rec.name, dept:rec.dept, location:rec.location, active:rec.active})});
+    const json = await res.json();
+    if (json.ok) {
+      s.active = newActive;
+      refreshActiveStaff(); renderStaffMaster();
+      showToast(newActive==='退職'? s.name+' さんを退職にしました' : s.name+' さんを復職にしました');
+    } else showToast('更新に失敗しました');
+  } catch(e){ showToast('更新に失敗しました'); }
+}
+
 // ===== MENU =====
 function onDragOver(e) { e.preventDefault(); document.getElementById('uploadArea').classList.add('dragover'); }
 function onDragLeave(e) { document.getElementById('uploadArea').classList.remove('dragover'); }
@@ -757,9 +940,10 @@ async function loadMenuAdmin() {
 }
 
 function switchTab(tab) {
-  ['orders','settings','menu','topics'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu','topics'][i]===tab));
+  ['orders','settings','menu','topics','staff'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu','topics','staff'][i]===tab));
   if (tab==='topics') loadTopicAdmin();
+  if (tab==='staff') loadStaffAdmin();
 }
 
 async function loadTopicAdmin() {
