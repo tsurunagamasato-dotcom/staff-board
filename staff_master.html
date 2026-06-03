@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社員マスタ管理</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f4f2;--surface:#fff;--border:#e2e0db;
+  --text:#1a1a1a;--text-sub:#6b6965;--text-hint:#a09d99;
+  --green:#1D9E75;--green-bg:#e8f5f0;--green-fg:#0f6e56;
+  --red:#E24B4A;--red-bg:#fdecea;--red-fg:#8b1a19;
+  --blue:#185FA5;--blue-bg:#e6f1fb;--blue-fg:#0c447c;
+  --navy:#1a1a2e;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic UI',Meiryo,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ヘッダー */
+.header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.header-icon{width:36px;height:36px;background:linear-gradient(135deg,#4caf50,#2e7d32);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.header-title{font-size:17px;font-weight:700}
+.header-sub{font-size:11px;opacity:.6;margin-top:1px}
+.header-right{margin-left:auto;display:flex;gap:8px}
+
+/* コンテナ */
+.container{max-width:900px;margin:0 auto;padding:20px 16px}
+
+/* ツールバー */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.btn{padding:9px 16px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;gap:6px}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-secondary{background:var(--surface);color:var(--text);border:1.5px solid var(--border)}
+.btn-secondary:hover{background:var(--bg)}
+.btn-danger{background:var(--red-bg);color:var(--red-fg);border:1.5px solid #f5c6c6}
+.count-badge{margin-left:auto;font-size:13px;color:var(--text-sub)}
+
+/* 検索 */
+.search-row{display:flex;gap:8px;margin-bottom:16px}
+.search-input{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:var(--surface)}
+.search-input:focus{outline:none;border-color:var(--navy)}
+.dept-filter{padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--surface)}
+
+/* テーブル */
+.table-wrap{background:var(--surface);border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--navy);color:#fff}
+th{padding:12px 14px;text-align:left;font-size:12px;font-weight:700;letter-spacing:.3px}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9f9f9}
+.dept-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.place-badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;background:var(--blue-bg);color:var(--blue-fg);font-weight:600}
+.slide-badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;background:#f0f0f0;color:#555;font-weight:600}
+.action-btns{display:flex;gap:6px}
+.edit-btn{padding:5px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.edit-btn:hover{background:var(--bg)}
+.del-btn{padding:5px 12px;border-radius:8px;border:1.5px solid #f5c6c6;background:var(--red-bg);color:var(--red-fg);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.del-btn:hover{opacity:.8}
+
+/* モーダル */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.hidden{display:none}
+.modal-box{background:#fff;border-radius:16px;width:100%;max-width:460px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:20px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.field input,.field select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit}
+.field input:focus,.field select:focus{outline:none;border-color:var(--navy)}
+.modal-footer{display:flex;gap:8px;margin-top:20px}
+.modal-cancel{flex:1;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.modal-save{flex:2;padding:11px;border-radius:10px;border:none;background:var(--navy);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+
+/* トースト */
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a2e;color:#fff;padding:12px 24px;border-radius:50px;font-size:14px;font-weight:700;opacity:0;transition:.3s;z-index:999;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{background:#2e7d32}
+.toast.error{background:var(--red)}
+
+/* 空状態 */
+.empty{text-align:center;padding:50px 20px;color:var(--text-hint)}
+.empty .empty-icon{font-size:40px;margin-bottom:10px}
+.empty p{font-size:14px}
+
+/* ローディング */
+.loading{text-align:center;padding:40px;color:var(--text-sub);font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">👥</div>
+  <div>
+    <div class="header-title">社員マスタ管理</div>
+    <div class="header-sub">ナカシマ — 所在地ボード</div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-secondary" onclick="location.href='https://tsurunagamasato-dotcom.github.io/staff-board/staff_monitor.html'">📺 モニター</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="openModal()">＋ 社員を追加</button>
+    <button class="btn btn-secondary" onclick="exportCSV()">📥 CSV出力</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('csvInput').click()">📤 CSVインポート</button>
+    <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(event)">
+    <span class="count-badge" id="countBadge">読み込み中...</span>
+  </div>
+
+  <div class="search-row">
+    <input type="text" class="search-input" id="searchInput" placeholder="🔍 氏名で検索" oninput="renderTable()">
+    <select class="dept-filter" id="deptFilter" onchange="renderTable()">
+      <option value="">全部署</option>
+      <option>社長</option>
+      <option>役員</option>
+      <option>総務部</option>
+      <option>営業部</option>
+      <option>設計課</option>
+      <option>電気課</option>
+      <option>購買課</option>
+      <option>加工課</option>
+      <option>組付課</option>
+      <option>第一製造部</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>氏名</th>
+          <th>部署</th>
+          <th>デフォルト居場所</th>
+          <th>スライド</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="5"><div class="loading">読み込み中...</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- モーダル -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">社員を追加</div>
+    <div class="field">
+      <label>氏名</label>
+      <input type="text" id="fName" placeholder="例：鶴永 将人">
+    </div>
+    <div class="field">
+      <label>部署</label>
+      <select id="fDept">
+        <option value="">選択してください</option>
+        <option>社長</option>
+        <option>役員</option>
+        <option>総務部</option>
+        <option>営業部</option>
+        <option>設計課</option>
+        <option>電気課</option>
+        <option>購買課</option>
+        <option>加工課</option>
+        <option>組付課</option>
+        <option>第一製造部</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>デフォルト居場所</label>
+      <select id="fPlace">
+        <option value="honsha_office">本社事務所</option>
+        <option value="honsha_factory">本社工場</option>
+        <option value="nezaki">根崎</option>
+        <option value="nezaki2">根崎第2</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>モニタースライド</label>
+      <select id="fSlide">
+        <option value="honsha1">本社事務所①</option>
+        <option value="honsha2">本社事務所②</option>
+        <option value="honsha3">本社事務所③</option>
+        <option value="nezaki">根崎</option>
+        <option value="nezaki2">根崎第2</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="modal-save" onclick="saveStaff()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwT7aSD1CmIOp_TlVa3yzUZr99b-yzMd5h_--kgweBABdyW8SnRMscd3cdWlTp6GsQzUQ/exec';
+
+const DEPT_COLORS = {
+  '社長':        '#b8860b',
+  '役員':        '#c9a227',
+  '総務部':      '#607d8b',
+  '営業部':      '#1565c0',
+  '第一製造部':  '#00838f',
+  '設計課':      '#283593',
+  '電気課':      '#e65100',
+  '加工課':      '#2e7d32',
+  '組付課':      '#6a1b9a',
+  '購買課':      '#880e4f',
+};
+
+const PLACE_LABELS = {
+  'honsha_office':'本社事務所',
+  'honsha_factory':'本社工場',
+  'nezaki':'根崎',
+  'nezaki2':'根崎第2',
+};
+
+const SLIDE_LABELS = {
+  'honsha1':'本社①',
+  'honsha2':'本社②',
+  'honsha3':'本社③',
+  'nezaki':'根崎',
+  'nezaki2':'根崎第2',
+};
+
+let staff = [];
+let editId = null;
+
+async function init() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getStaff&t=' + Date.now());
+    const json = await res.json();
+    if (json.ok) {
+      staff = json.staff || [];
+      renderTable();
+    } else {
+      showToast('データの取得に失敗しました', 'error');
+    }
+  } catch(e) {
+    showToast('通信エラーが発生しました', 'error');
+  }
+}
+
+function renderTable() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const dept = document.getElementById('deptFilter').value;
+  const tbody = document.getElementById('tableBody');
+
+  let filtered = staff.filter(s => {
+    const matchQ = !q || String(s.name).toLowerCase().includes(q);
+    const matchD = !dept || s.dept === dept;
+    return matchQ && matchD;
+  });
+
+  document.getElementById('countBadge').textContent = `${filtered.length}名 / 全${staff.length}名`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">👤</div><p>社員が登録されていません</p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(s => {
+    const color = DEPT_COLORS[s.dept] || '#888';
+    const placeLabel = PLACE_LABELS[s.defaultPlace] || s.defaultPlace || '-';
+    const slideLabel = SLIDE_LABELS[s.slide] || s.slide || '-';
+    return `
+      <tr>
+        <td><strong>${s.name}</strong></td>
+        <td><span class="dept-badge" style="background:${color}20;color:${color}">${s.dept||'-'}</span></td>
+        <td><span class="place-badge">${placeLabel}</span></td>
+        <td><span class="slide-badge">${slideLabel}</span></td>
+        <td>
+          <div class="action-btns">
+            <button class="edit-btn" onclick="openModal('${s.id}')">編集</button>
+            <button class="del-btn" onclick="deleteStaff('${s.id}','${s.name}')">削除</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function openModal(id) {
+  editId = id || null;
+  document.getElementById('modalTitle').textContent = id ? '社員を編集' : '社員を追加';
+
+  if (id) {
+    const s = staff.find(x => String(x.id) === String(id));
+    if (s) {
+      document.getElementById('fName').value = s.name || '';
+      document.getElementById('fDept').value = s.dept || '';
+      document.getElementById('fPlace').value = s.defaultPlace || 'honsha_office';
+      document.getElementById('fSlide').value = s.slide || 'honsha1';
+    }
+  } else {
+    document.getElementById('fName').value = '';
+    document.getElementById('fDept').value = '';
+    document.getElementById('fPlace').value = 'honsha_office';
+    document.getElementById('fSlide').value = 'honsha1';
+  }
+  document.getElementById('modalOverlay').classList.remove('hidden');
+  document.getElementById('fName').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.add('hidden');
+  editId = null;
+}
+
+async function saveStaff() {
+  const name = document.getElementById('fName').value.trim();
+  const dept = document.getElementById('fDept').value;
+  const defaultPlace = document.getElementById('fPlace').value;
+  const slide = document.getElementById('fSlide').value;
+
+  if (!name || !dept) { showToast('氏名と部署を入力してください', 'error'); return; }
+
+  const id = editId || Date.now();
+  const payload = { action: 'saveStaff', id, name, dept, defaultPlace, slide };
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (json.ok) {
+      if (editId) {
+        const idx = staff.findIndex(s => String(s.id) === String(editId));
+        if (idx >= 0) staff[idx] = { id, name, dept, defaultPlace, slide };
+      } else {
+        staff.push({ id, name, dept, defaultPlace, slide });
+      }
+      closeModal();
+      renderTable();
+      showToast(editId ? '✅ 更新しました' : '✅ 追加しました', 'success');
+    } else {
+      showToast('保存に失敗しました', 'error');
+    }
+  } catch(e) {
+    showToast('通信エラーが発生しました', 'error');
+  }
+}
+
+async function deleteStaff(id, name) {
+  if (!confirm(`「${name}」を削除してよろしいですか？`)) return;
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'deleteStaff', id })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      staff = staff.filter(s => String(s.id) !== String(id));
+      renderTable();
+      showToast('🗑️ 削除しました', 'success');
+    }
+  } catch(e) {
+    showToast('通信エラーが発生しました', 'error');
+  }
+}
+
+function exportCSV() {
+  const BOM = '\uFEFF';
+  const rows = [['id','name','dept','defaultPlace','slide']];
+  staff.forEach(s => rows.push([s.id, s.name, s.dept, s.defaultPlace, s.slide]));
+  const csv = BOM + rows.map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `社員マスタ_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('CSVをダウンロードしました', 'success');
+}
+
+function importCSV(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const text = ev.target.result.replace(/^\uFEFF/, '');
+    const lines = text.split('\n').filter(l => l.trim());
+    const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+    const imported = lines.slice(1).map((line, i) => {
+      const vals = line.split(',').map(v => v.replace(/"/g,'').trim());
+      const obj = {};
+      headers.forEach((h, j) => obj[h] = vals[j] || '');
+      if (!obj.id) obj.id = Date.now() + i;
+      return obj;
+    }).filter(o => o.name);
+
+    if (imported.length === 0) { showToast('インポートできるデータがありません', 'error'); return; }
+
+    try {
+      for (const s of imported) {
+        await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'saveStaff', ...s })
+        });
+      }
+      staff = imported;
+      renderTable();
+      showToast(`✅ ${imported.length}名をインポートしました`, 'success');
+    } catch(e) {
+      showToast('インポートに失敗しました', 'error');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+
+init();
+</script>
+</body>
+</html>
