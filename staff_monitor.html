@@ -499,11 +499,20 @@ function rebuildDeptSlides() {
           const st = state[m.id];
           const badge = STATUS_BADGE_MAP[st.status] || STATUS_BADGE_MAP['honsha_office'];
           const isNonDefault = st.status !== m.base;
+          // 本社系は①②③で表示
+          const slideLabel = {
+            'honsha1': '本社①', 'honsha2': '本社②', 'honsha3': '本社③',
+            'nezaki': '根崎', 'nezaki2': '根崎第2'
+          };
+          let displayLabel = badge.label;
+          if (st.status === 'honsha_office' && m.slide) {
+            displayLabel = slideLabel[m.slide] || badge.label;
+          }
           return `<div class="staff-card ${isNonDefault?'non-default':''}">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <span class="status-badge-sm" style="background:${badge.bg};color:${badge.fg};">
               <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
-              ${badge.label}
+              ${displayLabel}
             </span>
             ${st.memo?`<div class="card-time" style="color:#3d1f00;font-size:12px;font-weight:700;margin-top:2px;">📍 ${st.memo}</div>`:''}
             ${st.updated?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
