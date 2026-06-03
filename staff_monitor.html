@@ -209,131 +209,46 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwT7aSD1CmIOp_TlVa3yzUZr99b-yzMd5h_--kgweBABdyW8SnRMscd3cdWlTp6GsQzUQ/exec';
 const FETCH_INTERVAL = 15000;
 
-const STAFF_MASTER = [
-  {id:88,name:'中島 基木',dept:'社長',base:'honsha_office'},
-  {id:89,name:'笹倉 俊彦',dept:'役員',base:'honsha_office'},
-  {id:90,name:'石川 明雄',dept:'役員',base:'honsha_office'},
-  {id:91,name:'中島 大',  dept:'役員',base:'nezaki2'},
-  {id:13,name:'加藤 愛子',dept:'総務部',base:'honsha_office'},
-  {id:38,name:'石原 知佳',dept:'総務部',base:'honsha_office'},
-  {id:41,name:'澤井 裕司',dept:'総務部',base:'honsha_office'},
-  {id:49,name:'山口 奈奈美',dept:'総務部',base:'honsha_office'},
-  {id:52,name:'加藤 友那',dept:'総務部',base:'honsha_office'},
-  {id:63,name:'江嵜 嘉浩',dept:'総務部',base:'honsha_office'},
-  {id:85,name:'田島 靖子',dept:'総務部',base:'honsha_office'},
-  {id:54,name:'有江 達夫',dept:'営業部',base:'honsha_office'},
-  {id:64,name:'古田 毅',  dept:'営業部',base:'honsha_office'},
-  {id:69,name:'小野田 隆弘',dept:'営業部',base:'honsha_office'},
-  {id:86,name:'稲吉 一春',dept:'営業部',base:'honsha_office'},
-  {id:48,name:'鶴永 将人',dept:'購買課',base:'nezaki2'},
-  {id:51,name:'内木 緑',  dept:'購買課',base:'nezaki2'},
-  {id:71,name:'宮川 哲平',dept:'購買課',base:'nezaki2'},
-  {id:75,name:'安藤 奈津子',dept:'購買課',base:'nezaki2'},
-  {id:17,name:'鄒 永',    dept:'第一製造部',base:'honsha_office'},
-  {id:5, name:'平井 三洋',dept:'設計課',base:'honsha_office'},
-  {id:6, name:'寺本 豊',  dept:'設計課',base:'honsha_office'},
-  {id:10,name:'鈴木 桂',  dept:'設計課',base:'honsha_office'},
-  {id:22,name:'中島 來夢',dept:'設計課',base:'honsha_office'},
-  {id:25,name:'松木 建太郎',dept:'設計課',base:'honsha_office'},
-  {id:30,name:'茨 泰憲',  dept:'設計課',base:'honsha_office'},
-  {id:32,name:'広瀬 靖志',dept:'設計課',base:'honsha_office'},
-  {id:33,name:'TRAN PHONG VU',dept:'設計課',base:'honsha_office'},
-  {id:36,name:'深見 健太',dept:'設計課',base:'honsha_office'},
-  {id:39,name:'伊串 希',  dept:'設計課',base:'honsha_office'},
-  {id:40,name:'近藤 あゆみ',dept:'設計課',base:'honsha_office'},
-  {id:42,name:'米津 友里',dept:'設計課',base:'honsha_office'},
-  {id:56,name:'加藤 絢',  dept:'設計課',base:'honsha_office'},
-  {id:58,name:'小松 亜澄',dept:'設計課',base:'honsha_office'},
-  {id:60,name:'廣瀬 昇',  dept:'設計課',base:'honsha_office'},
-  {id:70,name:'荒川 真緒',dept:'設計課',base:'honsha_office'},
-  {id:7, name:'成田 健',  dept:'電気課',base:'honsha_office'},
-  {id:8, name:'中島 正隆',dept:'電気課',base:'honsha_office'},
-  {id:18,name:'加藤 幸浩',dept:'電気課',base:'honsha_office'},
-  {id:24,name:'坂本 英一',dept:'電気課',base:'honsha_office'},
-  {id:27,name:'宇野 孝祐',dept:'電気課',base:'honsha_office'},
-  {id:35,name:'城 重光',  dept:'電気課',base:'honsha_office'},
-  {id:43,name:'當眞 一聖',dept:'電気課',base:'honsha_office'},
-  {id:45,name:'山田 護',  dept:'電気課',base:'honsha_office'},
-  {id:61,name:'船木 勇作',dept:'電気課',base:'honsha_office'},
-  {id:66,name:'坂下 優',  dept:'電気課',base:'honsha_office'},
-  {id:67,name:'NGUYEN THI TUYET MAI',dept:'電気課',base:'honsha_office'},
-  {id:73,name:'NGUYEN HOANG PHUC AN',dept:'電気課',base:'honsha_office'},
-  {id:77,name:'牧内 宗真',dept:'電気課',base:'honsha_office'},
-  {id:78,name:'中村 尚幹',dept:'電気課',base:'honsha_office'},
-  {id:83,name:'荒木 萌々花',dept:'電気課',base:'honsha_office'},
-  {id:1, name:'川村 隆浩',dept:'加工課',base:'nezaki'},
-  {id:3, name:'柏田 祐介',dept:'加工課',base:'honsha_office'},
-  {id:11,name:'青山 薫',  dept:'加工課',base:'nezaki'},
-  {id:12,name:'中島 学',  dept:'加工課',base:'honsha_office'},
-  {id:14,name:'野村 昌史',dept:'加工課',base:'nezaki'},
-  {id:15,name:'大出 直明',dept:'加工課',base:'nezaki'},
-  {id:16,name:'小池 佑介',dept:'加工課',base:'nezaki'},
-  {id:28,name:'NGUYEN VAN LANH',dept:'加工課',base:'nezaki'},
-  {id:31,name:'川口 信夫',dept:'加工課',base:'nezaki'},
-  {id:34,name:'TRAN VAN THAN',dept:'加工課',base:'nezaki'},
-  {id:37,name:'NGUYEN HOANG AN',dept:'加工課',base:'nezaki'},
-  {id:44,name:'川端 英裕',dept:'加工課',base:'nezaki'},
-  {id:47,name:'太田 安彦',dept:'加工課',base:'nezaki'},
-  {id:55,name:'加古 武',  dept:'加工課',base:'nezaki'},
-  {id:57,name:'佐藤 佳宏',dept:'加工課',base:'nezaki'},
-  {id:59,name:'NGUYEN THANH NHANH',dept:'加工課',base:'nezaki'},
-  {id:62,name:'石田 昌也',dept:'加工課',base:'nezaki'},
-  {id:65,name:'坂本 和貴',dept:'加工課',base:'nezaki'},
-  {id:68,name:'TRAN KIM TUYEN',dept:'加工課',base:'nezaki'},
-  {id:79,name:'TRAN CHI TAM',dept:'加工課',base:'nezaki'},
-  {id:80,name:'神谷 翼',  dept:'加工課',base:'nezaki'},
-  {id:82,name:'今泉 崇',  dept:'加工課',base:'nezaki'},
-  {id:0, name:'塩澤 真治',dept:'組付課',base:'nezaki2'},
-  {id:2, name:'吉田 一英',dept:'組付課',base:'nezaki2'},
-  {id:4, name:'渡瀬 一美',dept:'組付課',base:'nezaki2'},
-  {id:9, name:'竹内 和人',dept:'組付課',base:'nezaki2'},
-  {id:21,name:'大村 秀樹',dept:'組付課',base:'nezaki2'},
-  {id:23,name:'渡辺 健一',dept:'組付課',base:'nezaki2'},
-  {id:26,name:'坂野 公彦',dept:'組付課',base:'nezaki2'},
-  {id:46,name:'近藤 隼次',dept:'組付課',base:'nezaki2'},
-  {id:50,name:'尾崎 佑和',dept:'組付課',base:'nezaki2'},
-  {id:53,name:'松尾 康平',dept:'組付課',base:'nezaki2'},
-  {id:72,name:'髙木 和幸',dept:'組付課',base:'nezaki2'},
-  {id:74,name:'BIEN VAN MINH',dept:'組付課',base:'nezaki2'},
-  {id:76,name:'富樫 至史',dept:'組付課',base:'nezaki2'},
-  {id:81,name:'真栄田 義斗',dept:'組付課',base:'nezaki2'},
-  {id:84,name:'加藤 翼',  dept:'組付課',base:'nezaki2'},
-  {id:87,name:'澤田 隆昭',dept:'組付課',base:'nezaki2'},
-];
+// STAFF_MASTERはGASから動的取得（起動時に読み込み）
+let STAFF_MASTER = [];
 
 // state
 let state = {};
-STAFF_MASTER.forEach(s => { state[s.id] = { status: s.base, updated: '', memo: '', leaveStart: '', leaveEnd: '' }; });
+
+function initState() {
+  state = {};
+  STAFF_MASTER.forEach(s => { state[s.id] = { status: s.base, updated: '', memo: '', leaveStart: '', leaveEnd: '' }; });
+}
 
 // スライド定義
 const SLIDE_DEFS = [
   { label:'本社事務所①', subtitle:'社長・役員・総務部・営業部',
     color:'#1D9E75', bg:'linear-gradient(135deg,#c8ede3,#d8f4ec)',
-    filter: m => state[m.id].status==='honsha_office' && (['社長','役員','総務部','営業部'].includes(m.dept) && m.id !== 90) || m.id === 12 },
+    filter: m => state[m.id] && state[m.id].status==='honsha_office' && m.slide==='honsha1' },
   { label:'本社事務所②', subtitle:'設計課・第一製造部',
     color:'#1D9E75', bg:'linear-gradient(135deg,#b8e8d8,#caeee3)',
-    filter: m => state[m.id].status==='honsha_office' && (['設計課','第一製造部'].includes(m.dept) || m.id === 90 || m.id === 3) },
+    filter: m => state[m.id] && state[m.id].status==='honsha_office' && m.slide==='honsha2' },
   { label:'本社事務所③', subtitle:'電気課・購買課',
     color:'#1D9E75', bg:'linear-gradient(135deg,#a8e0ce,#beeadb)',
-    filter: m => state[m.id].status==='honsha_office' && ['電気課','購買課'].includes(m.dept) },
+    filter: m => state[m.id] && state[m.id].status==='honsha_office' && m.slide==='honsha3' },
   { label:'本社工場', subtitle:'',
     color:'#0e7fa8', bg:'linear-gradient(135deg,#c0e8f4,#d0f0fa)',
-    filter: m => state[m.id].status==='honsha_factory' },
+    filter: m => state[m.id] && state[m.id].status==='honsha_factory' },
   { label:'根崎', subtitle:'加工課',
     color:'#185FA5', bg:'linear-gradient(135deg,#c4d8f0,#d4e6f8)',
-    filter: m => state[m.id].status==='nezaki' },
+    filter: m => state[m.id] && state[m.id].status==='nezaki' },
   { label:'根崎第2', subtitle:'組付課・購買課',
     color:'#534AB7', bg:'linear-gradient(135deg,#d0cef4,#dddcfa)',
-    filter: m => state[m.id].status==='nezaki2' },
+    filter: m => state[m.id] && state[m.id].status==='nezaki2' },
   { label:'外出/出張', subtitle:'',
     color:'#BA7517', bg:'linear-gradient(135deg,#f8e4c0,#faeece)',
-    filter: m => state[m.id].status==='gaishutsu' },
+    filter: m => state[m.id] && state[m.id].status==='gaishutsu' },
   { label:'在宅', subtitle:'',
     color:'#639922', bg:'linear-gradient(135deg,#d4edb8,#e0f4c8)',
-    filter: m => state[m.id].status==='zaitaku' },
+    filter: m => state[m.id] && state[m.id].status==='zaitaku' },
   { label:'休み', subtitle:'',
     color:'#888780', bg:'linear-gradient(135deg,#e4e2da,#eceae2)',
-    filter: m => state[m.id].status==='yasumi' },
+    filter: m => state[m.id] && state[m.id].status==='yasumi' },
 ];
 
 // 部署別スライド定義
@@ -387,6 +302,25 @@ function formatDate(dateStr) {
   const d = new Date(dateStr);
   if (isNaN(d)) return dateStr;
   return (d.getMonth()+1) + '/' + d.getDate();
+}
+
+async function loadStaffMaster() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getStaff&t=' + Date.now());
+    const json = await res.json();
+    if (json.ok && json.staff && json.staff.length > 0) {
+      STAFF_MASTER = json.staff.map(s => ({
+        id: parseInt(s.id),
+        name: s.name,
+        dept: s.dept,
+        base: s.defaultPlace || 'honsha_office',
+        slide: s.slide || 'honsha1'
+      }));
+      initState();
+    }
+  } catch(e) {
+    console.log('staffマスタ取得失敗:', e);
+  }
 }
 
 async function fetchAll(silent=false) {
@@ -614,6 +548,7 @@ function rebuildDeptSlides() {
 }
 
 async function init() {
+  await loadStaffMaster();
   rebuildSlides();
   await fetchAll(false);
   document.getElementById('loadingOverlay').style.display = 'none';
