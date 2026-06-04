@@ -430,7 +430,9 @@ async function init() {
 function normalizeDeadline(val) {
   if (!val) return '08:30';
   const s = String(val).trim();
+  // すでにHH:MM形式
   if (/^\d{1,2}:\d{2}$/.test(s)) return s;
+  // Excelシリアル値（小数）
   if (/^\d+(\.\d+)?$/.test(s)) {
     const frac = parseFloat(s) % 1;
     const totalMin = Math.round(frac * 24 * 60);
@@ -438,10 +440,16 @@ function normalizeDeadline(val) {
     const m = totalMin % 60;
     return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
   }
+  // ISO日付文字列（スプレッドシートがDate型に変換した場合）
+  // UTC→JST（+9時間）に変換
   if (s.includes('T') || (s.includes('-') && s.length > 10)) {
     try {
       const d = new Date(s);
-      if (!isNaN(d)) return String(d.getUTCHours()).padStart(2,'0') + ':' + String(d.getUTCMinutes()).padStart(2,'0');
+      if (!isNaN(d)) {
+        const jstH = (d.getUTCHours() + 9) % 24;
+        const jstM = d.getUTCMinutes();
+        return String(jstH).padStart(2,'0') + ':' + String(jstM).padStart(2,'0');
+      }
     } catch(e) {}
   }
   return s;

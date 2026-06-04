@@ -309,8 +309,7 @@ const HONSHA_DEPTS = ['社長','役員','総務部','営業部','設計課','電
 const NEZAKI_DEPTS  = ['加工課','組付課','購買課'];
 const NEZAKI_IDS    = [91]; // 中島大
 
-// ↓ フォールバック用の初期データ。通常はGASのstaffシートから読み込んで上書きされます。
-let STAFF_MASTER = [
+const STAFF_MASTER = [
   {id:88,name:'中島 基木',dept:'社長'},{id:89,name:'笹倉 俊彦',dept:'役員'},
   {id:90,name:'石川 明雄',dept:'役員'},{id:91,name:'中島 大',dept:'役員'},
   {id:13,name:'加藤 愛子',dept:'総務部'},{id:38,name:'石原 知佳',dept:'総務部'},
@@ -359,8 +358,6 @@ let STAFF_MASTER = [
 ];
 
 function getDefaultPlace(staff) {
-  if (staff.location === '本社') return 'honsha';
-  if (staff.location === '根崎') return 'nezaki';
   if (NEZAKI_IDS.includes(staff.id)) return 'nezaki';
   if (NEZAKI_DEPTS.includes(staff.dept)) return 'nezaki';
   return 'honsha';
@@ -384,7 +381,9 @@ function normalizeDeadline(val) {
     try {
       const d = new Date(s);
       if (!isNaN(d)) {
-        return String(d.getUTCHours()).padStart(2,'0') + ':' + String(d.getUTCMinutes()).padStart(2,'0');
+        const jstH = (d.getUTCHours() + 9) % 24;
+        const jstM = d.getUTCMinutes();
+        return String(jstH).padStart(2,'0') + ':' + String(jstM).padStart(2,'0');
       }
     } catch(e) {}
   }
@@ -432,14 +431,6 @@ async function init() {
         document.getElementById('deadlineBadge').textContent = '締切 ' + deadline;
         document.getElementById('deadlineTime').textContent = deadline;
         document.getElementById('deadlinePassed').classList.toggle('hidden', !isDeadlinePassed());
-      }
-    }).catch(()=>{}),
-    fetch(GAS_URL+'?action=getStaff&t='+Date.now()).then(r=>r.json()).then(json => {
-      if (json.ok && Array.isArray(json.staff) && json.staff.length) {
-        STAFF_MASTER = json.staff
-          .filter(s => s.active !== '退職')
-          .map(s => ({ id: Number(s.id), name: s.name, dept: s.dept, location: s.location || '' }));
-        renderDeptSelects();
       }
     }).catch(()=>{}),
     loadMenu(),
