@@ -348,7 +348,11 @@ function rebuildSlides() {
   // 中島節雄さんは出勤（honsha_office）登録時のみ表示するフィルター
   function filterWithChairman(def, m) {
     if (m.dept === '会長') {
-      return def.filter(m) && state[m.id] && state[m.id].status === 'honsha_office';
+      // 会長は「出勤登録済み（updatedが空でない）」かつ「honsha_office」の時のみ表示
+      return def.filter(m)
+        && state[m.id]
+        && state[m.id].status === 'honsha_office'
+        && state[m.id].updated !== '';
     }
     return state[m.id] && def.filter(m);
   }
