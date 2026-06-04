@@ -232,18 +232,29 @@ const SLIDE_LABELS = {
 let staff = [];
 let editId = null;
 
+const STAFF_LSKEY = 'staff_master_cache';
+
 async function init() {
+  // localStorageキャッシュで即座に表示
+  try {
+    const cached = localStorage.getItem(STAFF_LSKEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.length > 0) { staff = parsed; renderTable(); }
+    }
+  } catch(e) {}
+
+  // バックグラウンドでGASから最新データ取得
   try {
     const res = await fetch(GAS_URL + '?action=getStaff&t=' + Date.now());
     const json = await res.json();
     if (json.ok) {
       staff = json.staff || [];
+      localStorage.setItem(STAFF_LSKEY, JSON.stringify(staff));
       renderTable();
-    } else {
-      showToast('データの取得に失敗しました', 'error');
     }
   } catch(e) {
-    showToast('通信エラーが発生しました', 'error');
+    if (!staff.length) showToast('通信エラーが発生しました', 'error');
   }
 }
 
@@ -323,47 +334,48 @@ async function saveStaff() {
   const id = editId || Date.now();
   const payload = { action: 'saveStaff', id, name, dept, defaultPlace, slide };
 
+  // 先に画面を更新（オプティミスティック更新）
+  if (editId) {
+    const idx = staff.findIndex(s => String(s.id) === String(editId));
+    if (idx >= 0) staff[idx] = { id, name, dept, defaultPlace, slide };
+  } else {
+    staff.push({ id, name, dept, defaultPlace, slide });
+  }
+  localStorage.setItem(STAFF_LSKEY, JSON.stringify(staff));
+  closeModal();
+  renderTable();
+  showToast(editId ? '✅ 更新しました' : '✅ 追加しました', 'success');
+
+  // バックグラウンドでGASに保存
   try {
-    const res = await fetch(GAS_URL, {
+    await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
     });
-    const json = await res.json();
-    if (json.ok) {
-      if (editId) {
-        const idx = staff.findIndex(s => String(s.id) === String(editId));
-        if (idx >= 0) staff[idx] = { id, name, dept, defaultPlace, slide };
-      } else {
-        staff.push({ id, name, dept, defaultPlace, slide });
-      }
-      closeModal();
-      renderTable();
-      showToast(editId ? '✅ 更新しました' : '✅ 追加しました', 'success');
-    } else {
-      showToast('保存に失敗しました', 'error');
-    }
   } catch(e) {
-    showToast('通信エラーが発生しました', 'error');
+    showToast('通信エラー。データはローカルに保存済みです', 'error');
   }
 }
 
 async function deleteStaff(id, name) {
   if (!confirm(`「${name}」を削除してよろしいですか？`)) return;
+
+  // 先に画面を更新
+  staff = staff.filter(s => String(s.id) !== String(id));
+  localStorage.setItem(STAFF_LSKEY, JSON.stringify(staff));
+  renderTable();
+  showToast('🗑️ 削除しました', 'success');
+
+  // バックグラウンドでGASに削除
   try {
-    const res = await fetch(GAS_URL, {
+    await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'deleteStaff', id })
     });
-    const json = await res.json();
-    if (json.ok) {
-      staff = staff.filter(s => String(s.id) !== String(id));
-      renderTable();
-      showToast('🗑️ 削除しました', 'success');
-    }
   } catch(e) {
-    showToast('通信エラーが発生しました', 'error');
+    console.log('GAS削除失敗:', e);
   }
 }
 
