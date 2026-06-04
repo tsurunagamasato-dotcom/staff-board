@@ -342,11 +342,19 @@ async function fetchAll(silent=false) {
 }
 
 function rebuildSlides() {
+  // 中島節雄さんは出勤（honsha_office）登録時のみ表示するフィルター
+  function filterWithChairman(def, m) {
+    if (m.name === '中島 節雄') {
+      return def.filter(m) && state[m.id] && state[m.id].status === 'honsha_office';
+    }
+    return state[m.id] && def.filter(m);
+  }
+
   // 0名スライドはスキップ（本社工場・外出・在宅・休みのみ）
   slideKeys = SLIDE_DEFS
     .map((def,idx) => idx)
     .filter(idx => {
-      const members = STAFF_MASTER.filter(SLIDE_DEFS[idx].filter);
+      const members = STAFF_MASTER.filter(m => filterWithChairman(SLIDE_DEFS[idx], m));
       // 本社①②③は常に表示、その他は0名ならスキップ
       if (idx <= 2) return true;
       return members.length > 0;
@@ -357,7 +365,7 @@ function rebuildSlides() {
 
   slideKeys.forEach((defIdx, idx) => {
     const def = SLIDE_DEFS[defIdx];
-    const members = STAFF_MASTER.filter(def.filter);
+    const members = STAFF_MASTER.filter(m => filterWithChairman(def, m));
 
     const slide = document.createElement('div');
     slide.className = 'slide' + (idx===currentIndex?' active':'');
