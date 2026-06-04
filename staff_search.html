@@ -348,6 +348,10 @@ async function loadStaffMaster() {
         slide: s.slide || 'honsha1'
       }));
       localStorage.setItem(STAFF_LSKEY, JSON.stringify(STAFF_MASTER));
+      // stateを再生成
+      STAFF_MASTER.forEach(s => {
+        if (state[s.id] === undefined) state[s.id] = { status: s.base, updated: '' };
+      });
       renderDeptSelect();
     }
   } catch(e) { console.log('staffマスタ取得失敗:', e); }
@@ -359,7 +363,13 @@ async function init() {
     const cached = localStorage.getItem(STAFF_LSKEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.length > 0) { STAFF_MASTER = parsed; }
+      if (parsed.length > 0) {
+        STAFF_MASTER = parsed;
+        // stateを生成
+        STAFF_MASTER.forEach(s => {
+          if (state[s.id] === undefined) state[s.id] = { status: s.base, updated: '' };
+        });
+      }
     }
   } catch(e) {}
 
