@@ -344,7 +344,7 @@ async function fetchAll(silent=false) {
 function rebuildSlides() {
   // 中島節雄さんは出勤（honsha_office）登録時のみ表示するフィルター
   function filterWithChairman(def, m) {
-    if (m.name === '中島 節雄') {
+    if (m.dept === '会長') {
       return def.filter(m) && state[m.id] && state[m.id].status === 'honsha_office';
     }
     return state[m.id] && def.filter(m);

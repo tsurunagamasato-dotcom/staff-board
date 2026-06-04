@@ -246,7 +246,7 @@ const STATUSES = [
 ];
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.key, s]));
 
-const DEPT_ORDER = ['会長・社長','社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
+const DEPT_ORDER = ['会長','社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
 
 
 let STAFF_MASTER = [];
@@ -313,18 +313,15 @@ function renderStatus() {
   badge.style.display = isNonDefault ? 'flex' : 'none';
   badge.textContent = isNonDefault ? `⚠ 通常の居場所（${defaultLabel}）と異なります` : '';
 
-  // 会長・社長は「出勤」を含む特別な選択肢
-  const isChairman = selStaff.dept === '会長・社長';
+  // 会長は「出勤」のみ1択
+  const isChairman = selStaff.dept === '会長';
   const displayStatuses = isChairman
     ? [
         { key:'honsha_office', label:'出勤', icon:'🏢' },
-        { key:'gaishutsu',     label:'外出/出張', icon:'🚗' },
-        { key:'zaitaku',       label:'在宅', icon:'🏠' },
-        { key:'yasumi',        label:'休み', icon:'😴' },
       ]
     : STATUSES;
 
-  if (isChairman && !selStatus) selStatus = 'honsha_office';
+  if (isChairman) selStatus = 'honsha_office';
 
   document.getElementById('statusGrid').innerHTML = displayStatuses.map(st => {
     const isDefault = st.key === selStaff.base;
