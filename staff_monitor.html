@@ -304,6 +304,8 @@ function formatDate(dateStr) {
   return (d.getMonth()+1) + '/' + d.getDate();
 }
 
+const STAFF_LSKEY = 'staff_master_cache';
+
 async function loadStaffMaster() {
   try {
     const res = await fetch(GAS_URL + '?action=getStaff&t=' + Date.now());
@@ -317,6 +319,7 @@ async function loadStaffMaster() {
         slide: s.slide || 'honsha1'
       }));
       initState();
+      localStorage.setItem(STAFF_LSKEY, JSON.stringify(STAFF_MASTER));
     }
   } catch(e) {
     console.log('staffマスタ取得失敗:', e);
@@ -565,10 +568,19 @@ function rebuildDeptSlides() {
 }
 
 async function init() {
-  await loadStaffMaster();
-  rebuildSlides();
-  await fetchAll(false);
+  // localStorageキャッシュで即座に表示
+  try {
+    const cached = localStorage.getItem(STAFF_LSKEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.length > 0) { STAFF_MASTER = parsed; initState(); rebuildSlides(); }
+    }
+  } catch(e) {}
+
+  // staffマスタ取得と状態取得を並列実行
   document.getElementById('loadingOverlay').style.display = 'none';
+  await Promise.all([ loadStaffMaster(), fetchAll(false) ]);
+  rebuildSlides();
   slideTimer = setInterval(nextSlide, slideInterval);
   setInterval(() => fetchAll(true), FETCH_INTERVAL);
 }

@@ -253,9 +253,23 @@ let STAFF_MASTER = [];
 
 let selDept = null, selStaff = null, selStatus = null;
 
+const STAFF_LSKEY = 'staff_master_cache';
+
 async function init() {
-  await loadStaffMaster();
-  renderDepts();
+  // まずlocalStorageキャッシュで即座に表示
+  try {
+    const cached = localStorage.getItem(STAFF_LSKEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.length > 0) {
+        STAFF_MASTER = parsed;
+        renderDepts();
+      }
+    }
+  } catch(e) {}
+
+  // バックグラウンドでGASから最新データ取得
+  loadStaffMaster();
 }
 
 async function loadStaffMaster() {
@@ -270,6 +284,10 @@ async function loadStaffMaster() {
         base: s.defaultPlace || 'honsha_office',
         slide: s.slide || 'honsha1'
       }));
+      // キャッシュに保存
+      localStorage.setItem(STAFF_LSKEY, JSON.stringify(STAFF_MASTER));
+      // 画面を最新データで更新
+      renderDepts();
     }
   } catch(e) {
     console.log('staffマスタ取得失敗:', e);
