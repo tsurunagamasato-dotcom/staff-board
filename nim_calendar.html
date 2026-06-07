@@ -332,7 +332,9 @@
     </div>
     <!-- 工程マスタ -->
     <div class="card" id="process-master-card">
-      <div class="card-title">🔧 工程マスタ</div>
+      <div class="card-title">🔧 工程マスタ
+        <button class="btn btn-sm" style="font-size:10px;margin-left:8px;color:#f7b731;border-color:rgba(247,183,49,.3);" onclick="resetProcessesToDefault()">↺ 初期データで復元</button>
+      </div>
       <div class="process-member-tabs" id="process-member-tabs"></div>
       <div class="form-row">
         <input class="form-input" id="process-name-input" placeholder="工程名を入力" maxlength="20">
@@ -1030,6 +1032,17 @@ function renderProcessMaster(){
   });
 }
 
+function resetProcessesToDefault(){
+  if(!confirm('全担当者の工程リストを初期データに戻します。\n現在の工程リストは上書きされます。よろしいですか？')) return;
+  state.members.forEach(m=>{
+    const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
+    if(def&&Array.isArray(def.processes)){
+      m.processes=[...def.processes];
+    }
+  });
+  saveState();scheduleSave();renderProcessMaster();
+  alert('工程リストを復元しました！');
+}
 function addProcess(){
   const name=document.getElementById('process-name-input').value.trim();
   if(!name){alert('工程名を入力してください');return;}
@@ -1345,11 +1358,13 @@ async function autoLoadFromGAS() {
       if (d.projects && d.projects.length) state.projects = d.projects;
       // slotsは空でも必ず反映（古いデータを残さない）
       state.slots = d.slots || [];
-      // processesマイグレーション（配列でない場合も補完）
+      // processesマイグレーション（配列でない場合・空の場合も補完）
       state.members.forEach(m=>{
-        if(!Array.isArray(m.processes)){
+        if(!Array.isArray(m.processes)||m.processes.length===0){
           const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
-          m.processes=(def&&Array.isArray(def.processes))?def.processes:[];
+          if(def&&Array.isArray(def.processes)&&def.processes.length>0){
+            m.processes=def.processes;
+          }
         }
       });
       saveState();
