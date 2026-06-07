@@ -394,15 +394,24 @@ const DEFAULT_MEMBERS = [
 // =====================================================
 let state = loadState() || null;
 if(!state){
+  // 初回：デフォルト担当者（工程込み）で初期化
   state = {
-    members: DEFAULT_MEMBERS.map((m,i)=>({id:'m'+i, name:m.name, color:m.color})),
+    members: DEFAULT_MEMBERS.map((m,i)=>({
+      id:'m'+i, name:m.name, color:m.color, processes:m.processes||[]
+    })),
     projects: [],
-    slots: [],   // {id, projId, memberId, date, slot, actualH, comment}
+    slots: [],
     baseMonth: null,
     filterMembers: [],
   };
 }
-// マイグレーション
+// マイグレーション：processesが未設定の担当者に補完
+state.members.forEach((m,i)=>{
+  if(!m.processes){
+    const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
+    m.processes=def?def.processes:[];
+  }
+});
 if(!state.slots) state.slots=[];
 if(!state.filterMembers) state.filterMembers=[];
 if(!state.baseMonth){
@@ -419,8 +428,8 @@ let openProjId  = null;  // 展開中の案件ID
 // =====================================================
 //  PERSIST
 // =====================================================
-function saveState(){localStorage.setItem('sched_v5',JSON.stringify(state));}
-function loadState(){try{return JSON.parse(localStorage.getItem('sched_v5'));}catch{return null;}}
+function saveState(){localStorage.setItem('sched_v6',JSON.stringify(state));}
+function loadState(){try{return JSON.parse(localStorage.getItem('sched_v6'));}catch{return null;}}
 
 // =====================================================
 //  UTILS
