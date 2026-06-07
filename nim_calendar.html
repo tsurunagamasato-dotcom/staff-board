@@ -234,6 +234,9 @@
   .shortfall-radio input[type=radio]{accent-color:var(--accent);cursor:pointer;}
   .shortfall-radio input[type=radio]:checked + span{color:var(--accent);font-weight:600;}
 
+  .btn-reset-slots{font-size:11px;padding:4px 10px;color:#ff6b6b;border-color:rgba(255,107,107,.3);background:transparent;margin-left:auto;}
+  .btn-reset-slots:hover{background:rgba(255,107,107,.1);border-color:#ff6b6b;color:#ff6b6b;}
+
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -263,9 +266,9 @@
     <button class="btn btn-primary" onclick="switchView('master')">⚙ マスタ管理</button>
   </div>
   <!-- GAS連携バー -->
-  <!-- 同期ステータス表示 -->
   <div class="gas-bar">
     <span class="gas-status" id="gas-status"></span>
+    <button class="btn btn-reset-slots" onclick="resetSlotsOnGAS()" title="カレンダーの配置データをすべてリセット">🗑 配置データをリセット</button>
   </div>
   <div id="member-filter-wrap" class="member-filter"></div>
   <div class="layout-wrap">
@@ -1271,6 +1274,33 @@ function setGasStatus(msg, type) {
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => autoSaveToGAS(), 800);
+}
+
+async function resetSlotsOnGAS() {
+  if(!confirm('カレンダーの配置データ（予定・実績）を全て削除します。\n担当者・案件マスタは残ります。\nよろしいですか？')) return;
+  state.slots = [];
+  saveState();
+  setGasStatus('⟳ リセット中...', 'loading');
+  try {
+    const payload = {
+      members:  state.members,
+      projects: state.projects,
+      slots:    [],
+    };
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if(json.status === 'ok'){
+      setGasStatus('✓ リセット完了', 'ok');
+      renderCalendar();
+    } else {
+      setGasStatus('✗ リセット失敗', 'err');
+    }
+  } catch(e) {
+    setGasStatus('✗ 通信エラー', 'err');
+  }
 }
 
 async function autoSaveToGAS() {
