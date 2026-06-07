@@ -226,6 +226,14 @@
   /* 未達欄 */
   .shortfall-hint{font-size:11px;color:var(--text-dim);margin-bottom:6px;}
 
+  /* 未達ラジオ */
+  .shortfall-type-label{font-size:11px;color:var(--text-dim);margin-bottom:6px;font-weight:600;}
+  .shortfall-radio-group{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+  .shortfall-radio{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:background .15s;font-size:12px;}
+  .shortfall-radio:hover{background:rgba(255,255,255,.04);}
+  .shortfall-radio input[type=radio]{accent-color:var(--accent);cursor:pointer;}
+  .shortfall-radio input[type=radio]:checked + span{color:var(--accent);font-weight:600;}
+
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -413,9 +421,34 @@
     <div class="modal-row" id="shortfall-row" style="display:none;">
       <div class="modal-label" style="color:#f7b731;">⚠ 残り時間の作業内容（必須）</div>
       <div class="shortfall-hint" id="shortfall-hint"></div>
-      <select class="modal-select" id="modal-shortfall-process">
+      <!-- 工程名 -->
+      <select class="modal-select" id="modal-shortfall-process" style="margin-bottom:10px;" onchange="updateShortfallType()">
         <option value="">工程を選択してください</option>
       </select>
+      <!-- 案件紐付け選択 -->
+      <div class="shortfall-type-wrap" id="shortfall-type-wrap" style="display:none;">
+        <div class="shortfall-type-label">この時間をどう集計しますか？</div>
+        <div class="shortfall-radio-group">
+          <label class="shortfall-radio">
+            <input type="radio" name="shortfall-type" value="same" onchange="updateShortfallProjRow()">
+            <span>この案件に含める（同案件の別工程）</span>
+          </label>
+          <label class="shortfall-radio">
+            <input type="radio" name="shortfall-type" value="other" onchange="updateShortfallProjRow()">
+            <span>別案件に含める</span>
+          </label>
+          <label class="shortfall-radio">
+            <input type="radio" name="shortfall-type" value="outside" onchange="updateShortfallProjRow()">
+            <span>案件外の作業（集計に含めない）</span>
+          </label>
+        </div>
+        <!-- 別案件選択（other選択時のみ表示） -->
+        <div id="shortfall-other-proj-row" style="display:none;margin-top:8px;">
+          <select class="modal-select" id="modal-shortfall-other-proj">
+            <option value="">案件を選択してください</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" id="actual-modal-remove-btn" style="margin-right:auto;" onclick="removeFromSlot()">🗑 スロットから削除</button>
@@ -854,6 +887,23 @@ function openActualModal(slotId){
       if(p===s.shortfallProcess)opt.selected=true;
       sfSel.appendChild(opt);
     });
+    // ラジオボタン復元
+    const sfType=s.shortfallType||'same';
+    document.querySelectorAll('input[name="shortfall-type"]').forEach(r=>{
+      r.checked=(r.value===sfType);
+    });
+    // type-wrap表示制御
+    document.getElementById('shortfall-type-wrap').style.display=s.shortfallProcess?'':'none';
+    // 別案件セレクト構築・復元
+    const otherSel=document.getElementById('modal-shortfall-other-proj');
+    otherSel.innerHTML='<option value="">案件を選択してください</option>';
+    state.projects.forEach(p=>{
+      const opt=document.createElement('option');
+      opt.value=p.id;opt.textContent=p.name;
+      if(p.id===s.shortfallOtherProjId)opt.selected=true;
+      otherSel.appendChild(opt);
+    });
+    document.getElementById('shortfall-other-proj-row').style.display=(sfType==='other')?'':'none';
     document.getElementById('actual-modal').classList.add('open');
   }catch(err){
     console.error('openActualModal error:',err);
@@ -861,6 +911,16 @@ function openActualModal(slotId){
   }
 }
 function closeActualModal(){document.getElementById('actual-modal').classList.remove('open');actualTarget=null;}
+function updateShortfallType(){
+  // 工程選択後にtype-wrapを表示
+  const proc=document.getElementById('modal-shortfall-process').value;
+  document.getElementById('shortfall-type-wrap').style.display=proc?'':'none';
+}
+function updateShortfallProjRow(){
+  const sfRadio=document.querySelector('input[name="shortfall-type"]:checked');
+  const isOther=sfRadio&&sfRadio.value==='other';
+  document.getElementById('shortfall-other-proj-row').style.display=isOther?'':'none';
+}
 function updateRatio(){
   const actualH=parseFloat(document.getElementById('modal-actual-h').value)||0;
   const row=document.getElementById('ratio-row');
@@ -877,8 +937,12 @@ function updateRatio(){
       const diff=(SLOT_H-actualH).toFixed(1);
       document.getElementById('shortfall-hint').textContent='残り'+diff+'Hに何をしていたか選択してください';
       shortRow.style.display='';
+      // 工程未選択ならtype-wrapを隠す
+      const proc=document.getElementById('modal-shortfall-process').value;
+      document.getElementById('shortfall-type-wrap').style.display=proc?'':'none';
     }else{
       shortRow.style.display='none';
+      document.getElementById('shortfall-type-wrap').style.display='none';
     }
   }else{
     row.style.display='none';
@@ -893,6 +957,9 @@ function saveActual(){
   s.actualH=parseFloat(document.getElementById('modal-actual-h').value)||0;
   s.process=document.getElementById('modal-process').value;
   s.shortfallProcess=document.getElementById('modal-shortfall-process').value;
+  const sfRadio=document.querySelector('input[name="shortfall-type"]:checked');
+  s.shortfallType=sfRadio?sfRadio.value:'same';
+  s.shortfallOtherProjId=(s.shortfallType==='other')?document.getElementById('modal-shortfall-other-proj').value:'';
   saveState();scheduleSave();closeActualModal();renderCalendar();
 }
 function removeFromSlot(){
@@ -1110,11 +1177,35 @@ function renderReport(){
       if(!byProcess[proc])byProcess[proc]={planH:0,actualH:0,shortfalls:[]};
       byProcess[proc].planH+=SLOT_H;
       byProcess[proc].actualH+=(s.actualH||0);
-      if((s.actualH||0)<SLOT_H&&s.shortfallProcess){
-        byProcess[proc].shortfalls.push({date:s.date,slot:s.slot,diff:SLOT_H-(s.actualH||0),proc:s.shortfallProcess});
-      }
       totalPlan+=SLOT_H;
       totalActual+=(s.actualH||0);
+
+      // 残り時間の処理
+      const actualH=s.actualH||0;
+      if(actualH<SLOT_H&&s.shortfallProcess){
+        const diff=SLOT_H-actualH;
+        const sfType=s.shortfallType||'same';
+        let label='';
+        if(sfType==='same'){
+          // この案件に含める→該当工程に加算
+          const sfProc=s.shortfallProcess;
+          if(!byProcess[sfProc])byProcess[sfProc]={planH:0,actualH:0,shortfalls:[]};
+          byProcess[sfProc].actualH+=diff;
+          totalActual+=diff;
+          label='→ 同案件('+sfProc+')に加算';
+        } else if(sfType==='other'){
+          // 別案件→参考表示のみ
+          const otherProj=state.projects.find(p=>p.id===s.shortfallOtherProjId);
+          label='→ 別案件['+(otherProj?otherProj.name:'不明')+']';
+        } else {
+          // 案件外
+          label='→ 案件外';
+        }
+        byProcess[proc].shortfalls.push({
+          date:s.date,slot:s.slot,diff:diff,
+          proc:s.shortfallProcess,label:label
+        });
+      }
     });
 
     const sec=document.createElement('div');
@@ -1146,7 +1237,7 @@ function renderReport(){
       const diff=d.actualH-d.planH;
       const diffColor=diff>=0?'#3ecf8e':'#ff6b6b';
       const bc=pct>=100?'#3ecf8e':pct>=70?'#f7b731':'#4f7fff';
-      const sfText=d.shortfalls.length?d.shortfalls.map(x=>x.date+' '+x.slot+': '+x.proc+'('+x.diff+'H)').join('<br>'):'';
+      const sfText=d.shortfalls.length?d.shortfalls.map(x=>x.date+' '+x.slot+': '+x.proc+'('+x.diff+'H) '+x.label).join('<br>'):'';
       const tr=document.createElement('tr');
       tr.innerHTML=`
         <td>${proc}</td>
