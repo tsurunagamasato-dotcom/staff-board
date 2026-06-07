@@ -365,7 +365,9 @@
 
 <!-- ======= 集計ビュー ======= -->
 <div id="view-report" class="view">
+  <!-- ツールバー -->
   <div class="report-toolbar">
+    <!-- 表示モード -->
     <div class="toolbar-group">
       <button class="btn btn-toggle active" id="rep-mode-month" onclick="setReportMode('month')">月選択</button>
       <button class="btn btn-toggle" id="rep-mode-range" onclick="setReportMode('range')">期間指定</button>
@@ -383,10 +385,18 @@
       <input type="date" class="rep-date-input" id="rep-end">
       <button class="btn btn-primary btn-sm" onclick="renderReport()">集計</button>
     </div>
-    <!-- 担当者フィルタ -->
+    <!-- 集計軸 -->
+    <div class="toolbar-group">
+      <button class="btn btn-toggle active" id="rep-axis-process" onclick="setReportAxis('process')">工程別</button>
+      <button class="btn btn-toggle" id="rep-axis-project" onclick="setReportAxis('project')">案件別</button>
+      <button class="btn btn-toggle" id="rep-axis-monthly" onclick="setReportAxis('monthly')">月別</button>
+    </div>
+    <!-- 担当者選択（必須） -->
     <select class="rep-select" id="rep-member-filter" onchange="renderReport()">
-      <option value="">全員</option>
+      <option value="">担当者を選択</option>
     </select>
+    <!-- Excelエクスポート -->
+    <button class="btn btn-primary btn-sm" onclick="exportExcel()" style="margin-left:auto;">📥 Excel出力</button>
   </div>
   <div id="report-body"></div>
 </div>
@@ -1126,24 +1136,24 @@ function deleteProject(id){
 // =====================================================
 let reportMode  = 'month';
 let reportMonth = null;
-
-function initReport(){
-  if(!reportMonth){
-    reportMonth=state.baseMonth||getCurrentYM();
-  }
-  // 担当者フィルタ更新
-  const sel=document.getElementById('rep-member-filter');
-  const prev=sel.value;
-  sel.innerHTML='<option value="">全員</option>';
-  state.members.forEach(m=>{sel.innerHTML+=`<option value="${m.id}">${m.name}</option>`;});
-  if(prev)sel.value=prev;
-  updateReportMonthLabel();
-  renderReport();
-}
+let reportAxis  = 'process'; // 'process' | 'project' | 'monthly'
 
 function getCurrentYM(){
   const n=new Date();
   return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+}
+
+function initReport(){
+  if(!reportMonth) reportMonth=state.baseMonth||getCurrentYM();
+  const sel=document.getElementById('rep-member-filter');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">担当者を選択</option>';
+  state.members.forEach(m=>{
+    sel.innerHTML+=`<option value="${m.id}">${m.name}</option>`;
+  });
+  if(prev) sel.value=prev;
+  updateReportMonthLabel();
+  renderReport();
 }
 
 function setReportMode(mode){
@@ -1152,7 +1162,15 @@ function setReportMode(mode){
   document.getElementById('rep-mode-range').classList.toggle('active',mode==='range');
   document.getElementById('rep-month-ctrl').style.display=mode==='month'?'flex':'none';
   document.getElementById('rep-range-ctrl').style.display=mode==='range'?'flex':'none';
-  if(mode==='month')renderReport();
+  if(mode==='month') renderReport();
+}
+
+function setReportAxis(axis){
+  reportAxis=axis;
+  ['process','project','monthly'].forEach(a=>{
+    document.getElementById('rep-axis-'+a).classList.toggle('active',a===axis);
+  });
+  renderReport();
 }
 
 function shiftReportMonth(n){
@@ -1166,118 +1184,302 @@ function updateReportMonthLabel(){
   document.getElementById('rep-month-label').textContent=y+'年'+m+'月';
 }
 
+// 対象スロットを絞り込む共通処理
+function getFilteredSlots(){
+  const filterMid=document.getElementById('rep-member-filter').value;
+  let slots=state.slots;
+  if(reportMode==='month'){
+    slots=slots.filter(s=>s.date.startsWith(reportMonth+'-'));
+  } else {
+    const start=document.getElementById('rep-start').value;
+    const end=document.getElementById('rep-end').value;
+    if(!start||!end) return null;
+    slots=slots.filter(s=>s.date>=start&&s.date<=end);
+  }
+  if(filterMid) slots=slots.filter(s=>s.memberId===filterMid);
+  return slots;
+}
+
+// 実績H計算（残り時間の同案件加算を含む）
+function calcActualH(s){
+  let h=s.actualH||0;
+  if(h<SLOT_H&&s.shortfallProcess&&(s.shortfallType==='same'||!s.shortfallType)){
+    h=SLOT_H; // 残り時間も同案件計上 → 4H扱い
+  }
+  return h;
+}
+
 function renderReport(){
   const body=document.getElementById('report-body');
   body.innerHTML='';
   const filterMid=document.getElementById('rep-member-filter').value;
 
-  // 対象スロットを絞り込む
-  let slots=state.slots;
-  if(reportMode==='month'){
-    const prefix=reportMonth+'-';
-    slots=slots.filter(s=>s.date.startsWith(prefix));
-  } else {
-    const start=document.getElementById('rep-start').value;
-    const end=document.getElementById('rep-end').value;
-    if(!start||!end){body.innerHTML='<div class="report-empty">開始日と終了日を選択してください</div>';return;}
-    slots=slots.filter(s=>s.date>=start&&s.date<=end);
+  if(!filterMid){
+    body.innerHTML='<div class="report-empty">担当者を選択してください</div>';
+    return;
   }
-  if(filterMid) slots=slots.filter(s=>s.memberId===filterMid);
 
+  const slots=getFilteredSlots();
+  if(slots===null){
+    body.innerHTML='<div class="report-empty">開始日と終了日を選択してください</div>';
+    return;
+  }
   if(!slots.length){
-    body.innerHTML='<div class="report-empty">該当するデータがありません</div>';return;
+    body.innerHTML='<div class="report-empty">該当するデータがありません</div>';
+    return;
   }
 
-  // 担当者ごとに集計
-  const targets=filterMid?state.members.filter(m=>m.id===filterMid):state.members;
-  targets.forEach(mem=>{
-    const memSlots=slots.filter(s=>s.memberId===mem.id);
-    if(!memSlots.length)return;
-    const c=COLORS[mem.color];
+  const mem=state.members.find(m=>m.id===filterMid);
+  if(!mem) return;
+  const c=COLORS[mem.color];
 
-    // 工程別集計
-    const byProcess={};
-    let totalPlan=0,totalActual=0;
-    memSlots.forEach(s=>{
-      const proc=s.process||'（未設定）';
-      if(!byProcess[proc])byProcess[proc]={planH:0,actualH:0,shortfalls:[]};
-      byProcess[proc].planH+=SLOT_H;
-      byProcess[proc].actualH+=(s.actualH||0);
-      totalPlan+=SLOT_H;
-      totalActual+=(s.actualH||0);
+  if(reportAxis==='process')   renderByProcess(body,mem,c,slots);
+  else if(reportAxis==='project') renderByProject(body,mem,c,slots);
+  else if(reportAxis==='monthly') renderByMonthly(body,mem,c,slots);
+}
 
-      // 残り時間の処理
-      const actualH=s.actualH||0;
-      if(actualH<SLOT_H&&s.shortfallProcess){
-        const diff=SLOT_H-actualH;
-        const sfType=s.shortfallType||'same';
-        let label='';
-        if(sfType==='same'){
-          // この案件に含める→該当工程に加算
-          const sfProc=s.shortfallProcess;
-          if(!byProcess[sfProc])byProcess[sfProc]={planH:0,actualH:0,shortfalls:[]};
-          byProcess[sfProc].actualH+=diff;
-          totalActual+=diff;
-          label='→ 同案件('+sfProc+')に加算';
-        } else if(sfType==='other'){
-          // 別案件→参考表示のみ
-          const otherProj=state.projects.find(p=>p.id===s.shortfallOtherProjId);
-          label='→ 別案件['+(otherProj?otherProj.name:'不明')+']';
-        } else {
-          // 案件外
-          label='→ 案件外';
-        }
-        byProcess[proc].shortfalls.push({
-          date:s.date,slot:s.slot,diff:diff,
-          proc:s.shortfallProcess,label:label
-        });
+// ---- 工程別 ----
+function renderByProcess(body,mem,c,slots){
+  const{rows,totalPlan,totalActual}=aggregateByProcess(slots);
+  body.appendChild(makeMemberHeader(mem,c,totalPlan,totalActual));
+  body.appendChild(makeTable(
+    ['工程名','予定H','実績H','差異H','達成率','未達時の作業'],
+    rows.map(r=>[
+      r.key, r.planH, r.actualH,
+      (r.actualH-r.planH>=0?'+':'')+(r.actualH-r.planH),
+      r.planH>0?Math.round(r.actualH/r.planH*100)+'%':'-',
+      r.shortfalls.map(x=>x.date+' '+x.slot+': '+x.proc+'('+x.diff+'H) '+x.label).join(' / ')
+    ]),
+    rows
+  ));
+}
+
+// ---- 案件別 ----
+function renderByProject(body,mem,c,slots){
+  const byProj={};
+  let totalPlan=0,totalActual=0;
+  slots.forEach(s=>{
+    const proj=getProject(s.projId);
+    const key=proj?proj.name:'（未設定）';
+    if(!byProj[key])byProj[key]={planH:0,actualH:0};
+    byProj[key].planH+=SLOT_H;
+    const ah=calcActualH(s);
+    byProj[key].actualH+=ah;
+    totalPlan+=SLOT_H; totalActual+=ah;
+  });
+  body.appendChild(makeMemberHeader(mem,c,totalPlan,totalActual));
+  const rows=Object.entries(byProj).sort((a,b)=>a[0].localeCompare(b[0],'ja'))
+    .map(([key,d])=>({key,planH:d.planH,actualH:d.actualH,shortfalls:[]}));
+  body.appendChild(makeTable(
+    ['案件名','予定H','実績H','差異H','達成率'],
+    rows.map(r=>[
+      r.key, r.planH, r.actualH,
+      (r.actualH-r.planH>=0?'+':'')+(r.actualH-r.planH),
+      r.planH>0?Math.round(r.actualH/r.planH*100)+'%':'-'
+    ]),
+    rows
+  ));
+}
+
+// ---- 月別 ----
+function renderByMonthly(body,mem,c,slots){
+  const byMonth={};
+  let totalPlan=0,totalActual=0;
+  slots.forEach(s=>{
+    const ym=s.date.slice(0,7);
+    if(!byMonth[ym])byMonth[ym]={planH:0,actualH:0};
+    byMonth[ym].planH+=SLOT_H;
+    const ah=calcActualH(s);
+    byMonth[ym].actualH+=ah;
+    totalPlan+=SLOT_H; totalActual+=ah;
+  });
+  body.appendChild(makeMemberHeader(mem,c,totalPlan,totalActual));
+  const rows=Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]))
+    .map(([ym,d])=>{
+      const[y,m]=ym.split('-');
+      return{key:y+'年'+m+'月',planH:d.planH,actualH:d.actualH,shortfalls:[]};
+    });
+  body.appendChild(makeTable(
+    ['月','予定H','実績H','差異H','達成率'],
+    rows.map(r=>[
+      r.key, r.planH, r.actualH,
+      (r.actualH-r.planH>=0?'+':'')+(r.actualH-r.planH),
+      r.planH>0?Math.round(r.actualH/r.planH*100)+'%':'-'
+    ]),
+    rows
+  ));
+}
+
+// ---- 工程別集計の共通処理 ----
+function aggregateByProcess(slots){
+  const byProcess={};
+  let totalPlan=0,totalActual=0;
+  slots.forEach(s=>{
+    const proc=s.process||'（未設定）';
+    if(!byProcess[proc])byProcess[proc]={planH:0,actualH:0,shortfalls:[]};
+    byProcess[proc].planH+=SLOT_H;
+    const ah=calcActualH(s);
+    byProcess[proc].actualH+=ah;
+    totalPlan+=SLOT_H; totalActual+=ah;
+    // 未達時の作業記録
+    const rawH=s.actualH||0;
+    if(rawH<SLOT_H&&s.shortfallProcess){
+      const diff=SLOT_H-rawH;
+      const sfType=s.shortfallType||'same';
+      let label=sfType==='same'?'→ 同案件に加算':sfType==='other'?'→ 別案件':'→ 案件外';
+      byProcess[proc].shortfalls.push({date:s.date,slot:s.slot,diff,proc:s.shortfallProcess,label});
+    }
+  });
+  const rows=Object.entries(byProcess).sort((a,b)=>a[0].localeCompare(b[0],'ja'))
+    .map(([key,d])=>({key,...d}));
+  return{rows,totalPlan,totalActual};
+}
+
+// ---- ヘッダー生成 ----
+function makeMemberHeader(mem,c,totalPlan,totalActual){
+  const totalPct=totalPlan>0?Math.round(totalActual/totalPlan*100):0;
+  const div=document.createElement('div');
+  div.className='report-member-section';
+  div.innerHTML=`<div class="report-member-header">
+    <span style="width:10px;height:10px;border-radius:50%;background:${c.fg};display:inline-block;flex-shrink:0;"></span>
+    <span class="report-member-name" style="color:${c.fg}">${mem.name}</span>
+    <span class="report-member-summary">予定 ${totalPlan}H　実績 ${totalActual}H　達成率 ${totalPct}%</span>
+  </div>`;
+  return div;
+}
+
+// ---- テーブル生成 ----
+function makeTable(headers,dataRows,rawRows){
+  const wrap=document.createElement('div');
+  let html=`<table class="report-table"><thead><tr>`;
+  headers.forEach((h,i)=>{
+    const right=i>=1&&i<=3?'text-align:right;':'';
+    html+=`<th style="${right}">${h}</th>`;
+  });
+  html+=`</tr></thead><tbody>`;
+  dataRows.forEach((cols,ri)=>{
+    const raw=rawRows[ri];
+    const pct=raw.planH>0?Math.round(raw.actualH/raw.planH*100):0;
+    const bc=pct>=100?'#3ecf8e':pct>=70?'#f7b731':'#4f7fff';
+    html+=`<tr>`;
+    cols.forEach((val,ci)=>{
+      const right=ci>=1&&ci<=3?'text-align:right;font-family:"IBM Plex Mono",monospace;':'';
+      const diffColor=(ci===3&&typeof val==='string')?
+        (val.startsWith('+')||val==='0'?'color:#3ecf8e;':'color:#ff6b6b;'):'';
+      if(ci===4&&headers.includes('達成率')&&headers[ci]==='達成率'){
+        // 達成率バーセル
+        html+=`<td class="report-bar-cell">
+          <div>${val}</div>
+          <div class="report-mini-bar"><div class="report-mini-fill" style="width:${Math.min(pct,100)}%;background:${bc};"></div></div>
+        </td>`;
+      } else if(ci===5){
+        html+=`<td><div class="report-shortfall" style="white-space:pre-line;">${val}</div></td>`;
+      } else {
+        html+=`<td style="${right}${diffColor}">${val}</td>`;
       }
     });
-
-    const sec=document.createElement('div');
-    sec.className='report-member-section';
-    const totalPct=totalPlan>0?Math.round(totalActual/totalPlan*100):0;
-    const barColor=totalPct>=100?'#3ecf8e':totalPct>=70?'#f7b731':'#4f7fff';
-    sec.innerHTML=`
-      <div class="report-member-header">
-        <span style="width:10px;height:10px;border-radius:50%;background:${c.fg};display:inline-block;flex-shrink:0;"></span>
-        <span class="report-member-name" style="color:${c.fg}">${mem.name}</span>
-        <span class="report-member-summary">予定 ${totalPlan}H　実績 ${totalActual}H　達成率 ${totalPct}%</span>
-      </div>
-      <table class="report-table">
-        <thead><tr>
-          <th>工程名</th>
-          <th style="text-align:right;">予定H</th>
-          <th style="text-align:right;">実績H</th>
-          <th style="text-align:right;">差異H</th>
-          <th class="report-bar-cell">達成率</th>
-          <th>未達時の作業</th>
-        </tr></thead>
-        <tbody id="rep-tbody-${mem.id}"></tbody>
-      </table>`;
-    body.appendChild(sec);
-
-    const tbody=document.getElementById('rep-tbody-'+mem.id);
-    Object.entries(byProcess).sort((a,b)=>a[0].localeCompare(b[0],'ja')).forEach(([proc,d])=>{
-      const pct=d.planH>0?Math.round(d.actualH/d.planH*100):0;
-      const diff=d.actualH-d.planH;
-      const diffColor=diff>=0?'#3ecf8e':'#ff6b6b';
-      const bc=pct>=100?'#3ecf8e':pct>=70?'#f7b731':'#4f7fff';
-      const sfText=d.shortfalls.length?d.shortfalls.map(x=>x.date+' '+x.slot+': '+x.proc+'('+x.diff+'H) '+x.label).join('<br>'):'';
-      const tr=document.createElement('tr');
-      tr.innerHTML=`
-        <td>${proc}</td>
-        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;">${d.planH}</td>
-        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;">${d.actualH}</td>
-        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;color:${diffColor}">${diff>=0?'+':''}${diff}</td>
-        <td class="report-bar-cell">
-          <div>${pct}%</div>
-          <div class="report-mini-bar"><div class="report-mini-fill" style="width:${Math.min(pct,100)}%;background:${bc};"></div></div>
-        </td>
-        <td><div class="report-shortfall">${sfText}</div></td>`;
-      tbody.appendChild(tr);
-    });
+    html+=`</tr>`;
   });
+  html+=`</tbody></table>`;
+  wrap.innerHTML=html;
+  return wrap;
+}
+
+// =====================================================
+//  Excel エクスポート（SheetJS）
+// =====================================================
+function exportExcel(){
+  const filterMid=document.getElementById('rep-member-filter').value;
+  if(!filterMid){alert('担当者を選択してください');return;}
+  const slots=getFilteredSlots();
+  if(!slots||!slots.length){alert('エクスポートするデータがありません');return;}
+  const mem=state.members.find(m=>m.id===filterMid);
+  if(!mem)return;
+
+  // SheetJSを動的に読み込む
+  if(typeof XLSX==='undefined'){
+    const script=document.createElement('script');
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    script.onload=()=>_doExport(mem,slots);
+    document.head.appendChild(script);
+  } else {
+    _doExport(mem,slots);
+  }
+}
+
+function _doExport(mem,slots){
+  const wb=XLSX.utils.book_new();
+  const period=reportMode==='month'?
+    (()=>{const{y,m}=parseYM(reportMonth);return y+'年'+m+'月';})():
+    (document.getElementById('rep-start').value+'〜'+document.getElementById('rep-end').value);
+
+  // シート1：工程別
+  const{rows:pRows,totalPlan:pTotal,totalActual:pActual}=aggregateByProcess(slots);
+  const pData=[
+    ['担当者：'+mem.name+' 　期間：'+period],
+    [],
+    ['工程名','予定H','実績H','差異H','達成率(%)','未達時の作業'],
+    ...pRows.map(r=>[
+      r.key,r.planH,r.actualH,r.actualH-r.planH,
+      r.planH>0?Math.round(r.actualH/r.planH*100):0,
+      r.shortfalls.map(x=>x.date+' '+x.slot+': '+x.proc+'('+x.diff+'H) '+x.label).join(' / ')
+    ]),
+    [],
+    ['合計',pTotal,pActual,pActual-pTotal,pTotal>0?Math.round(pActual/pTotal*100):0,'']
+  ];
+  const ws1=XLSX.utils.aoa_to_sheet(pData);
+  XLSX.utils.book_append_sheet(wb,'工程別',ws1);
+
+  // シート2：案件別
+  const byProj={};
+  slots.forEach(s=>{
+    const proj=getProject(s.projId);
+    const key=proj?proj.name:'（未設定）';
+    if(!byProj[key])byProj[key]={planH:0,actualH:0};
+    byProj[key].planH+=SLOT_H;
+    byProj[key].actualH+=calcActualH(s);
+  });
+  const projRows=Object.entries(byProj).sort((a,b)=>a[0].localeCompare(b[0],'ja'));
+  const projTotalP=projRows.reduce((s,[,d])=>s+d.planH,0);
+  const projTotalA=projRows.reduce((s,[,d])=>s+d.actualH,0);
+  const pjData=[
+    ['担当者：'+mem.name+' 　期間：'+period],
+    [],
+    ['案件名','予定H','実績H','差異H','達成率(%)'],
+    ...projRows.map(([k,d])=>[k,d.planH,d.actualH,d.actualH-d.planH,d.planH>0?Math.round(d.actualH/d.planH*100):0]),
+    [],
+    ['合計',projTotalP,projTotalA,projTotalA-projTotalP,projTotalP>0?Math.round(projTotalA/projTotalP*100):0]
+  ];
+  const ws2=XLSX.utils.aoa_to_sheet(pjData);
+  XLSX.utils.book_append_sheet(wb,'案件別',ws2);
+
+  // シート3：月別
+  const byMonth={};
+  slots.forEach(s=>{
+    const ym=s.date.slice(0,7);
+    if(!byMonth[ym])byMonth[ym]={planH:0,actualH:0};
+    byMonth[ym].planH+=SLOT_H;
+    byMonth[ym].actualH+=calcActualH(s);
+  });
+  const monthRows=Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]));
+  const mTotalP=monthRows.reduce((s,[,d])=>s+d.planH,0);
+  const mTotalA=monthRows.reduce((s,[,d])=>s+d.actualH,0);
+  const mData=[
+    ['担当者：'+mem.name+' 　期間：'+period],
+    [],
+    ['月','予定H','実績H','差異H','達成率(%)'],
+    ...monthRows.map(([ym,d])=>{
+      const[y,m]=ym.split('-');
+      return[y+'年'+m+'月',d.planH,d.actualH,d.actualH-d.planH,d.planH>0?Math.round(d.actualH/d.planH*100):0];
+    }),
+    [],
+    ['合計',mTotalP,mTotalA,mTotalA-mTotalP,mTotalP>0?Math.round(mTotalA/mTotalP*100):0]
+  ];
+  const ws3=XLSX.utils.aoa_to_sheet(mData);
+  XLSX.utils.book_append_sheet(wb,'月別',ws3);
+
+  // ダウンロード
+  XLSX.writeFile(wb, mem.name+'_集計_'+period.replace(/〜/g,'-').replace(/[年月]/g,'')+'.xlsx');
 }
 
 // =====================================================
