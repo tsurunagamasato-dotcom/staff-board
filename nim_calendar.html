@@ -683,7 +683,12 @@ function renderSummary(){
   monthSlots.forEach(s=>{
     if(!byMember[s.memberId])byMember[s.memberId]={planH:0,actualH:0};
     byMember[s.memberId].planH+=SLOT_H;
-    byMember[s.memberId].actualH+=(s.actualH||0);
+    let actual=s.actualH||0;
+    // 残り時間が「この案件に含める」場合は実績に加算
+    if(actual<SLOT_H && s.shortfallProcess && (s.shortfallType==='same'||!s.shortfallType)){
+      actual+=(SLOT_H-actual);
+    }
+    byMember[s.memberId].actualH+=actual;
   });
 
   // 横並びコンテナ
