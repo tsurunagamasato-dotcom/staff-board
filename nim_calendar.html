@@ -485,6 +485,11 @@ const DEFAULT_MEMBERS = [
   {name:'井口', color:5, processes:["外注打合せ", "客先打合せ", "社内打合せ", "ソフト設計", "ハード図設計・機器構成確認", "各個動作確認", "部品手配", "盤内配線工事", "外部配線工事", "自動運転調整", "段取り作業", "現地運転調整", "立会い", "出荷準備", "取扱説明書作成", "画面作画", "外注管理", "見積資料作成", "現地配線工事", "機器立上作業", "ロボットプログラム設計", "ロボット運転調整", "不具合対応/修正"]},
 ];
 
+// 担当者IDを名前から生成（固定・どのPCでも同じ）
+function memberNameToId(name){ return 'mem_' + name; }
+// 案件IDを名前から生成（固定・どのPCでも同じ）
+function projNameToId(name){ return 'proj_' + name; }
+
 // =====================================================
 //  STATE
 // =====================================================
@@ -492,8 +497,8 @@ let state = loadState() || null;
 if(!state){
   // 初回：デフォルト担当者（工程込み）で初期化
   state = {
-    members: DEFAULT_MEMBERS.map((m,i)=>({
-      id:'m'+i, name:m.name, color:m.color, processes:m.processes||[]
+    members: DEFAULT_MEMBERS.map(m=>({
+      id:memberNameToId(m.name), name:m.name, color:m.color, processes:m.processes||[]
     })),
     projects: [],
     slots: [],
@@ -1093,7 +1098,7 @@ function addMember(){
   const name=document.getElementById('member-name-input').value.trim();
   if(!name){alert('担当者名を入力してください');return;}
   if(state.members.length>=5){alert('担当者は最大5名です');return;}
-  state.members.push({id:uid(),name,color:selectedColor});
+  state.members.push({id:memberNameToId(name),name,color:selectedColor,processes:[]});
   document.getElementById('member-name-input').value='';
   saveState();scheduleSave();renderMaster();
 }
@@ -1105,7 +1110,7 @@ function deleteMember(id){
 function addProject(){
   const name=document.getElementById('proj-name-input').value.trim();
   if(!name){alert('案件名を入力してください');return;}
-  state.projects.push({id:uid(),name});
+  state.projects.push({id:projNameToId(name),name});
   document.getElementById('proj-name-input').value='';
   saveState();scheduleSave();renderMaster();
 }
@@ -1359,9 +1364,10 @@ async function autoLoadFromGAS() {
       // slotsは空でも必ず反映
       state.slots = d.slots || [];
 
-      // 型の正規化
+      // 型の正規化（名前ベースIDなのでマッピング不要）
       state.members.forEach(m=>{
-        m.id    = String(m.id);
+        // IDを名前ベースに正規化（古いランダムIDを上書き）
+        m.id    = memberNameToId(m.name);
         m.color = Number(m.color);
         if(typeof m.processes === 'string'){
           try{ m.processes = JSON.parse(m.processes); }catch(e){ m.processes = []; }
@@ -1372,47 +1378,19 @@ async function autoLoadFromGAS() {
           if(def && def.processes.length > 0) m.processes = [...def.processes];
         }
       });
-      state.projects.forEach(p=>{ p.id = String(p.id); });
-      state.slots.forEach(s=>{
-        s.id       = String(s.id);
-        s.projId   = String(s.projId);
-        s.memberId = String(s.memberId);
-        s.actualH  = Number(s.actualH) || 0;
+      state.projects.forEach(p=>{
+        // IDを名前ベースに正規化
+        p.id = projNameToId(p.name);
       });
-
-      // ★ IDの再マッピング：
-      // スプレッドシートのIDとlocalStorageのIDが異なる場合に名前で紐付け直す
-      // memberId → 名前で検索して現在のIDに置き換え
-      // 名前→ID の逆引きマップを作成
-      const memberNameToId = {};
-      state.members.forEach(m=>{ memberNameToId[m.name] = m.id; });
-
-      // slots の memberId を名前経由で解決
-      // まず GAS から来た memberId に対応する名前を探す
-      // GASのmembersのIDと現在のIDが同じならそのままでOK
-      const gasMembers = d.members || [];
-      const gasMemberIdToName = {};
-      gasMembers.forEach(m=>{ gasMemberIdToName[String(m.id)] = m.name; });
-
-      const gasProjIdToName = {};
-      const gasProjects = d.projects || [];
-      gasProjects.forEach(p=>{ gasProjIdToName[String(p.id)] = p.name; });
-
-      // 名前→ID（現在のstate）
-      const projNameToId = {};
-      state.projects.forEach(p=>{ projNameToId[p.name] = p.id; });
-
       state.slots.forEach(s=>{
-        // memberIdを現在のstateのIDに解決
-        const mName = gasMemberIdToName[s.memberId];
-        if(mName && memberNameToId[mName]){
-          s.memberId = memberNameToId[mName];
-        }
-        // projIdを現在のstateのIDに解決
-        const pName = gasProjIdToName[s.projId];
-        if(pName && projNameToId[pName]){
-          s.projId = projNameToId[pName];
-        }
+        s.id      = String(s.id);
+        s.actualH = Number(s.actualH) || 0;
+        // memberId・projIdを名前ベースIDに正規化
+        // GASから来たIDが古いランダム形式の場合は名前で解決
+        const mem = state.members.find(m=>m.id===s.memberId||m.name===s.memberId);
+        if(mem) s.memberId = mem.id;
+        const proj = state.projects.find(p=>p.id===s.projId||p.name===s.projId);
+        if(proj) s.projId = proj.id;
       });
 
       saveState();
