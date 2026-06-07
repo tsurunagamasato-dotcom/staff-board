@@ -151,7 +151,7 @@
   .slot-empty-label{font-size:8px;color:var(--text-dim);}
 
   /* ===== MASTER VIEW ===== */
-  .master-cols{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;align-items:start;}
+  .master-cols{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:14px;align-items:start;}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;}
   .card-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:14px;font-family:'IBM Plex Mono',monospace;}
   .form-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
@@ -318,6 +318,15 @@
         <tbody></tbody>
       </table>
     </div>
+    <!-- 部門マスタ -->
+    <div class="card">
+      <div class="card-title">🏭 部門マスタ</div>
+      <div class="form-row">
+        <input class="form-input" id="dept-name-input" placeholder="部門名を入力（例：組付）" maxlength="20">
+        <button class="btn btn-primary btn-sm" onclick="addDept()">追加</button>
+      </div>
+      <div class="process-list" id="dept-list"></div>
+    </div>
     <!-- 案件マスタ -->
     <div class="card">
       <div class="card-title">📋 案件マスタ</div>
@@ -326,7 +335,7 @@
         <button class="btn btn-primary btn-sm" onclick="addProject()">追加</button>
       </div>
       <table class="data-table" id="proj-table">
-        <thead><tr><th>案件名</th><th></th></tr></thead>
+        <thead><tr><th>案件名</th><th>部門工数</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -401,12 +410,28 @@
   <div id="report-body"></div>
 </div>
 
+<!-- ======= 部門工数設定モーダル ======= -->
+<div class="modal-overlay" id="dept-hours-modal">
+  <div class="modal" style="width:480px;">
+    <div class="modal-title">🏭 部門別予定工数の設定</div>
+    <div class="modal-sub" id="dept-hours-modal-sub">案件名</div>
+    <div id="dept-hours-rows"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeDeptHoursModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveDeptHours()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======= 実績入力モーダル ======= -->
 <div class="modal-overlay" id="actual-modal">
   <div class="modal">
     <div class="modal-title">📝 実績入力</div>
     <div class="modal-row">
-      <div class="modal-label">案件名</div>
+      <div class="modal-label" style="display:flex;justify-content:space-between;align-items:center;">
+        案件名
+        <button class="btn btn-sm" id="modal-dept-btn" style="font-size:10px;" onclick="openDeptHoursFromSlot(currentSlotProjId())">🏭 部門工数設定</button>
+      </div>
       <div class="modal-info" id="modal-proj-name">-</div>
     </div>
     <div class="modal-row">
@@ -512,6 +537,7 @@ if(!state){
     })),
     projects: [],
     slots: [],
+    departments: ['組付','電気','設計','加工'],
     baseMonth: null,
     filterMembers: [],
   };
@@ -525,6 +551,9 @@ state.members.forEach((m,i)=>{
 });
 if(!state.slots) state.slots=[];
 if(!state.filterMembers) state.filterMembers=[];
+if(!state.departments) state.departments=['組付','電気','設計','加工'];
+// projectsにdeptHoursフィールドを補完
+state.projects.forEach(p=>{ if(!p.deptHours) p.deptHours={}; });
 if(!state.baseMonth){
   const n=new Date();
   state.baseMonth=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
@@ -935,6 +964,11 @@ function openActualModal(slotId){
     alert('実績入力画面を開けませんでした: '+err.message);
   }
 }
+function currentSlotProjId(){
+  if(!actualTarget) return null;
+  const s=state.slots.find(x=>x.id===actualTarget);
+  return s?s.projId:null;
+}
 function closeActualModal(){document.getElementById('actual-modal').classList.remove('open');actualTarget=null;}
 function updateShortfallType(){
   // 工程選択後にtype-wrapを表示
@@ -1093,9 +1127,15 @@ function renderProjTable(){
   const tbody=document.querySelector('#proj-table tbody');
   tbody.innerHTML='';
   state.projects.forEach(p=>{
+    const dh=p.deptHours||{};
+    const summary=state.departments.map(d=>d+':'+(dh[d]||0)+'H').join(' / ');
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>${p.name}</td>
-      <td><button class="del-btn" onclick="deleteProject('${p.id}')">削除</button></td>`;
+      <td style="font-size:10px;color:var(--text-dim);">${summary||'未設定'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm" style="font-size:10px;margin-right:4px;" onclick="openDeptHoursModal('${p.id}')">工数設定</button>
+        <button class="del-btn" onclick="deleteProject('${p.id}')">削除</button>
+      </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -1124,6 +1164,46 @@ function addProject(){
   document.getElementById('proj-name-input').value='';
   saveState();scheduleSave();renderMaster();
 }
+// 部門工数モーダル
+let deptHoursTargetId = null;
+function openDeptHoursModal(projId){
+  deptHoursTargetId=projId;
+  const proj=getProject(projId);
+  if(!proj)return;
+  document.getElementById('dept-hours-modal-sub').textContent=proj.name;
+  const rows=document.getElementById('dept-hours-rows');
+  rows.innerHTML='';
+  (state.departments||[]).forEach(d=>{
+    const val=(proj.deptHours&&proj.deptHours[d])||0;
+    const row=document.createElement('div');
+    row.className='modal-row';
+    row.innerHTML=`<div class="modal-label">${d}（H）</div>
+      <input class="modal-input" id="dept-h-${d}" type="number" min="0" step="0.5" value="${val}" placeholder="0">`;
+    rows.appendChild(row);
+  });
+  document.getElementById('dept-hours-modal').classList.add('open');
+}
+function closeDeptHoursModal(){
+  document.getElementById('dept-hours-modal').classList.remove('open');
+  deptHoursTargetId=null;
+}
+function saveDeptHours(){
+  const proj=getProject(deptHoursTargetId);
+  if(!proj)return;
+  if(!proj.deptHours) proj.deptHours={};
+  (state.departments||[]).forEach(d=>{
+    const val=parseFloat(document.getElementById('dept-h-'+d).value)||0;
+    proj.deptHours[d]=val;
+  });
+  saveState();scheduleSave();closeDeptHoursModal();renderProjTable();
+}
+
+// カレンダーのスロットから部門工数を開く（スロットクリック→実績モーダル内リンク）
+function openDeptHoursFromSlot(projId){
+  closeActualModal();
+  openDeptHoursModal(projId);
+}
+
 function deleteProject(id){
   if(!confirm('案件を削除しますか？（配置済みのスロットも全て削除されます）'))return;
   state.projects=state.projects.filter(p=>p.id!==id);
