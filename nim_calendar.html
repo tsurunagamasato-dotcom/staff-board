@@ -1356,17 +1356,33 @@ async function autoLoadFromGAS() {
       const d = json.data;
       if (d.members  && d.members.length)  state.members  = d.members;
       if (d.projects && d.projects.length) state.projects = d.projects;
-      // slotsは空でも必ず反映（古いデータを残さない）
+      // slotsは空でも必ず反映
       state.slots = d.slots || [];
-      // processesマイグレーション（配列でない場合・空の場合も補完）
+
+      // 型の正規化：スプレッドシートから来た値はstring/numberが混在する
       state.members.forEach(m=>{
-        if(!Array.isArray(m.processes)||m.processes.length===0){
-          const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
-          if(def&&Array.isArray(def.processes)&&def.processes.length>0){
-            m.processes=def.processes;
-          }
+        m.id     = String(m.id);
+        m.color  = Number(m.color);
+        // processes: JSON文字列の場合はパース
+        if(typeof m.processes === 'string'){
+          try{ m.processes = JSON.parse(m.processes); }
+          catch(e){ m.processes = []; }
+        }
+        if(!Array.isArray(m.processes)) m.processes = [];
+        // 空なら初期データで補完
+        if(m.processes.length === 0){
+          const def = DEFAULT_MEMBERS.find(dm=>dm.name===m.name);
+          if(def && def.processes.length > 0) m.processes = [...def.processes];
         }
       });
+      state.projects.forEach(p=>{ p.id = String(p.id); });
+      state.slots.forEach(s=>{
+        s.id       = String(s.id);
+        s.projId   = String(s.projId);
+        s.memberId = String(s.memberId);
+        s.actualH  = Number(s.actualH) || 0;
+      });
+
       saveState();
       renderCalendar();
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
