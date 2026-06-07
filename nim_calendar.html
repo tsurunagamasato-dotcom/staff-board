@@ -360,7 +360,7 @@
       <div class="ratio-label" id="modal-ratio-label"></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-danger btn-sm" style="margin-right:auto;" onclick="removeFromSlot()">削除</button>
+      <button class="btn btn-danger btn-sm" id="actual-modal-remove-btn" style="margin-right:auto;" onclick="removeFromSlot()">🗑 スロットから削除</button>
       <button class="btn" onclick="closeActualModal()">キャンセル</button>
       <button class="btn btn-primary" onclick="saveActual()">保存</button>
     </div>
@@ -714,6 +714,14 @@ function buildSlotEntry(s,date,slot){
       </div>`:''}
     </div>`;
   el.addEventListener('click',e=>{e.stopPropagation();openActualModal(s.id);});
+  // 右クリックで削除
+  el.addEventListener('contextmenu',e=>{
+    e.preventDefault();e.stopPropagation();
+    if(confirm('「'+(proj?proj.name:'この予定')+'」をスロットから削除しますか？')){
+      state.slots=state.slots.filter(x=>x.id!==s.id);
+      saveState();scheduleSave();renderCalendar();
+    }
+  });
   el.addEventListener('dragstart',e=>{
     dragData={slotId:s.id};
     e.dataTransfer.effectAllowed='move';
@@ -751,33 +759,37 @@ function setupDropZone(el,toDate,toSlot){
 //  ACTUAL MODAL
 // =====================================================
 function openActualModal(slotId){
-  const s=state.slots.find(x=>x.id===slotId);
-  if(!s)return;
-  actualTarget=slotId;
-  const proj=getProject(s.projId);
-  const mem=getMember(s.memberId);
-  document.getElementById('modal-proj-name').textContent=proj?proj.name:'-';
-  document.getElementById('modal-member-name').textContent=mem?mem.name:'-';
-  document.getElementById('modal-date-slot').textContent=`${s.date}　${s.slot}`;
-  document.getElementById('modal-actual-h').value=s.actualH||'';
-  // 工程ドロップダウンを担当者の工程リストで構築
-  const procSel=document.getElementById('modal-process');
-  procSel.innerHTML='<option value="">選択してください</option>';
-  const processes=mem&&mem.processes?mem.processes:[];
-  processes.forEach(p=>{
-    const opt=document.createElement('option');
-    opt.value=p;opt.textContent=p;
-    if(p===s.process)opt.selected=true;
-    procSel.appendChild(opt);
-  });
-  if(s.process&&!processes.includes(s.process)){
-    // 削除された工程でも保存済みなら表示
-    const opt=document.createElement('option');
-    opt.value=s.process;opt.textContent=s.process+'（削除済み）';opt.selected=true;
-    procSel.appendChild(opt);
+  try{
+    const s=state.slots.find(x=>x.id===slotId);
+    if(!s)return;
+    actualTarget=slotId;
+    const proj=getProject(s.projId);
+    const mem=getMember(s.memberId);
+    document.getElementById('modal-proj-name').textContent=proj?proj.name:'-';
+    document.getElementById('modal-member-name').textContent=mem?mem.name:'-';
+    document.getElementById('modal-date-slot').textContent=s.date+'　'+s.slot;
+    document.getElementById('modal-actual-h').value=s.actualH||'';
+    // 工程ドロップダウンを担当者の工程リストで構築
+    const procSel=document.getElementById('modal-process');
+    procSel.innerHTML='<option value="">選択してください</option>';
+    const processes=(mem&&mem.processes)?mem.processes:[];
+    processes.forEach(p=>{
+      const opt=document.createElement('option');
+      opt.value=p;opt.textContent=p;
+      if(p===s.process)opt.selected=true;
+      procSel.appendChild(opt);
+    });
+    if(s.process&&!processes.includes(s.process)){
+      const opt=document.createElement('option');
+      opt.value=s.process;opt.textContent=s.process+'（削除済み）';opt.selected=true;
+      procSel.appendChild(opt);
+    }
+    updateRatio();
+    document.getElementById('actual-modal').classList.add('open');
+  }catch(err){
+    console.error('openActualModal error:',err);
+    alert('実績入力画面を開けませんでした: '+err.message);
   }
-  updateRatio();
-  document.getElementById('actual-modal').classList.add('open');
 }
 function closeActualModal(){document.getElementById('actual-modal').classList.remove('open');actualTarget=null;}
 function updateRatio(){
@@ -988,7 +1000,15 @@ async function autoLoadFromGAS() {
       const d = json.data;
       if (d.members  && d.members.length)  state.members  = d.members;
       if (d.projects && d.projects.length) state.projects = d.projects;
-      if (d.slots    && d.slots.length)    state.slots    = d.slots;
+      // slotsは空でも必ず反映（古いデータを残さない）
+      state.slots = d.slots || [];
+      // processesマイグレーション
+      state.members.forEach(m=>{
+        if(!m.processes){
+          const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
+          m.processes=def?def.processes:[];
+        }
+      });
       saveState();
       renderCalendar();
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
