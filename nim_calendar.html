@@ -1147,7 +1147,7 @@ function initReport(){
   if(!reportMonth) reportMonth=state.baseMonth||getCurrentYM();
   const sel=document.getElementById('rep-member-filter');
   const prev=sel.value;
-  sel.innerHTML='<option value="">担当者を選択</option>';
+  sel.innerHTML='<option value="">全員</option>';
   state.members.forEach(m=>{
     sel.innerHTML+=`<option value="${m.id}">${m.name}</option>`;
   });
@@ -1214,11 +1214,6 @@ function renderReport(){
   body.innerHTML='';
   const filterMid=document.getElementById('rep-member-filter').value;
 
-  if(!filterMid){
-    body.innerHTML='<div class="report-empty">担当者を選択してください</div>';
-    return;
-  }
-
   const slots=getFilteredSlots();
   if(slots===null){
     body.innerHTML='<div class="report-empty">開始日と終了日を選択してください</div>';
@@ -1229,13 +1224,18 @@ function renderReport(){
     return;
   }
 
-  const mem=state.members.find(m=>m.id===filterMid);
-  if(!mem) return;
-  const c=COLORS[mem.color];
+  const targets=filterMid
+    ? state.members.filter(m=>m.id===filterMid)
+    : state.members;
 
-  if(reportAxis==='process')   renderByProcess(body,mem,c,slots);
-  else if(reportAxis==='project') renderByProject(body,mem,c,slots);
-  else if(reportAxis==='monthly') renderByMonthly(body,mem,c,slots);
+  targets.forEach(mem=>{
+    const memSlots=slots.filter(s=>s.memberId===mem.id);
+    if(!memSlots.length) return;
+    const c=COLORS[mem.color];
+    if(reportAxis==='process')      renderByProcess(body,mem,c,memSlots);
+    else if(reportAxis==='project') renderByProject(body,mem,c,memSlots);
+    else if(reportAxis==='monthly') renderByMonthly(body,mem,c,memSlots);
+  });
 }
 
 // ---- 工程別 ----
@@ -1390,96 +1390,86 @@ function makeTable(headers,dataRows,rawRows){
 // =====================================================
 function exportExcel(){
   const filterMid=document.getElementById('rep-member-filter').value;
-  if(!filterMid){alert('担当者を選択してください');return;}
   const slots=getFilteredSlots();
   if(!slots||!slots.length){alert('エクスポートするデータがありません');return;}
-  const mem=state.members.find(m=>m.id===filterMid);
-  if(!mem)return;
+  const exportTargets=filterMid
+    ? state.members.filter(m=>m.id===filterMid)
+    : state.members;
 
   // SheetJSを動的に読み込む
   if(typeof XLSX==='undefined'){
     const script=document.createElement('script');
     script.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    script.onload=()=>_doExport(mem,slots);
+    script.onload=()=>_doExport(exportTargets,slots);
     document.head.appendChild(script);
   } else {
-    _doExport(mem,slots);
+    _doExport(exportTargets,slots);
   }
 }
 
-function _doExport(mem,slots){
+function _doExport(members,slots){
+  // 担当者が1人なら個人シート、複数なら担当者ごとにシートを追加
   const wb=XLSX.utils.book_new();
   const period=reportMode==='month'?
     (()=>{const{y,m}=parseYM(reportMonth);return y+'年'+m+'月';})():
     (document.getElementById('rep-start').value+'〜'+document.getElementById('rep-end').value);
 
-  // シート1：工程別
-  const{rows:pRows,totalPlan:pTotal,totalActual:pActual}=aggregateByProcess(slots);
-  const pData=[
-    ['担当者：'+mem.name+' 　期間：'+period],
-    [],
-    ['工程名','予定H','実績H','差異H','達成率(%)','未達時の作業'],
-    ...pRows.map(r=>[
-      r.key,r.planH,r.actualH,r.actualH-r.planH,
-      r.planH>0?Math.round(r.actualH/r.planH*100):0,
-      r.shortfalls.map(x=>x.date+' '+x.slot+': '+x.proc+'('+x.diff+'H) '+x.label).join(' / ')
-    ]),
-    [],
-    ['合計',pTotal,pActual,pActual-pTotal,pTotal>0?Math.round(pActual/pTotal*100):0,'']
-  ];
-  const ws1=XLSX.utils.aoa_to_sheet(pData);
-  XLSX.utils.book_append_sheet(wb,'工程別',ws1);
+  members.forEach(mem=>{
+    const memSlots=slots.filter(s=>s.memberId===mem.id);
+    if(!memSlots.length) return;
 
-  // シート2：案件別
-  const byProj={};
-  slots.forEach(s=>{
-    const proj=getProject(s.projId);
-    const key=proj?proj.name:'（未設定）';
-    if(!byProj[key])byProj[key]={planH:0,actualH:0};
-    byProj[key].planH+=SLOT_H;
-    byProj[key].actualH+=calcActualH(s);
+    // 工程別シート
+    const{rows:pRows,totalPlan:pTotal,totalActual:pActual}=aggregateByProcess(memSlots);
+    const pData=[
+      ['担当者：'+mem.name+'　期間：'+period],[],
+      ['工程名','予定H','実績H','差異H','達成率(%)','未達時の作業'],
+      ...pRows.map(r=>[r.key,r.planH,r.actualH,r.actualH-r.planH,
+        r.planH>0?Math.round(r.actualH/r.planH*100):0,
+        r.shortfalls.map(x=>x.date+' '+x.slot+': '+x.proc+'('+x.diff+'H) '+x.label).join(' / ')]),
+      [],[' 合計',pTotal,pActual,pActual-pTotal,pTotal>0?Math.round(pActual/pTotal*100):0,'']
+    ];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pData),mem.name+'_工程別');
+
+    // 案件別シート
+    const byProj={};
+    memSlots.forEach(s=>{
+      const proj=getProject(s.projId);
+      const key=proj?proj.name:'（未設定）';
+      if(!byProj[key])byProj[key]={planH:0,actualH:0};
+      byProj[key].planH+=SLOT_H; byProj[key].actualH+=calcActualH(s);
+    });
+    const projRows=Object.entries(byProj).sort((a,b)=>a[0].localeCompare(b[0],'ja'));
+    const pjP=projRows.reduce((s,[,d])=>s+d.planH,0);
+    const pjA=projRows.reduce((s,[,d])=>s+d.actualH,0);
+    const pjData=[
+      ['担当者：'+mem.name+'　期間：'+period],[],
+      ['案件名','予定H','実績H','差異H','達成率(%)'],
+      ...projRows.map(([k,d])=>[k,d.planH,d.actualH,d.actualH-d.planH,d.planH>0?Math.round(d.actualH/d.planH*100):0]),
+      [],[' 合計',pjP,pjA,pjA-pjP,pjP>0?Math.round(pjA/pjP*100):0]
+    ];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pjData),mem.name+'_案件別');
+
+    // 月別シート
+    const byMonth={};
+    memSlots.forEach(s=>{
+      const ym=s.date.slice(0,7);
+      if(!byMonth[ym])byMonth[ym]={planH:0,actualH:0};
+      byMonth[ym].planH+=SLOT_H; byMonth[ym].actualH+=calcActualH(s);
+    });
+    const mRows=Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]));
+    const mP=mRows.reduce((s,[,d])=>s+d.planH,0);
+    const mA=mRows.reduce((s,[,d])=>s+d.actualH,0);
+    const mData=[
+      ['担当者：'+mem.name+'　期間：'+period],[],
+      ['月','予定H','実績H','差異H','達成率(%)'],
+      ...mRows.map(([ym,d])=>{const[y,m]=ym.split('-');return[y+'年'+m+'月',d.planH,d.actualH,d.actualH-d.planH,d.planH>0?Math.round(d.actualH/d.planH*100):0];}),
+      [],[' 合計',mP,mA,mA-mP,mP>0?Math.round(mA/mP*100):0]
+    ];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(mData),mem.name+'_月別');
   });
-  const projRows=Object.entries(byProj).sort((a,b)=>a[0].localeCompare(b[0],'ja'));
-  const projTotalP=projRows.reduce((s,[,d])=>s+d.planH,0);
-  const projTotalA=projRows.reduce((s,[,d])=>s+d.actualH,0);
-  const pjData=[
-    ['担当者：'+mem.name+' 　期間：'+period],
-    [],
-    ['案件名','予定H','実績H','差異H','達成率(%)'],
-    ...projRows.map(([k,d])=>[k,d.planH,d.actualH,d.actualH-d.planH,d.planH>0?Math.round(d.actualH/d.planH*100):0]),
-    [],
-    ['合計',projTotalP,projTotalA,projTotalA-projTotalP,projTotalP>0?Math.round(projTotalA/projTotalP*100):0]
-  ];
-  const ws2=XLSX.utils.aoa_to_sheet(pjData);
-  XLSX.utils.book_append_sheet(wb,'案件別',ws2);
 
-  // シート3：月別
-  const byMonth={};
-  slots.forEach(s=>{
-    const ym=s.date.slice(0,7);
-    if(!byMonth[ym])byMonth[ym]={planH:0,actualH:0};
-    byMonth[ym].planH+=SLOT_H;
-    byMonth[ym].actualH+=calcActualH(s);
-  });
-  const monthRows=Object.entries(byMonth).sort((a,b)=>a[0].localeCompare(b[0]));
-  const mTotalP=monthRows.reduce((s,[,d])=>s+d.planH,0);
-  const mTotalA=monthRows.reduce((s,[,d])=>s+d.actualH,0);
-  const mData=[
-    ['担当者：'+mem.name+' 　期間：'+period],
-    [],
-    ['月','予定H','実績H','差異H','達成率(%)'],
-    ...monthRows.map(([ym,d])=>{
-      const[y,m]=ym.split('-');
-      return[y+'年'+m+'月',d.planH,d.actualH,d.actualH-d.planH,d.planH>0?Math.round(d.actualH/d.planH*100):0];
-    }),
-    [],
-    ['合計',mTotalP,mTotalA,mTotalA-mTotalP,mTotalP>0?Math.round(mTotalA/mTotalP*100):0]
-  ];
-  const ws3=XLSX.utils.aoa_to_sheet(mData);
-  XLSX.utils.book_append_sheet(wb,'月別',ws3);
-
-  // ダウンロード
-  XLSX.writeFile(wb, mem.name+'_集計_'+period.replace(/〜/g,'-').replace(/[年月]/g,'')+'.xlsx');
+  const fname=(members.length===1?members[0].name:'全員')+'_集計_'+period.replace(/〜/g,'-').replace(/[年月]/g,'')+'.xlsx';
+  XLSX.writeFile(wb,fname);
 }
 
 // =====================================================
