@@ -188,9 +188,6 @@
 
   /* GAS連携バー */
   .gas-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;}
-  .gas-url-input{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;font-family:'IBM Plex Mono',monospace;padding:6px 10px;outline:none;transition:border .15s;}
-  .gas-url-input:focus{border-color:var(--accent);}
-  .gas-url-input::placeholder{color:var(--text-dim);}
   .btn-save{background:var(--accent);border-color:var(--accent);color:#fff;font-size:12px;padding:5px 14px;}
   .btn-save:hover{background:#6b90ff;color:#fff;}
   .btn-save:disabled{opacity:.5;cursor:not-allowed;}
@@ -229,10 +226,8 @@
     <button class="btn btn-primary" onclick="switchView('master')">⚙ マスタ管理</button>
   </div>
   <!-- GAS連携バー -->
+  <!-- 同期ステータス表示 -->
   <div class="gas-bar">
-    <input class="gas-url-input" id="gas-url-input" placeholder="GAS Web App URL を貼り付け（例: https://script.google.com/macros/s/...exec）" spellcheck="false">
-    <button class="btn btn-save" onclick="saveToGAS()" id="btn-save">☁ 保存</button>
-    <button class="btn btn-load" onclick="loadFromGAS()" id="btn-load">↓ 読込</button>
     <span class="gas-status" id="gas-status"></span>
   </div>
   <div id="member-filter-wrap" class="member-filter"></div>
@@ -443,7 +438,7 @@ function setViewMode(n){
 // =====================================================
 //  CALENDAR RENDER
 // =====================================================
-function shiftMonths(n){state.baseMonth=addMonths(state.baseMonth,n);saveState();renderCalendar();}
+function shiftMonths(n){state.baseMonth=addMonths(state.baseMonth,n);saveState();scheduleSave();renderCalendar();}
 
 function renderCalendar(){
   const months=viewMode===1?[state.baseMonth]:[state.baseMonth,addMonths(state.baseMonth,1),addMonths(state.baseMonth,2)];
@@ -476,7 +471,7 @@ function renderMemberFilter(){
     chip.onclick=()=>{
       if(state.filterMembers.includes(mem.id))state.filterMembers=state.filterMembers.filter(x=>x!==mem.id);
       else state.filterMembers.push(mem.id);
-      saveState();renderCalendar();
+      saveState();scheduleSave();renderCalendar();
     };
     wrap.appendChild(chip);
   });
@@ -720,7 +715,7 @@ function setupDropZone(el,toDate,toSlot){
       });
     }
     dragData=null;
-    saveState();renderCalendar();
+    saveState();scheduleSave();renderCalendar();
   });
 }
 
@@ -761,13 +756,13 @@ function saveActual(){
   if(!s)return;
   s.actualH=parseFloat(document.getElementById('modal-actual-h').value)||0;
   s.comment=document.getElementById('modal-comment').value;
-  saveState();closeActualModal();renderCalendar();
+  saveState();scheduleSave();closeActualModal();renderCalendar();
 }
 function removeFromSlot(){
   if(!actualTarget)return;
   if(!confirm('このスロットの配置を削除しますか？'))return;
   state.slots=state.slots.filter(x=>x.id!==actualTarget);
-  saveState();closeActualModal();renderCalendar();
+  saveState();scheduleSave();closeActualModal();renderCalendar();
 }
 
 // =====================================================
@@ -810,40 +805,33 @@ function addMember(){
   if(state.members.length>=5){alert('担当者は最大5名です');return;}
   state.members.push({id:uid(),name,color:selectedColor});
   document.getElementById('member-name-input').value='';
-  saveState();renderMaster();
+  saveState();scheduleSave();renderMaster();
 }
 function deleteMember(id){
   if(!confirm('担当者を削除しますか？'))return;
   state.members=state.members.filter(m=>m.id!==id);
-  saveState();renderMaster();
+  saveState();scheduleSave();renderMaster();
 }
 function addProject(){
   const name=document.getElementById('proj-name-input').value.trim();
   if(!name){alert('案件名を入力してください');return;}
   state.projects.push({id:uid(),name});
   document.getElementById('proj-name-input').value='';
-  saveState();renderMaster();
+  saveState();scheduleSave();renderMaster();
 }
 function deleteProject(id){
   if(!confirm('案件を削除しますか？（配置済みのスロットも全て削除されます）'))return;
   state.projects=state.projects.filter(p=>p.id!==id);
   state.slots=state.slots.filter(s=>s.projId!==id);
-  saveState();renderMaster();
+  saveState();scheduleSave();renderMaster();
 }
 
 // =====================================================
-//  GAS 連携
+//  GAS 連携（自動保存・自動読込）
 // =====================================================
-const GAS_URL_KEY = 'sched_gas_url';
-
-function getGasUrl() {
-  const input = document.getElementById('gas-url-input').value.trim();
-  if (input) {
-    localStorage.setItem(GAS_URL_KEY, input);
-    return input;
-  }
-  return localStorage.getItem(GAS_URL_KEY) || '';
-}
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzk1g8s5ZVXZHLaUKwZ22jmroha7fo8iH-WSTjy7f4jjoCscVrCNZvK0hUo1PybA8Yf/exec';
+let isSyncing = false;
+let saveTimer = null;
 
 function setGasStatus(msg, type) {
   const el = document.getElementById('gas-status');
@@ -851,45 +839,42 @@ function setGasStatus(msg, type) {
   el.className = 'gas-status ' + type;
 }
 
-function setGasBtns(disabled) {
-  document.getElementById('btn-save').disabled = disabled;
-  document.getElementById('btn-load').disabled = disabled;
+// データ変更時に呼ぶ：0.8秒後に自動保存（連続操作をまとめる）
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => autoSaveToGAS(), 800);
 }
 
-async function saveToGAS() {
-  const url = getGasUrl();
-  if (!url) { alert('GAS Web App URLを入力してください'); return; }
-  setGasBtns(true);
-  setGasStatus('保存中...', 'loading');
+async function autoSaveToGAS() {
+  if (isSyncing) return;
+  isSyncing = true;
+  setGasStatus('⟳ 同期中...', 'loading');
   try {
     const payload = {
       members:  state.members,
       projects: state.projects,
       slots:    state.slots,
     };
-    const res = await fetch(url, {
+    const res = await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
     const json = await res.json();
     if (json.status === 'ok') {
-      setGasStatus('✓ 保存完了 ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
+      setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
     } else {
-      setGasStatus('✗ ' + (json.message || '保存失敗'), 'err');
+      setGasStatus('✗ 保存失敗', 'err');
     }
   } catch(e) {
-    setGasStatus('✗ 通信エラー: ' + e.message, 'err');
+    setGasStatus('✗ 通信エラー', 'err');
   }
-  setGasBtns(false);
+  isSyncing = false;
 }
 
-async function loadFromGAS() {
-  const url = getGasUrl();
-  if (!url) { alert('GAS Web App URLを入力してください'); return; }
-  setGasBtns(true);
-  setGasStatus('読込中...', 'loading');
+async function autoLoadFromGAS() {
+  setGasStatus('⟳ 読込中...', 'loading');
   try {
-    const res = await fetch(url);
+    const res = await fetch(GAS_URL);
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
       const d = json.data;
@@ -898,25 +883,22 @@ async function loadFromGAS() {
       if (d.slots    && d.slots.length)    state.slots    = d.slots;
       saveState();
       renderCalendar();
-      setGasStatus('✓ 読込完了 ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
+      setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
     } else {
-      setGasStatus('✗ ' + (json.message || '読込失敗'), 'err');
+      setGasStatus('✓ データなし（新規）', 'ok');
     }
   } catch(e) {
-    setGasStatus('✗ 通信エラー: ' + e.message, 'err');
+    setGasStatus('✗ 通信エラー（オフライン？）', 'err');
   }
-  setGasBtns(false);
 }
 
 // =====================================================
-//  INIT
+//  INIT：まずlocalStorageで即表示 → バックグラウンドでGAS同期
 // =====================================================
-// 保存済みGAS URLがあれば入力欄に復元
-(function(){
-  const saved = localStorage.getItem(GAS_URL_KEY);
-  if (saved) document.getElementById('gas-url-input').value = saved;
-})();
+// ① localStorageのデータで即座にカレンダーを表示（待ち時間ゼロ）
 renderCalendar();
+// ② 裏でGASから最新データを取得して静かに更新
+autoLoadFromGAS();
 </script>
 </body>
 </html>
