@@ -407,9 +407,9 @@ if(!state){
 }
 // マイグレーション：processesが未設定の担当者に補完
 state.members.forEach((m,i)=>{
-  if(!m.processes){
+  if(!Array.isArray(m.processes)){
     const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
-    m.processes=def?def.processes:[];
+    m.processes=(def&&Array.isArray(def.processes))?def.processes:[];
   }
 });
 if(!state.slots) state.slots=[];
@@ -772,7 +772,7 @@ function openActualModal(slotId){
     // 工程ドロップダウンを担当者の工程リストで構築
     const procSel=document.getElementById('modal-process');
     procSel.innerHTML='<option value="">選択してください</option>';
-    const processes=(mem&&mem.processes)?mem.processes:[];
+    const processes=(mem&&Array.isArray(mem.processes))?mem.processes:[];
     processes.forEach(p=>{
       const opt=document.createElement('option');
       opt.value=p;opt.textContent=p;
@@ -1002,11 +1002,11 @@ async function autoLoadFromGAS() {
       if (d.projects && d.projects.length) state.projects = d.projects;
       // slotsは空でも必ず反映（古いデータを残さない）
       state.slots = d.slots || [];
-      // processesマイグレーション
+      // processesマイグレーション（配列でない場合も補完）
       state.members.forEach(m=>{
-        if(!m.processes){
+        if(!Array.isArray(m.processes)){
           const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
-          m.processes=def?def.processes:[];
+          m.processes=(def&&Array.isArray(def.processes))?def.processes:[];
         }
       });
       saveState();
