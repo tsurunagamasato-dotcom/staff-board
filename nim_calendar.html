@@ -1331,14 +1331,16 @@ async function autoSaveToGAS() {
   isSyncing = true;
   setGasStatus('⟳ 同期中...', 'loading');
   try {
-    const payload = {
+    // 全データをそのままJSON1つで保存
+    const payload = JSON.stringify({
       members:  state.members,
       projects: state.projects,
       slots:    state.slots,
-    };
+      baseMonth: state.baseMonth,
+    });
     const res = await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: payload,
     });
     const json = await res.json();
     if (json.status === 'ok') {
@@ -1355,44 +1357,21 @@ async function autoSaveToGAS() {
 async function autoLoadFromGAS() {
   setGasStatus('⟳ 読込中...', 'loading');
   try {
-    const res = await fetch(GAS_URL);
+    const res  = await fetch(GAS_URL);
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
       const d = json.data;
+      // JSONをそのまま復元（型変換不要）
       if (d.members  && d.members.length)  state.members  = d.members;
       if (d.projects && d.projects.length) state.projects = d.projects;
-      // slotsは空でも必ず反映
-      state.slots = d.slots || [];
-
-      // 型の正規化（名前ベースIDなのでマッピング不要）
+      state.slots = Array.isArray(d.slots) ? d.slots : [];
+      // processesが空の場合は初期データで補完
       state.members.forEach(m=>{
-        // IDを名前ベースに正規化（古いランダムIDを上書き）
-        m.id    = memberNameToId(m.name);
-        m.color = Number(m.color);
-        if(typeof m.processes === 'string'){
-          try{ m.processes = JSON.parse(m.processes); }catch(e){ m.processes = []; }
-        }
-        if(!Array.isArray(m.processes)) m.processes = [];
-        if(m.processes.length === 0){
-          const def = DEFAULT_MEMBERS.find(dm=>dm.name===m.name);
-          if(def && def.processes.length > 0) m.processes = [...def.processes];
+        if(!Array.isArray(m.processes)||m.processes.length===0){
+          const def=DEFAULT_MEMBERS.find(dm=>dm.name===m.name);
+          if(def&&def.processes.length>0) m.processes=[...def.processes];
         }
       });
-      state.projects.forEach(p=>{
-        // IDを名前ベースに正規化
-        p.id = projNameToId(p.name);
-      });
-      state.slots.forEach(s=>{
-        s.id      = String(s.id);
-        s.actualH = Number(s.actualH) || 0;
-        // memberId・projIdを名前ベースIDに正規化
-        // GASから来たIDが古いランダム形式の場合は名前で解決
-        const mem = state.members.find(m=>m.id===s.memberId||m.name===s.memberId);
-        if(mem) s.memberId = mem.id;
-        const proj = state.projects.find(p=>p.id===s.projId||p.name===s.projId);
-        if(proj) s.projId = proj.id;
-      });
-
       saveState();
       renderCalendar();
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
