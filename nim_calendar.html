@@ -1359,17 +1359,14 @@ async function autoLoadFromGAS() {
       // slotsは空でも必ず反映
       state.slots = d.slots || [];
 
-      // 型の正規化：スプレッドシートから来た値はstring/numberが混在する
+      // 型の正規化
       state.members.forEach(m=>{
-        m.id     = String(m.id);
-        m.color  = Number(m.color);
-        // processes: JSON文字列の場合はパース
+        m.id    = String(m.id);
+        m.color = Number(m.color);
         if(typeof m.processes === 'string'){
-          try{ m.processes = JSON.parse(m.processes); }
-          catch(e){ m.processes = []; }
+          try{ m.processes = JSON.parse(m.processes); }catch(e){ m.processes = []; }
         }
         if(!Array.isArray(m.processes)) m.processes = [];
-        // 空なら初期データで補完
         if(m.processes.length === 0){
           const def = DEFAULT_MEMBERS.find(dm=>dm.name===m.name);
           if(def && def.processes.length > 0) m.processes = [...def.processes];
@@ -1381,6 +1378,41 @@ async function autoLoadFromGAS() {
         s.projId   = String(s.projId);
         s.memberId = String(s.memberId);
         s.actualH  = Number(s.actualH) || 0;
+      });
+
+      // ★ IDの再マッピング：
+      // スプレッドシートのIDとlocalStorageのIDが異なる場合に名前で紐付け直す
+      // memberId → 名前で検索して現在のIDに置き換え
+      // 名前→ID の逆引きマップを作成
+      const memberNameToId = {};
+      state.members.forEach(m=>{ memberNameToId[m.name] = m.id; });
+
+      // slots の memberId を名前経由で解決
+      // まず GAS から来た memberId に対応する名前を探す
+      // GASのmembersのIDと現在のIDが同じならそのままでOK
+      const gasMembers = d.members || [];
+      const gasMemberIdToName = {};
+      gasMembers.forEach(m=>{ gasMemberIdToName[String(m.id)] = m.name; });
+
+      const gasProjIdToName = {};
+      const gasProjects = d.projects || [];
+      gasProjects.forEach(p=>{ gasProjIdToName[String(p.id)] = p.name; });
+
+      // 名前→ID（現在のstate）
+      const projNameToId = {};
+      state.projects.forEach(p=>{ projNameToId[p.name] = p.id; });
+
+      state.slots.forEach(s=>{
+        // memberIdを現在のstateのIDに解決
+        const mName = gasMemberIdToName[s.memberId];
+        if(mName && memberNameToId[mName]){
+          s.memberId = memberNameToId[mName];
+        }
+        // projIdを現在のstateのIDに解決
+        const pName = gasProjIdToName[s.projId];
+        if(pName && projNameToId[pName]){
+          s.projId = projNameToId[pName];
+        }
       });
 
       saveState();
