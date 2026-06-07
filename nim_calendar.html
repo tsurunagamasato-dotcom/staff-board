@@ -151,7 +151,7 @@
   .slot-empty-label{font-size:8px;color:var(--text-dim);}
 
   /* ===== MASTER VIEW ===== */
-  .master-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start;}
+  .master-cols{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;align-items:start;}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;}
   .card-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:14px;font-family:'IBM Plex Mono',monospace;}
   .form-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
@@ -197,6 +197,13 @@
   .gas-status.ok{color:#3ecf8e;}
   .gas-status.err{color:#ff6b6b;}
   .gas-status.loading{color:var(--text-dim);}
+
+  /* 工程マスタ */
+  .process-member-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;}
+  .process-tab{padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:11px;font-family:'Noto Sans JP',sans-serif;cursor:pointer;transition:all .15s;}
+  .process-tab.active{color:#fff;font-weight:600;}
+  .process-list{display:flex;flex-direction:column;gap:4px;margin-top:6px;}
+  .process-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--surface2);border-radius:5px;font-size:12px;}
 
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
@@ -290,6 +297,16 @@
         <tbody></tbody>
       </table>
     </div>
+    <!-- 工程マスタ -->
+    <div class="card" id="process-master-card">
+      <div class="card-title">🔧 工程マスタ</div>
+      <div class="process-member-tabs" id="process-member-tabs"></div>
+      <div class="form-row">
+        <input class="form-input" id="process-name-input" placeholder="工程名を入力" maxlength="20">
+        <button class="btn btn-primary btn-sm" onclick="addProcess()">追加</button>
+      </div>
+      <div class="process-list" id="process-list"></div>
+    </div>
     <!-- 使い方 -->
     <div class="card">
       <div class="card-title">💡 使い方</div>
@@ -332,8 +349,10 @@
       <input class="modal-input" id="modal-actual-h" type="number" min="0" max="4" step="0.5" placeholder="0">
     </div>
     <div class="modal-row">
-      <div class="modal-label">コメント</div>
-      <input class="modal-input" id="modal-comment" placeholder="作業メモ（任意）">
+      <div class="modal-label">工程名</div>
+      <select class="modal-select" id="modal-process">
+        <option value="">選択してください</option>
+      </select>
     </div>
     <div class="modal-row" id="ratio-row" style="display:none;">
       <div class="modal-label">予定 4H に対する実績</div>
@@ -363,11 +382,11 @@ const COLORS = {
 
 // デフォルト担当者
 const DEFAULT_MEMBERS = [
-  {name:'宍倉', color:1},
-  {name:'福島', color:2},
-  {name:'貴美', color:3},
-  {name:'中村', color:4},
-  {name:'井口', color:5},
+  {name:'宍倉', color:1, processes:[]},
+  {name:'福島', color:2, processes:["打合せ(社内・客先)", "総組付け", "出荷準備", "段取り作業", "Unit組付け", "塗装", "配管", "BKT製作取付", "カバー製作取付", "運転調整", "現地工事", "立会い", "不具合対応/修正", "納品", "引き取り", "非定常作業", "測定"]},
+  {name:'貴美', color:3, processes:[]},
+  {name:'中村', color:4, processes:["打合せ(社内・客先)", "総組付け", "出荷準備", "段取り作業", "Unit組付け", "塗装", "配管", "BKT製作取付", "カバー製作取付", "運転調整", "現地工事", "立会い", "不具合対応/修正", "納品", "引き取り", "非定常作業", "測定"]},
+  {name:'井口', color:5, processes:["外注打合せ", "客先打合せ", "社内打合せ", "ソフト設計", "ハード図設計・機器構成確認", "各個動作確認", "部品手配", "盤内配線工事", "外部配線工事", "自動運転調整", "段取り作業", "現地運転調整", "立会い", "出荷準備", "取扱説明書作成", "画面作画", "外注管理", "見積資料作成", "現地配線工事", "機器立上作業", "ロボットプログラム設計", "ロボット運転調整", "不具合対応/修正"]},
 ];
 
 // =====================================================
@@ -732,7 +751,22 @@ function openActualModal(slotId){
   document.getElementById('modal-member-name').textContent=mem?mem.name:'-';
   document.getElementById('modal-date-slot').textContent=`${s.date}　${s.slot}`;
   document.getElementById('modal-actual-h').value=s.actualH||'';
-  document.getElementById('modal-comment').value=s.comment||'';
+  // 工程ドロップダウンを担当者の工程リストで構築
+  const procSel=document.getElementById('modal-process');
+  procSel.innerHTML='<option value="">選択してください</option>';
+  const processes=mem&&mem.processes?mem.processes:[];
+  processes.forEach(p=>{
+    const opt=document.createElement('option');
+    opt.value=p;opt.textContent=p;
+    if(p===s.process)opt.selected=true;
+    procSel.appendChild(opt);
+  });
+  if(s.process&&!processes.includes(s.process)){
+    // 削除された工程でも保存済みなら表示
+    const opt=document.createElement('option');
+    opt.value=s.process;opt.textContent=s.process+'（削除済み）';opt.selected=true;
+    procSel.appendChild(opt);
+  }
   updateRatio();
   document.getElementById('actual-modal').classList.add('open');
 }
@@ -755,7 +789,7 @@ function saveActual(){
   const s=state.slots.find(x=>x.id===actualTarget);
   if(!s)return;
   s.actualH=parseFloat(document.getElementById('modal-actual-h').value)||0;
-  s.comment=document.getElementById('modal-comment').value;
+  s.process=document.getElementById('modal-process').value;
   saveState();scheduleSave();closeActualModal();renderCalendar();
 }
 function removeFromSlot(){
@@ -768,9 +802,74 @@ function removeFromSlot(){
 // =====================================================
 //  MASTER
 // =====================================================
+let activeProcessMemberId = null;
+
 function renderMaster(){
   renderMemberTable();
   renderProjTable();
+  renderProcessMaster();
+}
+
+function renderProcessMaster(){
+  const tabs=document.getElementById('process-member-tabs');
+  const list=document.getElementById('process-list');
+  tabs.innerHTML='';
+  list.innerHTML='';
+  if(!state.members.length){
+    list.innerHTML='<div style="font-size:11px;color:var(--text-dim);">担当者を先に登録してください</div>';
+    return;
+  }
+  // activeProcessMemberIdが未設定なら最初の担当者に
+  if(!activeProcessMemberId||!state.members.find(m=>m.id===activeProcessMemberId)){
+    activeProcessMemberId=state.members[0].id;
+  }
+  // タブ
+  state.members.forEach(m=>{
+    const c=COLORS[m.color];
+    const tab=document.createElement('button');
+    tab.className='process-tab'+(m.id===activeProcessMemberId?' active':'');
+    tab.textContent=m.name;
+    if(m.id===activeProcessMemberId){tab.style.background=c.fg;tab.style.borderColor=c.fg;}
+    tab.onclick=()=>{activeProcessMemberId=m.id;renderProcessMaster();};
+    tabs.appendChild(tab);
+  });
+  // 選択中担当者の工程リスト
+  const mem=getMember(activeProcessMemberId);
+  if(!mem)return;
+  const processes=mem.processes||[];
+  if(!processes.length){
+    list.innerHTML='<div style="font-size:11px;color:var(--text-dim);padding:4px;">工程がありません</div>';
+    return;
+  }
+  processes.forEach((p,i)=>{
+    const c=COLORS[mem.color];
+    const item=document.createElement('div');
+    item.className='process-item';
+    item.innerHTML=`
+      <span style="font-size:12px;">${p}</span>
+      <button class="del-btn" onclick="deleteProcess('${mem.id}',${i})">削除</button>`;
+    list.appendChild(item);
+  });
+}
+
+function addProcess(){
+  const name=document.getElementById('process-name-input').value.trim();
+  if(!name){alert('工程名を入力してください');return;}
+  if(!activeProcessMemberId){alert('担当者タブを選択してください');return;}
+  const mem=getMember(activeProcessMemberId);
+  if(!mem)return;
+  if(!mem.processes)mem.processes=[];
+  if(mem.processes.includes(name)){alert('同じ工程名が既にあります');return;}
+  mem.processes.push(name);
+  document.getElementById('process-name-input').value='';
+  saveState();scheduleSave();renderProcessMaster();
+}
+
+function deleteProcess(memberId,index){
+  const mem=getMember(memberId);
+  if(!mem||!mem.processes)return;
+  mem.processes.splice(index,1);
+  saveState();scheduleSave();renderProcessMaster();
 }
 function renderMemberTable(){
   const tbody=document.querySelector('#member-table tbody');
