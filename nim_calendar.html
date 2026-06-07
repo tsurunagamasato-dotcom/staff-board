@@ -205,6 +205,27 @@
   .process-list{display:flex;flex-direction:column;gap:4px;margin-top:6px;}
   .process-item{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--surface2);border-radius:5px;font-size:12px;}
 
+  /* ===== 集計ビュー ===== */
+  .report-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+  .rep-date-input{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;padding:6px 10px;outline:none;}
+  .rep-date-input:focus{border-color:var(--accent);}
+  .rep-select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;padding:6px 10px;outline:none;}
+  .report-member-section{margin-bottom:24px;}
+  .report-member-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);}
+  .report-member-name{font-size:16px;font-weight:700;}
+  .report-member-summary{font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;}
+  .report-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;}
+  .report-table th{text-align:left;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font-size:11px;font-weight:600;}
+  .report-table td{padding:7px 10px;border:1px solid var(--border);vertical-align:middle;}
+  .report-table tr:hover td{background:rgba(255,255,255,.02);}
+  .report-bar-cell{width:120px;}
+  .report-mini-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:3px;}
+  .report-mini-fill{height:100%;border-radius:3px;}
+  .report-shortfall{font-size:11px;color:#f7b731;margin-top:2px;}
+  .report-empty{padding:40px;text-align:center;color:var(--text-dim);font-size:13px;}
+  /* 未達欄 */
+  .shortfall-hint{font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -217,6 +238,7 @@
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchView('calendar')">📅 カレンダー</button>
     <button class="nav-tab" onclick="switchView('master')">⚙ マスタ管理</button>
+    <button class="nav-tab" onclick="switchView('report')">📊 集計</button>
   </div>
 </header>
 
@@ -328,6 +350,34 @@
   </div>
 </div>
 
+<!-- ======= 集計ビュー ======= -->
+<div id="view-report" class="view">
+  <div class="report-toolbar">
+    <div class="toolbar-group">
+      <button class="btn btn-toggle active" id="rep-mode-month" onclick="setReportMode('month')">月選択</button>
+      <button class="btn btn-toggle" id="rep-mode-range" onclick="setReportMode('range')">期間指定</button>
+    </div>
+    <!-- 月選択 -->
+    <div id="rep-month-ctrl" style="display:flex;align-items:center;gap:8px;">
+      <button class="btn" onclick="shiftReportMonth(-1)">◀</button>
+      <span id="rep-month-label" style="font-size:15px;font-weight:600;min-width:90px;text-align:center;"></span>
+      <button class="btn" onclick="shiftReportMonth(1)">▶</button>
+    </div>
+    <!-- 期間指定 -->
+    <div id="rep-range-ctrl" style="display:none;align-items:center;gap:8px;">
+      <input type="date" class="rep-date-input" id="rep-start">
+      <span style="color:var(--text-dim);">〜</span>
+      <input type="date" class="rep-date-input" id="rep-end">
+      <button class="btn btn-primary btn-sm" onclick="renderReport()">集計</button>
+    </div>
+    <!-- 担当者フィルタ -->
+    <select class="rep-select" id="rep-member-filter" onchange="renderReport()">
+      <option value="">全員</option>
+    </select>
+  </div>
+  <div id="report-body"></div>
+</div>
+
 <!-- ======= 実績入力モーダル ======= -->
 <div class="modal-overlay" id="actual-modal">
   <div class="modal">
@@ -358,6 +408,14 @@
       <div class="modal-label">予定 4H に対する実績</div>
       <div class="progress-bar"><div class="progress-fill" id="modal-prog" style="width:0%"></div></div>
       <div class="ratio-label" id="modal-ratio-label"></div>
+    </div>
+    <!-- 未達時：残り時間の作業内容 -->
+    <div class="modal-row" id="shortfall-row" style="display:none;">
+      <div class="modal-label" style="color:#f7b731;">⚠ 残り時間の作業内容（必須）</div>
+      <div class="shortfall-hint" id="shortfall-hint"></div>
+      <select class="modal-select" id="modal-shortfall-process">
+        <option value="">工程を選択してください</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" id="actual-modal-remove-btn" style="margin-right:auto;" onclick="removeFromSlot()">🗑 スロットから削除</button>
@@ -452,9 +510,11 @@ function switchView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
-  document.querySelectorAll('.nav-tab')[v==='calendar'?0:1].classList.add('active');
+  const idx={calendar:0,master:1,report:2}[v]||0;
+  document.querySelectorAll('.nav-tab')[idx].classList.add('active');
   if(v==='calendar')renderCalendar();
   if(v==='master')renderMaster();
+  if(v==='report')initReport();
 }
 function setViewMode(n){
   viewMode=n;
@@ -785,6 +845,15 @@ function openActualModal(slotId){
       procSel.appendChild(opt);
     }
     updateRatio();
+    // 残り時間工程ドロップダウンも同じ工程リストで構築
+    const sfSel=document.getElementById('modal-shortfall-process');
+    sfSel.innerHTML='<option value="">工程を選択してください</option>';
+    processes.forEach(p=>{
+      const opt=document.createElement('option');
+      opt.value=p;opt.textContent=p;
+      if(p===s.shortfallProcess)opt.selected=true;
+      sfSel.appendChild(opt);
+    });
     document.getElementById('actual-modal').classList.add('open');
   }catch(err){
     console.error('openActualModal error:',err);
@@ -795,14 +864,26 @@ function closeActualModal(){document.getElementById('actual-modal').classList.re
 function updateRatio(){
   const actualH=parseFloat(document.getElementById('modal-actual-h').value)||0;
   const row=document.getElementById('ratio-row');
+  const shortRow=document.getElementById('shortfall-row');
   if(actualH>0){
     row.style.display='';
     const pct=Math.round(actualH/SLOT_H*100);
     const fill=document.getElementById('modal-prog');
     fill.style.width=Math.min(pct,100)+'%';
     fill.style.background=pct>=100?'#3ecf8e':pct>=75?'#f7b731':'#4f7fff';
-    document.getElementById('modal-ratio-label').textContent=`実績 ${actualH}H / 予定 ${SLOT_H}H = ${pct}%`;
-  }else{row.style.display='none';}
+    document.getElementById('modal-ratio-label').textContent='実績 '+actualH+'H / 予定 '+SLOT_H+'H = '+pct+'%';
+    // 未達の場合：残り時間欄を表示
+    if(actualH<SLOT_H){
+      const diff=(SLOT_H-actualH).toFixed(1);
+      document.getElementById('shortfall-hint').textContent='残り'+diff+'Hに何をしていたか選択してください';
+      shortRow.style.display='';
+    }else{
+      shortRow.style.display='none';
+    }
+  }else{
+    row.style.display='none';
+    shortRow.style.display='none';
+  }
 }
 document.getElementById('modal-actual-h').addEventListener('input',updateRatio);
 function saveActual(){
@@ -811,6 +892,7 @@ function saveActual(){
   if(!s)return;
   s.actualH=parseFloat(document.getElementById('modal-actual-h').value)||0;
   s.process=document.getElementById('modal-process').value;
+  s.shortfallProcess=document.getElementById('modal-shortfall-process').value;
   saveState();scheduleSave();closeActualModal();renderCalendar();
 }
 function removeFromSlot(){
@@ -944,6 +1026,141 @@ function deleteProject(id){
   state.projects=state.projects.filter(p=>p.id!==id);
   state.slots=state.slots.filter(s=>s.projId!==id);
   saveState();scheduleSave();renderMaster();
+}
+
+// =====================================================
+//  集計ビュー
+// =====================================================
+let reportMode  = 'month';
+let reportMonth = null;
+
+function initReport(){
+  if(!reportMonth){
+    reportMonth=state.baseMonth||getCurrentYM();
+  }
+  // 担当者フィルタ更新
+  const sel=document.getElementById('rep-member-filter');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">全員</option>';
+  state.members.forEach(m=>{sel.innerHTML+=`<option value="${m.id}">${m.name}</option>`;});
+  if(prev)sel.value=prev;
+  updateReportMonthLabel();
+  renderReport();
+}
+
+function getCurrentYM(){
+  const n=new Date();
+  return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+}
+
+function setReportMode(mode){
+  reportMode=mode;
+  document.getElementById('rep-mode-month').classList.toggle('active',mode==='month');
+  document.getElementById('rep-mode-range').classList.toggle('active',mode==='range');
+  document.getElementById('rep-month-ctrl').style.display=mode==='month'?'flex':'none';
+  document.getElementById('rep-range-ctrl').style.display=mode==='range'?'flex':'none';
+  if(mode==='month')renderReport();
+}
+
+function shiftReportMonth(n){
+  reportMonth=addMonths(reportMonth,n);
+  updateReportMonthLabel();
+  renderReport();
+}
+
+function updateReportMonthLabel(){
+  const{y,m}=parseYM(reportMonth);
+  document.getElementById('rep-month-label').textContent=y+'年'+m+'月';
+}
+
+function renderReport(){
+  const body=document.getElementById('report-body');
+  body.innerHTML='';
+  const filterMid=document.getElementById('rep-member-filter').value;
+
+  // 対象スロットを絞り込む
+  let slots=state.slots;
+  if(reportMode==='month'){
+    const prefix=reportMonth+'-';
+    slots=slots.filter(s=>s.date.startsWith(prefix));
+  } else {
+    const start=document.getElementById('rep-start').value;
+    const end=document.getElementById('rep-end').value;
+    if(!start||!end){body.innerHTML='<div class="report-empty">開始日と終了日を選択してください</div>';return;}
+    slots=slots.filter(s=>s.date>=start&&s.date<=end);
+  }
+  if(filterMid) slots=slots.filter(s=>s.memberId===filterMid);
+
+  if(!slots.length){
+    body.innerHTML='<div class="report-empty">該当するデータがありません</div>';return;
+  }
+
+  // 担当者ごとに集計
+  const targets=filterMid?state.members.filter(m=>m.id===filterMid):state.members;
+  targets.forEach(mem=>{
+    const memSlots=slots.filter(s=>s.memberId===mem.id);
+    if(!memSlots.length)return;
+    const c=COLORS[mem.color];
+
+    // 工程別集計
+    const byProcess={};
+    let totalPlan=0,totalActual=0;
+    memSlots.forEach(s=>{
+      const proc=s.process||'（未設定）';
+      if(!byProcess[proc])byProcess[proc]={planH:0,actualH:0,shortfalls:[]};
+      byProcess[proc].planH+=SLOT_H;
+      byProcess[proc].actualH+=(s.actualH||0);
+      if((s.actualH||0)<SLOT_H&&s.shortfallProcess){
+        byProcess[proc].shortfalls.push({date:s.date,slot:s.slot,diff:SLOT_H-(s.actualH||0),proc:s.shortfallProcess});
+      }
+      totalPlan+=SLOT_H;
+      totalActual+=(s.actualH||0);
+    });
+
+    const sec=document.createElement('div');
+    sec.className='report-member-section';
+    const totalPct=totalPlan>0?Math.round(totalActual/totalPlan*100):0;
+    const barColor=totalPct>=100?'#3ecf8e':totalPct>=70?'#f7b731':'#4f7fff';
+    sec.innerHTML=`
+      <div class="report-member-header">
+        <span style="width:10px;height:10px;border-radius:50%;background:${c.fg};display:inline-block;flex-shrink:0;"></span>
+        <span class="report-member-name" style="color:${c.fg}">${mem.name}</span>
+        <span class="report-member-summary">予定 ${totalPlan}H　実績 ${totalActual}H　達成率 ${totalPct}%</span>
+      </div>
+      <table class="report-table">
+        <thead><tr>
+          <th>工程名</th>
+          <th style="text-align:right;">予定H</th>
+          <th style="text-align:right;">実績H</th>
+          <th style="text-align:right;">差異H</th>
+          <th class="report-bar-cell">達成率</th>
+          <th>未達時の作業</th>
+        </tr></thead>
+        <tbody id="rep-tbody-${mem.id}"></tbody>
+      </table>`;
+    body.appendChild(sec);
+
+    const tbody=document.getElementById('rep-tbody-'+mem.id);
+    Object.entries(byProcess).sort((a,b)=>a[0].localeCompare(b[0],'ja')).forEach(([proc,d])=>{
+      const pct=d.planH>0?Math.round(d.actualH/d.planH*100):0;
+      const diff=d.actualH-d.planH;
+      const diffColor=diff>=0?'#3ecf8e':'#ff6b6b';
+      const bc=pct>=100?'#3ecf8e':pct>=70?'#f7b731':'#4f7fff';
+      const sfText=d.shortfalls.length?d.shortfalls.map(x=>x.date+' '+x.slot+': '+x.proc+'('+x.diff+'H)').join('<br>'):'';
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td>${proc}</td>
+        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;">${d.planH}</td>
+        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;">${d.actualH}</td>
+        <td style="text-align:right;font-family:'IBM Plex Mono',monospace;color:${diffColor}">${diff>=0?'+':''}${diff}</td>
+        <td class="report-bar-cell">
+          <div>${pct}%</div>
+          <div class="report-mini-bar"><div class="report-mini-fill" style="width:${Math.min(pct,100)}%;background:${bc};"></div></div>
+        </td>
+        <td><div class="report-shortfall">${sfText}</div></td>`;
+      tbody.appendChild(tr);
+    });
+  });
 }
 
 // =====================================================
