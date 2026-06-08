@@ -655,13 +655,16 @@ const DEPT_PROCESSES = {
   '一般事務・作業 / Routine Work': ['900 その他','999 その他'],
 };
 
-// 初期担当者（工程は部門割当後に設定）
+// 担当者の初期工程（999と900は全員共通）
+const COMMON_PROCS = ['999 その他','900 その他'];
+
+// 初期担当者
 const DEFAULT_MEMBERS = [
-  {name:'宍倉', color:1, depts:[], processes:['999 その他','900 その他']},
-  {name:'貴美', color:3, depts:[], processes:['999 その他','900 その他']},
-  {name:'福島', color:2, depts:[], processes:['999 その他','900 その他']},
-  {name:'中村', color:4, depts:[], processes:['999 その他','900 その他']},
-  {name:'井口', color:5, depts:[], processes:['999 その他','900 その他']},
+  {name:'宍倉', color:1, depts:[], processes:[...COMMON_PROCS]},
+  {name:'貴美', color:3, depts:[], processes:[...COMMON_PROCS]},
+  {name:'福島', color:2, depts:[], processes:[...COMMON_PROCS]},
+  {name:'中村', color:4, depts:[], processes:[...COMMON_PROCS]},
+  {name:'井口', color:5, depts:[], processes:[...COMMON_PROCS]},
 ];
 
 // 担当者IDを名前から生成（固定・どのPCでも同じ）
@@ -1899,14 +1902,28 @@ async function autoLoadFromGAS() {
     if (json.status === 'ok' && json.data) {
       const d = json.data;
       // members
+      // membersは名前ベースでDEFAULT_MEMBERSとマージ（IDがズレても正しく表示）
       if(d.members && d.members.length){
-        state.members = d.members.map(m=>({
-          id:   String(m.id||memberNameToId(m.name||'')).replace('mem_mem_','mem_'),
-          name: String(m.name||''),
-          color: Number(m.color)||1,
-          depts: Array.isArray(m.depts) ? m.depts : (m.dept ? [m.dept] : []),
-          processes: (Array.isArray(m.processes) && m.processes.length) ? m.processes : [...ALL_PROCESSES],
-        }));
+        state.members = DEFAULT_MEMBERS.map(def=>{
+          const found = d.members.find(m=>m.name===def.name);
+          if(found){
+            return {
+              id: memberNameToId(def.name),
+              name: def.name,
+              color: Number(found.color)||def.color,
+              depts: Array.isArray(found.depts) ? found.depts : [],
+              processes: (Array.isArray(found.processes) && found.processes.length > 0)
+                ? found.processes : [...COMMON_PROCS],
+            };
+          }
+          return {
+            id: memberNameToId(def.name),
+            name: def.name,
+            color: def.color,
+            depts: [],
+            processes: [...COMMON_PROCS],
+          };
+        });
       }
       // projects
       if(d.projects && d.projects.length){
