@@ -654,12 +654,21 @@ const DEPT_PROCESSES = {
   '一般事務・作業 / Routine Work': ['900 その他'],
 };
 
+const ALL_PROCESSES = [
+  '001 部品製作','002 不具合修正','004 部品手配',
+  '205 組付','210 運転調整','212 現地工事','215 不具合修正',
+  '106 スケッチ（打合）','111 部品図修正','113 取説作成',
+  '306 ソフト設計','307 ハード設計','308 画面作画','309 部品手配',
+  '311 配線工事','312 運転調整','314 現地工事','317 不具合修正',
+  '320 取説作成','999 その他','900 その他'
+];
+
 const DEFAULT_MEMBERS = [
-  {name:'宍倉', color:1, processes:[], depts:[]},
-  {name:'福島', color:2, processes:[], depts:[]},
-  {name:'貴美', color:3, processes:[], depts:[]},
-  {name:'中村', color:4, processes:[], depts:[]},
-  {name:'井口', color:5, processes:[], depts:[]},
+  {name:'宍倉', color:1, depts:[], processes:ALL_PROCESSES},
+  {name:'福島', color:2, depts:[], processes:ALL_PROCESSES},
+  {name:'貴美', color:3, depts:[], processes:ALL_PROCESSES},
+  {name:'中村', color:4, depts:[], processes:ALL_PROCESSES},
+  {name:'井口', color:5, depts:[], processes:ALL_PROCESSES},
 ];
 
 // 担当者IDを名前から生成（固定・どのPCでも同じ）
@@ -672,30 +681,43 @@ function projNameToId(name){ return 'proj_' + name; }
 // =====================================================
 let state = loadState() || null;
 if(!state){
-  // 初回：デフォルト担当者（工程込み）で初期化
   state = {
     members: DEFAULT_MEMBERS.map(m=>({
-      id:memberNameToId(m.name), name:m.name, color:m.color, processes:m.processes||[]
+      id:memberNameToId(m.name), name:m.name, color:m.color,
+      processes:[...m.processes], depts:[...m.depts]
     })),
     projects: [],
     slots: [],
-    departments: ['組付','電気','設計','加工'],
+    departments: Object.keys(DEPT_PROCESSES),
     baseMonth: null,
     filterMembers: [],
   };
 }
-// マイグレーション：processesが未設定の担当者に補完
-state.members.forEach((m,i)=>{
-  if(!Array.isArray(m.processes)){
+// 担当者が空なら初期データで復元
+if(!state.members || !state.members.length){
+  state.members = DEFAULT_MEMBERS.map(m=>({
+    id:memberNameToId(m.name), name:m.name, color:m.color,
+    processes:[...m.processes], depts:[...m.depts]
+  }));
+}
+// マイグレーション
+state.members.forEach(m=>{
+  if(!m.id) m.id=memberNameToId(m.name);
+  if(!Array.isArray(m.processes)||!m.processes.length){
     const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
-    m.processes=(def&&Array.isArray(def.processes))?def.processes:[];
+    m.processes=def?[...def.processes]:[...ALL_PROCESSES];
   }
+  if(!Array.isArray(m.depts)) m.depts=[];
+  m.color=Number(m.color)||1;
 });
 if(!state.slots) state.slots=[];
 if(!state.filterMembers) state.filterMembers=[];
-if(!state.departments) state.departments=Object.keys(DEPT_PROCESSES);
-// projectsにdeptHoursフィールドを補完
-state.projects.forEach(p=>{ if(!p.deptHours) p.deptHours={}; });
+if(!state.departments||!state.departments.length) state.departments=Object.keys(DEPT_PROCESSES);
+state.projects.forEach(p=>{
+  if(!p.id) p.id=projNameToId(p.name);
+  if(!p.deptHours) p.deptHours={};
+  if(!p.totalPlanH) p.totalPlanH=0;
+});
 if(!state.baseMonth){
   const n=new Date();
   state.baseMonth=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
@@ -710,8 +732,8 @@ let openProjId  = null;  // 展開中の案件ID
 // =====================================================
 //  PERSIST
 // =====================================================
-function saveState(){localStorage.setItem('sched_v6',JSON.stringify(state));}
-function loadState(){try{return JSON.parse(localStorage.getItem('sched_v6'));}catch{return null;}}
+function saveState(){localStorage.setItem('sched_v7',JSON.stringify(state));}
+function loadState(){try{return JSON.parse(localStorage.getItem('sched_v7'));}catch{return null;}}
 
 // =====================================================
 //  UTILS
