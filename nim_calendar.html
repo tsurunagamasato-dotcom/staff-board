@@ -775,18 +775,35 @@ function renderSidePanel(){
 // =====================================================
 //  月次集計
 // =====================================================
+
+// その月の平日（月〜金）日数を計算
+function countWeekdays(y, m){
+  const days = daysInMonth(y, m);
+  let count = 0;
+  for(let d = 1; d <= days; d++){
+    const dow = new Date(y, m-1, d).getDay();
+    if(dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+
 function renderSummary(){
   const{y,m}=parseYM(state.baseMonth);
   document.getElementById('summary-month-label').textContent=`${y}年${m}月`;
   const body=document.getElementById('summary-body');
   body.innerHTML='';
 
+  // 平日数 × 8H = 稼働上限
+  const weekdays = countWeekdays(y, m);
+  const maxH = weekdays * 8;
+
   // その月のスロット絞り込み
   const prefix=`${y}-${String(m).padStart(2,'0')}-`;
   const monthSlots=state.slots.filter(s=>s.date.startsWith(prefix));
 
   if(!monthSlots.length){
-    body.innerHTML='<div class="summary-empty">配置データなし</div>';return;
+    body.innerHTML=`<div class="summary-empty">配置データなし<br><small style="color:var(--text-dim)">今月の稼働上限：${maxH}H（平日${weekdays}日）</small></div>`;
+    return;
   }
 
   // 担当者ごとに集計
@@ -795,7 +812,6 @@ function renderSummary(){
     if(!byMember[s.memberId])byMember[s.memberId]={planH:0,actualH:0};
     byMember[s.memberId].planH+=SLOT_H;
     let actual=s.actualH||0;
-    // 残り時間が「この案件に含める」場合は実績に加算
     if(actual<SLOT_H && s.shortfallProcess && (s.shortfallType==='same'||!s.shortfallType)){
       actual+=(SLOT_H-actual);
     }
@@ -812,16 +828,27 @@ function renderSummary(){
     const c=COLORS[mem.color];
     const pct=d.planH>0?Math.round(d.actualH/d.planH*100):0;
     const barColor=pct>=100?'#3ecf8e':pct>=70?'#f7b731':'#4f7fff';
+
+    // 予定が稼働上限を超えたら赤
+    const isOver = d.planH > maxH;
+    const planColor = isOver ? '#ff6b6b' : c.fg;
+    const overMsg = isOver
+      ? `<div style="font-size:9px;color:#ff6b6b;margin-top:2px;">⚠ 上限(${maxH}H)超過</div>`
+      : '';
+
     const row=document.createElement('div');
     row.className='summary-row';
+    if(isOver) row.style.borderColor='rgba(255,107,107,.4)';
     row.innerHTML=`
       <div class="summary-member-name">
         <span class="summary-dot" style="background:${c.fg}"></span>${mem.name}
+        <span style="font-size:9px;color:var(--text-dim);margin-left:auto;font-family:'IBM Plex Mono',monospace;">上限${maxH}H</span>
       </div>
       <div class="summary-kpi">
-        <div class="summary-kpi-card">
+        <div class="summary-kpi-card" ${isOver?'style="border-color:rgba(255,107,107,.4);"':''}>
           <div class="summary-kpi-label">予　定</div>
-          <div class="summary-kpi-val" style="color:${c.fg}">${d.planH}<small style="font-size:11px;font-weight:400;">H</small></div>
+          <div class="summary-kpi-val" style="color:${planColor}">${d.planH}<small style="font-size:11px;font-weight:400;">H</small></div>
+          ${overMsg}
         </div>
         <div class="summary-kpi-card">
           <div class="summary-kpi-label">実　績</div>
