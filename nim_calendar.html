@@ -245,6 +245,7 @@
 
   /* GAS連携バー */
   .gas-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;}
+  .overrun-alert{flex:1;min-width:200px;font-size:12px;color:#ff6b6b;font-weight:600;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.4);border-radius:6px;padding:5px 10px;line-height:1.5;}
   .btn-save{background:var(--accent);border-color:var(--accent);color:#fff;font-size:12px;padding:5px 14px;}
   .btn-save:hover{background:#6b90ff;color:#fff;}
   .btn-save:disabled{opacity:.5;cursor:not-allowed;}
@@ -401,7 +402,7 @@
   <!-- GAS連携バー -->
   <div class="gas-bar">
     <span class="gas-status" id="gas-status"></span>
-    <button class="btn btn-reset-slots" onclick="resetSlotsOnGAS()" title="カレンダーの配置データをすべてリセット">🗑 配置データをリセット</button>
+    <span id="overrun-alert" class="overrun-alert" style="display:none;"></span>
   </div>
   <div id="member-filter-wrap" class="member-filter"></div>
   <div class="layout-wrap">
@@ -436,9 +437,7 @@
   <div class="master-cols">
     <!-- 担当者マスタ -->
     <div class="card">
-      <div class="card-title">👤 担当者マスタ
-        <button class="btn btn-sm" style="margin-left:8px;font-size:10px;color:#f7b731;border-color:rgba(247,183,49,.4);" onclick="initDefaultMembers()">↺ 初期担当者を設定</button>
-      </div>
+      <div class="card-title">👤 担当者マスタ</div>
       <div class="form-row">
         <input class="form-input" id="member-name-input" placeholder="担当者名を入力" maxlength="20">
         <div class="color-swatch" id="member-color-pick">
@@ -455,18 +454,11 @@
         <tbody></tbody>
       </table>
     </div>
-    <!-- 部門マスタ -->
-    <div class="card">
-      <div class="card-title">🏭 部門マスタ</div>
-      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">担当者マスタで各担当者に部門を割り当てると工程が自動セットされます</div>
-      <div id="dept-overview"></div>
-    </div>
     <!-- 案件マスタ -->
     <div class="card">
       <div class="card-title">📋 案件マスタ</div>
       <div class="form-row">
         <input class="form-input" id="proj-name-input" placeholder="案件名を入力" maxlength="40">
-        <input class="form-input" id="proj-total-plan-h" placeholder="予定工数(H)" type="number" min="0" step="0.5" style="max-width:110px;flex:none;">
         <button class="btn btn-primary btn-sm" onclick="addProject()">追加</button>
       </div>
       <table class="data-table" id="proj-table">
@@ -476,9 +468,7 @@
     </div>
     <!-- 工程マスタ -->
     <div class="card" id="process-master-card">
-      <div class="card-title">🔧 工程マスタ
-        <button class="btn btn-sm" style="font-size:10px;margin-left:8px;color:#f7b731;border-color:rgba(247,183,49,.3);" onclick="resetProcessesToDefault()">↺ 初期データで復元</button>
-      </div>
+      <div class="card-title">🔧 工程マスタ</div>
       <div class="process-member-tabs" id="process-member-tabs"></div>
       <div class="form-row">
         <input class="form-input" id="process-name-input" placeholder="工程名を入力" maxlength="20">
@@ -766,10 +756,37 @@ function renderCalendar(){
   renderMemberFilter();
   renderSidePanel();
   renderSummary();
+  renderOverrunAlert();
   const row=document.getElementById('months-row');
   row.className='months-row view-'+viewMode;
   row.innerHTML='';
   months.forEach(ym=>row.appendChild(buildMonthBlock(ym)));
+}
+
+// 案件×部門ごとに予定工数を超えているものを上部に表示
+function renderOverrunAlert(){
+  const el=document.getElementById('overrun-alert');
+  if(!el) return;
+  const overruns=[];
+  state.projects.forEach(proj=>{
+    const dh=proj.deptHours||{};
+    Object.keys(dh).forEach(dept=>{
+      const planH=dh[dept]||0;
+      if(planH<=0) return;
+      const{usedH}=calcDeptUsage(proj.id, dept);
+      if(usedH>planH){
+        const deptShort=dept.split(' / ')[0];
+        overruns.push(`${proj.name}（${deptShort}）${usedH}/${planH}H`);
+      }
+    });
+  });
+  if(overruns.length){
+    el.style.display='';
+    el.innerHTML='⚠ 予定工数を超過：'+overruns.join('　／　');
+  } else {
+    el.style.display='none';
+    el.innerHTML='';
+  }
 }
 
 // =====================================================
@@ -1028,26 +1045,10 @@ function buildSlotEntry(s,date,slot){
   const pct=Math.round(actualH/SLOT_H*100);
 
   const el=document.createElement('div');
-  // 残り工数ステータスに応じて色変化
-  const slotStatus=getSlotStatus(s.projId);
-  const proj2=getProject(s.projId);
+  // バーは常に担当者カラー（超過警告は上部アラートで表示）
   let bgColor=c.bg;
   let borderColor=c.fg;
   let statusBadge='';
-  if(slotStatus==='over'){
-    bgColor='rgba(255,107,107,.2)';
-    borderColor='#ff6b6b';
-    statusBadge='<span style="font-size:7px;color:#ff6b6b;flex-shrink:0;">⚠超過</span>';
-  } else if(slotStatus==='full'){
-    bgColor='rgba(120,128,164,.15)';
-    borderColor='#7880a4';
-    statusBadge='<span style="font-size:7px;color:#7880a4;flex-shrink:0;">上限</span>';
-  } else if(slotStatus==='last'){
-    const{remainH}=calcProjUsage(proj2);
-    bgColor=c.bg;
-    borderColor=c.fg;
-    statusBadge=`<span style="font-size:7px;color:#f7b731;flex-shrink:0;">残${remainH}H</span>`;
-  }
 
   el.className='slot-entry';
   el.style.borderLeftColor=borderColor;
@@ -1304,6 +1305,7 @@ function addProcess(){
   mem.processes.push(name);
   document.getElementById('process-name-input').value='';
   saveState();scheduleSave();renderProcessMaster();
+}
 function renderMemberTable(){
   const tbody=document.querySelector('#member-table tbody');
   tbody.innerHTML='';
@@ -1356,14 +1358,6 @@ function applyDeptProcesses(memberId){
     saveState();scheduleSave();renderMaster();
   }
 }
-  // 部門に対応する工程を自動セット
-  if(dept && DEPT_PROCESSES[dept]){
-    if(confirm('「'+dept+'」の工程リストを自動セットしますか？\n（現在の工程リストは上書きされます）')){
-      mem.processes=[...DEPT_PROCESSES[dept]];
-    }
-  }
-  saveState();scheduleSave();renderMaster();
-}
 // 案件の消費済みH・残りHを計算
 function calcProjUsage(proj){
   const usedSlots=state.slots.filter(s=>s.projId===proj.id).length;
@@ -1373,14 +1367,52 @@ function calcProjUsage(proj){
   return{usedH,planH,remainH};
 }
 
-// スロットの状態を返す（案件の残り工数に基づく）
-function getSlotStatus(projId){
-  const proj=getProject(projId);
-  if(!proj||!proj.totalPlanH) return 'normal'; // 予定工数未設定
-  const{usedH,planH,remainH}=calcProjUsage(proj);
+// 工程名（例「205 組付」）から部門名を逆引き
+function processToDept(processName){
+  if(!processName) return null;
+  for(const[dept,procs] of Object.entries(DEPT_PROCESSES)){
+    if(procs.includes(processName)) return dept;
+  }
+  return null;
+}
+
+// スロットの判定対象部門を決める（担当者の部門ベース）
+function slotDept(slot){
+  // 工程が設定済みならその部門を優先
+  const byProc=processToDept(slot.process);
+  if(byProc) return byProc;
+  // 工程未設定なら担当者の部門で判定
+  const mem=getMember(slot.memberId);
+  if(!mem||!Array.isArray(mem.depts)||!mem.depts.length) return null;
+  const proj=getProject(slot.projId);
+  const dh=(proj&&proj.deptHours)||{};
+  // 担当者の部門のうち、この案件で予定工数が設定されている部門を優先
+  const withPlan=mem.depts.find(d=>dh[d]>0);
+  if(withPlan) return withPlan;
+  // なければ最初の部門
+  return mem.depts[0];
+}
+
+// 案件×部門ごとの累計H・予定H・残りHを計算
+function calcDeptUsage(projId, dept){
+  const planH=(getProject(projId)?.deptHours||{})[dept]||0;
+  // この案件で、判定部門が一致するスロットの累計
+  const usedH=state.slots.filter(s=>{
+    if(s.projId!==projId) return false;
+    return slotDept(s)===dept;
+  }).length * SLOT_H;
+  const remainH=planH>0?planH-usedH:null;
+  return{usedH,planH,remainH};
+}
+
+// スロットの状態を返す（案件×部門の予定工数に基づく）
+function getSlotStatus(slot){
+  const dept=slotDept(slot);
+  if(!dept) return 'normal';
+  const{planH,remainH}=calcDeptUsage(slot.projId, dept);
+  if(!planH) return 'normal'; // その部門の予定工数が未設定
   if(remainH<0) return 'over';          // 超過
-  if(remainH===0) return 'full';         // 上限到達
-  if(remainH<SLOT_H) return 'last';      // 最後の半端スロット
+  if(remainH===0) return 'full';         // 上限ぴったり
   return 'normal';
 }
 
@@ -1442,10 +1474,8 @@ function deleteMember(id){
 function addProject(){
   const name=document.getElementById('proj-name-input').value.trim();
   if(!name){alert('案件名を入力してください');return;}
-  const totalPlanH=parseFloat(document.getElementById('proj-total-plan-h').value)||0;
-  state.projects.push({id:projNameToId(name),name,totalPlanH,deptHours:{}});
+  state.projects.push({id:projNameToId(name),name,totalPlanH:0,deptHours:{}});
   document.getElementById('proj-name-input').value='';
-  document.getElementById('proj-total-plan-h').value='';
   saveState();scheduleSave();renderMaster();
 }
 // 部門工数モーダル
@@ -1457,7 +1487,7 @@ function openDeptHoursModal(projId){
   document.getElementById('dept-hours-modal-sub').textContent=proj.name;
   const rows=document.getElementById('dept-hours-rows');
   rows.innerHTML='';
-  (state.departments||[]).forEach(d=>{
+  (Object.keys(DEPT_PROCESSES)).forEach(d=>{
     const val=(proj.deptHours&&proj.deptHours[d])||0;
     const row=document.createElement('div');
     row.className='modal-row';
@@ -1475,7 +1505,7 @@ function saveDeptHours(){
   const proj=getProject(deptHoursTargetId);
   if(!proj)return;
   if(!proj.deptHours) proj.deptHours={};
-  (state.departments||[]).forEach(d=>{
+  (Object.keys(DEPT_PROCESSES)).forEach(d=>{
     const val=parseFloat(document.getElementById('dept-h-'+d).value)||0;
     proj.deptHours[d]=val;
   });
@@ -1966,7 +1996,7 @@ async function autoLoadFromGAS() {
         state.departments=Object.keys(DEPT_PROCESSES);
       saveState();
       renderCalendar();
-      if(document.getElementById('view-master').classList.contains('active')) renderMaster();
+      renderMaster();
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
     } else {
       // スプレッドシートが空 → 初期担当者データをセットして保存
@@ -1983,7 +2013,7 @@ async function autoLoadFromGAS() {
       // 初期データをGASにも保存
       autoSaveToGAS();
       renderCalendar();
-      if(document.getElementById('view-master').classList.contains('active')) renderMaster();
+      renderMaster();
       setGasStatus('✓ 初期データをセットしました', 'ok');
     }
   } catch(e) {
@@ -2018,50 +2048,6 @@ async function autoSaveToGAS() {
   }
   isSyncing = false;
 }
-
-async function autoLoadFromGAS() {
-  setGasStatus('⟳ 読込中...', 'loading');
-  try {
-    const res  = await fetch(GAS_URL);
-    const json = await res.json();
-    console.log('GAS response:', JSON.stringify(json).slice(0,200));
-    if (json.status === 'ok' && json.data) {
-      const d = json.data;
-      // membersはGASが空配列なら上書きしない（初期データを守る）
-      if(Array.isArray(d.members) && d.members.length > 0){
-        state.members = d.members;
-      }
-      if(Array.isArray(d.projects)) state.projects = d.projects;
-      state.slots = Array.isArray(d.slots) ? d.slots : [];
-      // 最低限の補完
-      state.members.forEach(m=>{
-        m.id = memberNameToId(m.name);
-        if(!Array.isArray(m.depts)) m.depts = m.dept ? [m.dept] : [];
-        if(!Array.isArray(m.processes) || m.processes.length===0) m.processes = [...COMMON_PROCS];
-        m.color = Number(m.color)||1;
-      });
-      state.projects.forEach(p=>{
-        if(!p.totalPlanH) p.totalPlanH=0;
-        if(!p.deptHours||typeof p.deptHours!=='object') p.deptHours={};
-      });
-      state.slots.forEach(s=>{ s.actualH=Number(s.actualH)||0; });
-      saveState();
-      renderCalendar();
-      renderMaster();
-      setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
-    } else {
-      // GASにデータなし → 現在の初期データをGASへ保存
-      autoSaveToGAS();
-      renderCalendar();
-      renderMaster();
-      setGasStatus('✓ 初期データで開始', 'ok');
-    }
-  } catch(e) {
-    console.error('GAS load error:', e);
-    setGasStatus('✗ 通信エラー: ' + e.message, 'err');
-  }
-}
-
 
 // =====================================================
 //  テーマ切り替え
