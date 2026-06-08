@@ -1850,11 +1850,8 @@ async function resetSlotsOnGAS() {
       projects: state.projects,
       slots:    [],
     };
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      redirect: 'follow',
-    });
+    const resetUrl = GAS_URL + '?action=save&payload=' + encodeURIComponent(JSON.stringify(payload));
+    const res = await fetch(resetUrl, {redirect: 'follow'});
     const text2 = await res.text();
     const json = JSON.parse(text2);
     if(json.status === 'ok'){
@@ -1873,18 +1870,15 @@ async function autoSaveToGAS() {
   isSyncing = true;
   setGasStatus('⟳ 同期中...', 'loading');
   try {
-    // 全データをそのままJSON1つで保存
     const payload = JSON.stringify({
       members:  state.members,
       projects: state.projects,
       slots:    state.slots,
       baseMonth: state.baseMonth,
     });
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: payload,
-      redirect: 'follow',
-    });
+    // GETパラメータで送信（POSTのCORSを回避）
+    const url = GAS_URL + '?action=save&payload=' + encodeURIComponent(payload);
+    const res = await fetch(url, {redirect: 'follow'});
     const text = await res.text();
     const json = JSON.parse(text);
     if (json.status === 'ok') {
@@ -1893,7 +1887,7 @@ async function autoSaveToGAS() {
       setGasStatus('✗ 保存失敗', 'err');
     }
   } catch(e) {
-    setGasStatus('✗ 通信エラー', 'err');
+    setGasStatus('✗ 通信エラー: ' + e.message, 'err');
   }
   isSyncing = false;
 }
