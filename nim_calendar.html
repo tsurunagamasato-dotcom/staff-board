@@ -59,7 +59,8 @@
   /* ===== LAYOUT（左：サイドパネル、右：カレンダー、下：集計） ===== */
   .layout-wrap{display:flex;gap:14px;align-items:flex-start;}
   .left-col{width:190px;flex-shrink:0;}
-  .cal-and-summary{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;}
+  .cal-center{flex:1;min-width:0;}
+  .right-col{width:220px;flex-shrink:0;}
 
   /* ===== SIDE PANEL（案件一覧） ===== */
   .side-panel-title{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:'IBM Plex Mono',monospace;}
@@ -86,24 +87,23 @@
   .side-member-name{font-weight:500;}
   .drag-hint{font-size:9px;color:var(--text-dim);padding:4px 7px;font-style:italic;}
 
-  /* ===== 月次集計パネル（カレンダー下・横並び） ===== */
-  .summary-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;}
-  .summary-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  /* ===== 月次集計パネル（右カラム・縦並び） ===== */
+  .summary-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;position:sticky;top:70px;}
+  .summary-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
   .summary-title{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;font-family:'IBM Plex Mono',monospace;}
-  .summary-month-label{font-size:13px;color:var(--accent);font-weight:700;font-family:'IBM Plex Mono',monospace;}
-  /* 担当者カードを横一列に */
-  .summary-members{display:flex;gap:12px;flex-wrap:wrap;}
+  .summary-month-label{font-size:12px;color:var(--accent);font-weight:700;font-family:'IBM Plex Mono',monospace;}
+  /* 担当者カードを縦に積む */
+  .summary-members{display:flex;flex-direction:column;gap:8px;}
   .summary-row{
-    flex:1;min-width:140px;
     background:var(--surface2);border:1px solid var(--border);border-radius:8px;
     padding:10px 12px;
   }
   .summary-member-name{font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
   .summary-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-  .summary-kpi{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
-  .summary-kpi-card{background:var(--surface);border-radius:5px;padding:6px 8px;text-align:center;}
-  .summary-kpi-label{font-size:9px;color:var(--text-dim);margin-bottom:3px;letter-spacing:.04em;}
-  .summary-kpi-val{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;line-height:1;}
+  .summary-kpi{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:7px;}
+  .summary-kpi-card{background:var(--surface);border-radius:5px;padding:5px 6px;text-align:center;}
+  .summary-kpi-label{font-size:9px;color:var(--text-dim);margin-bottom:2px;letter-spacing:.04em;}
+  .summary-kpi-val{font-size:16px;font-weight:700;font-family:'IBM Plex Mono',monospace;line-height:1;}
   .summary-bar-wrap{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:3px;}
   .summary-bar-fill{height:100%;border-radius:3px;transition:width .4s;}
   .summary-pct{font-size:10px;font-family:'IBM Plex Mono',monospace;text-align:right;}
@@ -345,19 +345,21 @@
   </div>
   <div id="member-filter-wrap" class="member-filter"></div>
   <div class="layout-wrap">
-    <!-- 左カラム：案件一覧のみ -->
+    <!-- 左カラム：案件一覧 -->
     <div class="left-col">
       <div class="side-panel-title">📋 案件一覧</div>
       <div id="project-list" class="project-list"></div>
     </div>
-    <!-- 右エリア：カレンダー＋集計 -->
-    <div class="cal-and-summary">
+    <!-- 中央：カレンダー -->
+    <div class="cal-center">
       <div style="overflow-x:auto;">
         <div id="months-wrap" class="months-wrap">
           <div id="months-row" class="months-row view-1"></div>
         </div>
       </div>
-      <!-- 月次集計（カレンダー下・横並び） -->
+    </div>
+    <!-- 右カラム：月次集計 -->
+    <div class="right-col">
       <div class="summary-panel">
         <div class="summary-header">
           <div class="summary-title">📊 月次集計</div>
