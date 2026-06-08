@@ -59,8 +59,8 @@
   /* ===== LAYOUT（左：サイドパネル、右：カレンダー、下：集計） ===== */
   .layout-wrap{display:flex;gap:14px;align-items:flex-start;}
   .left-col{width:190px;flex-shrink:0;}
-  .cal-center{flex:1;min-width:0;}
-  .right-col{width:220px;flex-shrink:0;}
+  .cal-center{flex:1;min-width:0;overflow:hidden;}
+  .right-col{width:220px;flex-shrink:0;align-self:flex-start;position:sticky;top:70px;}
 
   /* ===== SIDE PANEL（案件一覧） ===== */
   .side-panel-title{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:'IBM Plex Mono',monospace;}
@@ -88,7 +88,7 @@
   .drag-hint{font-size:9px;color:var(--text-dim);padding:4px 7px;font-style:italic;}
 
   /* ===== 月次集計パネル（右カラム・縦並び） ===== */
-  .summary-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;position:sticky;top:70px;}
+  .summary-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:calc(100vh - 100px);overflow-y:auto;}
   .summary-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
   .summary-title{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;font-family:'IBM Plex Mono',monospace;}
   .summary-month-label{font-size:12px;color:var(--accent);font-weight:700;font-family:'IBM Plex Mono',monospace;}
