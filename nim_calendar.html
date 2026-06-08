@@ -1853,8 +1853,10 @@ async function resetSlotsOnGAS() {
     const res = await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(payload),
+      redirect: 'follow',
     });
-    const json = await res.json();
+    const text2 = await res.text();
+    const json = JSON.parse(text2);
     if(json.status === 'ok'){
       setGasStatus('✓ リセット完了', 'ok');
       renderCalendar();
@@ -1881,8 +1883,10 @@ async function autoSaveToGAS() {
     const res = await fetch(GAS_URL, {
       method: 'POST',
       body: payload,
+      redirect: 'follow',
     });
-    const json = await res.json();
+    const text = await res.text();
+    const json = JSON.parse(text);
     if (json.status === 'ok') {
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
     } else {
@@ -1897,7 +1901,7 @@ async function autoSaveToGAS() {
 async function autoLoadFromGAS() {
   setGasStatus('⟳ 読込中...', 'loading');
   try {
-    const res  = await fetch(GAS_URL);
+    const res  = await fetch(GAS_URL + '?t=' + Date.now(), {redirect:'follow'});
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
       const d = json.data;
@@ -1954,9 +1958,22 @@ async function autoLoadFromGAS() {
       if(document.getElementById('view-master').classList.contains('active')) renderMaster();
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
     } else {
+      // スプレッドシートが空 → 初期担当者データをセットして保存
+      state.members = DEFAULT_MEMBERS.map(m=>({
+        id: memberNameToId(m.name),
+        name: m.name,
+        color: m.color,
+        depts: [],
+        processes: [...COMMON_PROCS],
+      }));
+      state.projects = [];
+      state.slots = [];
       saveState();
+      // 初期データをGASにも保存
+      autoSaveToGAS();
       renderCalendar();
-      setGasStatus('✓ 初期データで表示中', 'ok');
+      if(document.getElementById('view-master').classList.contains('active')) renderMaster();
+      setGasStatus('✓ 初期データをセットしました', 'ok');
     }
   } catch(e) {
     setGasStatus('✗ 通信エラー: ' + e.message, 'err');
