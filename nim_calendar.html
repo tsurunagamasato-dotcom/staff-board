@@ -1897,17 +1897,36 @@ async function autoLoadFromGAS() {
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
       const d = json.data;
-      // JSONをそのまま復元（型変換不要）
+      // JSONをそのまま復元
       if (d.members  && d.members.length)  state.members  = d.members;
       if (d.projects && d.projects.length) state.projects = d.projects;
       state.slots = Array.isArray(d.slots) ? d.slots : [];
-      // processesが空の場合は初期データで補完
+
+      // マイグレーション：members
       state.members.forEach(m=>{
+        // depts: 旧dept(文字列)→新depts(配列)
+        if(!Array.isArray(m.depts)){
+          m.depts = m.dept ? [m.dept] : [];
+        }
+        // processes
         if(!Array.isArray(m.processes)||m.processes.length===0){
           const def=DEFAULT_MEMBERS.find(dm=>dm.name===m.name);
-          if(def&&def.processes.length>0) m.processes=[...def.processes];
+          if(def&&def.processes&&def.processes.length>0) m.processes=[...def.processes];
         }
+        m.color=Number(m.color)||1;
       });
+      // マイグレーション：projects
+      state.projects.forEach(p=>{
+        p.id=projNameToId(p.name);
+        if(!p.totalPlanH) p.totalPlanH=0;
+        if(!p.deptHours)  p.deptHours={};
+      });
+      // マイグレーション：slots
+      state.slots.forEach(s=>{ s.actualH=Number(s.actualH)||0; });
+      // departments
+      if(!state.departments||!state.departments.length){
+        state.departments=Object.keys(DEPT_PROCESSES);
+      }
       saveState();
       renderCalendar();
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
