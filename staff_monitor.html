@@ -64,6 +64,14 @@
     content:''; position:absolute; left:0; top:0; bottom:0;
     width:4px; background:#BA7517; border-radius:10px 0 0 10px;
   }
+  /* 休みカード：全体を赤く */
+  .staff-card.yasumi-card {
+    background:rgba(255,80,80,0.18);
+    border:2px solid rgba(220,50,50,0.5);
+  }
+  .staff-card.yasumi-card .card-name {
+    color:#b71c1c;
+  }
 
   .card-name {
     font-size:22px; font-weight:700;
@@ -155,9 +163,9 @@
 
   /* 部署別カードのバッジ */
   .status-badge-sm {
-    display: inline-flex; align-items: center; gap: 3px;
-    padding: 2px 8px; border-radius: 999px;
-    font-size: 13px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 16px; font-weight: 700;
   }
 </style>
 </head>
@@ -383,7 +391,7 @@ function rebuildSlides() {
     const cardsHtml = members.length > 0
       ? `<div class="staff-grid">${members.map(m => {
           const isNonDefault = state[m.id].status !== m.base;
-          return `<div class="staff-card ${isNonDefault?'non-default':''}">
+          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''}">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <div class="card-dept">${m.dept}</div>
             ${state[m.id].memo?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${state[m.id].memo}</div>`:''}
@@ -533,7 +541,7 @@ function rebuildDeptSlides(filterDept) {
           if (st.status === 'honsha_office' && m.slide) {
             displayLabel = slideLabel[m.slide] || badge.label;
           }
-          return `<div class="staff-card ${isNonDefault?'non-default':''}">
+          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''}">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <span class="status-badge-sm" style="background:${badge.bg};color:${badge.fg};">
               <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
