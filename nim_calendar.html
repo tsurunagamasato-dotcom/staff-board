@@ -338,6 +338,14 @@
   /* 月ヘッダーをテーマ対応 */
   .month-header{background:var(--mh-bg,var(--surface2));color:var(--mh-color,var(--accent));}
 
+  /* 部門チェックボックス */
+  .dept-check-list{display:flex;flex-direction:column;gap:4px;}
+  .dept-check-item{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;cursor:pointer;transition:background .1s;font-size:11px;}
+  .dept-check-item:hover{background:rgba(255,255,255,.04);}
+  .dept-check-item input[type=checkbox]{accent-color:var(--accent);cursor:pointer;width:14px;height:14px;}
+  .dept-check-item input:checked + span{color:var(--accent);font-weight:600;}
+  .dept-apply-btn{margin-top:8px;width:100%;}
+
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -441,7 +449,7 @@
         <button class="btn btn-primary btn-sm" onclick="addMember()">追加</button>
       </div>
       <table class="data-table" id="member-table">
-        <thead><tr><th>名前</th><th>色</th><th>担当部門</th><th></th></tr></thead>
+        <thead><tr><th>名前</th><th>色</th><th>担当部門（複数選択可）</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -646,11 +654,11 @@ const DEPT_PROCESSES = {
 };
 
 const DEFAULT_MEMBERS = [
-  {name:'宍倉', color:1, processes:[], dept:''},
-  {name:'福島', color:2, processes:[], dept:''},
-  {name:'貴美', color:3, processes:[], dept:''},
-  {name:'中村', color:4, processes:[], dept:''},
-  {name:'井口', color:5, processes:[], dept:''},
+  {name:'宍倉', color:1, processes:[], depts:[]},
+  {name:'福島', color:2, processes:[], depts:[]},
+  {name:'貴美', color:3, processes:[], depts:[]},
+  {name:'中村', color:4, processes:[], depts:[]},
+  {name:'井口', color:5, processes:[], depts:[]},
 ];
 
 // 担当者IDを名前から生成（固定・どのPCでも同じ）
@@ -1268,40 +1276,56 @@ function addProcess(){
   mem.processes.push(name);
   document.getElementById('process-name-input').value='';
   saveState();scheduleSave();renderProcessMaster();
-}
-
-function deleteProcess(memberId,index){
-  const mem=getMember(memberId);
-  if(!mem||!mem.processes)return;
-  mem.processes.splice(index,1);
-  saveState();scheduleSave();renderProcessMaster();
-}
 function renderMemberTable(){
   const tbody=document.querySelector('#member-table tbody');
   tbody.innerHTML='';
   state.members.forEach(m=>{
     const c=COLORS[m.color];
-    const deptOptions=Object.keys(DEPT_PROCESSES).map(d=>
-      `<option value="${d}" ${m.dept===d?'selected':''}>${d}</option>`
-    ).join('');
+    if(!Array.isArray(m.depts)) m.depts = m.dept ? [m.dept] : [];
+    const depts=m.depts;
+    const checkList=Object.keys(DEPT_PROCESSES).map(d=>`
+      <label class="dept-check-item">
+        <input type="checkbox" ${depts.includes(d)?'checked':''} onchange="toggleDept('${m.id}','${d.replace(/'/g,"\'")}',this.checked)">
+        <span>${d}</span>
+      </label>`).join('');
+    const selectedLabel=depts.length?depts.map(d=>d.split(' / ')[0]).join('・'):'未設定';
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>${m.name}</td>
       <td><span style="background:${c.fg};width:12px;height:12px;display:inline-block;border-radius:50%;vertical-align:middle;"></span></td>
       <td>
-        <select class="form-select" style="font-size:11px;padding:3px 6px;" onchange="assignDept('${m.id}',this.value)">
-          <option value="">部門を選択</option>
-          ${deptOptions}
-        </select>
+        <div style="font-size:10px;color:var(--accent);margin-bottom:4px;font-weight:600;" id="dept-lbl-${m.id}">${selectedLabel}</div>
+        <div class="dept-check-list">${checkList}</div>
+        <button class="btn btn-primary btn-sm dept-apply-btn" onclick="applyDeptProcesses('${m.id}')">▶ 工程を反映</button>
       </td>
       <td><button class="del-btn" onclick="deleteMember('${m.id}')">削除</button></td>`;
     tbody.appendChild(tr);
   });
 }
 
-function assignDept(memberId, dept){
+function toggleDept(memberId, dept, checked){
   const mem=getMember(memberId);
   if(!mem) return;
-  mem.dept=dept;
+  if(!Array.isArray(mem.depts)) mem.depts=[];
+  if(checked){ if(!mem.depts.includes(dept)) mem.depts.push(dept); }
+  else { mem.depts=mem.depts.filter(d=>d!==dept); }
+  saveState();
+  const lbl=document.getElementById('dept-lbl-'+memberId);
+  if(lbl) lbl.textContent=mem.depts.length?mem.depts.map(d=>d.split(' / ')[0]).join('・'):'未設定';
+}
+
+function applyDeptProcesses(memberId){
+  const mem=getMember(memberId);
+  if(!mem||!Array.isArray(mem.depts)||!mem.depts.length){alert('部門を選択してください');return;}
+  const allProcs=[];
+  mem.depts.forEach(d=>{
+    if(DEPT_PROCESSES[d]) DEPT_PROCESSES[d].forEach(p=>{ if(!allProcs.includes(p)) allProcs.push(p); });
+  });
+  const deptNames=mem.depts.map(d=>d.split(' / ')[0]).join('・');
+  if(confirm('「'+deptNames+'」の工程（計'+allProcs.length+'件）をセットします。\n現在の工程リストは上書きされます。よろしいですか？')){
+    mem.processes=[...allProcs];
+    saveState();scheduleSave();renderMaster();
+  }
+}
   // 部門に対応する工程を自動セット
   if(dept && DEPT_PROCESSES[dept]){
     if(confirm('「'+dept+'」の工程リストを自動セットしますか？\n（現在の工程リストは上書きされます）')){
@@ -1335,7 +1359,7 @@ function addMember(){
   const name=document.getElementById('member-name-input').value.trim();
   if(!name){alert('担当者名を入力してください');return;}
   if(state.members.length>=5){alert('担当者は最大5名です');return;}
-  state.members.push({id:memberNameToId(name),name,color:selectedColor,processes:[],dept:''});
+  state.members.push({id:memberNameToId(name),name,color:selectedColor,processes:[],depts:[]});
   document.getElementById('member-name-input').value='';
   saveState();scheduleSave();renderMaster();
 }
