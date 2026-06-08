@@ -494,13 +494,23 @@ function setViewMode(mode) {
   slideTimer = setInterval(nextSlide, slideInterval);
 }
 
-function rebuildDeptSlides() {
-  slideKeys = DEPT_SLIDE_DEFS.map((_,idx) => idx);
+function rebuildDeptSlides(filterDept) {
+  // filterDeptが指定された場合はその部署のみ表示
+  let defs = DEPT_SLIDE_DEFS;
+  if (filterDept) {
+    defs = DEPT_SLIDE_DEFS.filter(def => def.depts.some(d => d === filterDept));
+    // 該当がなければ部署名で直接生成
+    if (defs.length === 0) {
+      defs = [{ label: filterDept, depts: [filterDept], color: '#185FA5', bg: 'linear-gradient(135deg,#c4d8f0,#d4e6f8)' }];
+    }
+  }
+
+  slideKeys = defs.map((_,idx) => idx);
   const wrap = document.getElementById('slideWrap');
   wrap.innerHTML = '';
 
   slideKeys.forEach((defIdx, idx) => {
-    const def = DEPT_SLIDE_DEFS[defIdx];
+    const def = defs[defIdx];
     const members = STAFF_MASTER.filter(m => def.depts.includes(m.dept));
 
     const slide = document.createElement('div');
@@ -572,6 +582,10 @@ function rebuildDeptSlides() {
 }
 
 async function init() {
+  // URLパラメータで部署固定モードを判定
+  const urlParams = new URLSearchParams(location.search);
+  const deptParam = urlParams.get('dept');
+
   // localStorageキャッシュで即座に表示
   try {
     const cached = localStorage.getItem(STAFF_LSKEY);
@@ -581,12 +595,32 @@ async function init() {
     }
   } catch(e) {}
 
+  // 部署固定モードの場合はUIを調整
+  if (deptParam) {
+    // ヘッダーのモード切替ボタンを非表示
+    document.querySelectorAll('.mode-btn').forEach(el => el.style.display = 'none');
+    // 部署名をタイトルに表示
+    document.title = deptParam + ' — 所在地ボード';
+  }
+
   // staffマスタ取得と状態取得を並列実行
   document.getElementById('loadingOverlay').style.display = 'none';
   await Promise.all([ loadStaffMaster(), fetchAll(false) ]);
-  rebuildSlides();
+
+  if (deptParam) {
+    // 部署固定モード：該当部署のスライドだけ表示
+    rebuildDeptSlides(deptParam);
+  } else {
+    rebuildSlides();
+  }
+
   slideTimer = setInterval(nextSlide, slideInterval);
-  setInterval(() => fetchAll(true), FETCH_INTERVAL);
+  setInterval(async () => {
+    await fetchAll(true);
+    if (deptParam) rebuildDeptSlides(deptParam);
+    else if (viewMode === 'location') rebuildSlides();
+    else rebuildDeptSlides();
+  }, FETCH_INTERVAL);
 }
 
 init();
