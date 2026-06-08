@@ -1895,6 +1895,98 @@ async function autoLoadFromGAS() {
   try {
     const res  = await fetch(GAS_URL);
     const json = await res.json();
+    if (json.status === 'ok' && json.data) {
+      const d = json.data;
+
+      // members をそのまま使用
+      if(d.members && d.members.length){
+        state.members = d.members;
+        state.members.forEach(m=>{
+          // IDの二重prefix修正
+          if(m.id && m.id.startsWith('mem_mem_')) m.id = m.id.replace('mem_mem_','mem_');
+          // depts補完
+          if(!Array.isArray(m.depts)) m.depts = m.dept ? [m.dept] : [];
+          if(!Array.isArray(m.processes)) m.processes = [];
+          m.color = Number(m.color)||1;
+        });
+      }
+
+      // projects をそのまま使用
+      if(d.projects && d.projects.length){
+        state.projects = d.projects;
+        state.projects.forEach(p=>{
+          // IDの二重prefix修正
+          if(p.id && p.id.startsWith('proj_proj_')) p.id = p.id.replace('proj_proj_','proj_');
+          if(!p.totalPlanH) p.totalPlanH=0;
+          if(!p.deptHours||typeof p.deptHours!=='object') p.deptHours={};
+        });
+      }
+
+      // slots をそのまま使用（IDの二重prefix修正）
+      if(Array.isArray(d.slots)){
+        state.slots = d.slots;
+        state.slots.forEach(s=>{
+          if(s.projId   && s.projId.startsWith('proj_proj_'))   s.projId   = s.projId.replace('proj_proj_','proj_');
+          if(s.memberId && s.memberId.startsWith('mem_mem_'))    s.memberId = s.memberId.replace('mem_mem_','mem_');
+          // 日付のISO形式を日付のみに正規化
+          if(s.date && s.date.length > 10) s.date = s.date.slice(0,10);
+          s.actualH = Number(s.actualH)||0;
+        });
+      } else {
+        state.slots = [];
+      }
+
+      // departments
+      if(!state.departments||!state.departments.length){
+        state.departments = Object.keys(DEPT_PROCESSES);
+      }
+
+      saveState();
+      renderCalendar();
+      setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
+    } else {
+      setGasStatus('✓ データなし（新規）', 'ok');
+    }
+  } catch(e) {
+    console.error('GAS load error:', e);
+    setGasStatus('✗ 通信エラー: ' + e.message, 'err');
+  }
+}
+
+
+async function autoSaveToGAS() {
+  if (isSyncing) return;
+  isSyncing = true;
+  setGasStatus('⟳ 同期中...', 'loading');
+  try {
+    // 全データをそのままJSON1つで保存
+    const payload = JSON.stringify({
+      members:  state.members,
+      projects: state.projects,
+      slots:    state.slots,
+      baseMonth: state.baseMonth,
+    });
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: payload,
+    });
+    const json = await res.json();
+    if (json.status === 'ok') {
+      setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
+    } else {
+      setGasStatus('✗ 保存失敗', 'err');
+    }
+  } catch(e) {
+    setGasStatus('✗ 通信エラー', 'err');
+  }
+  isSyncing = false;
+}
+
+async function autoLoadFromGAS() {
+  setGasStatus('⟳ 読込中...', 'loading');
+  try {
+    const res  = await fetch(GAS_URL);
+    const json = await res.json();
     console.log('GAS response:', JSON.stringify(json).slice(0,200));
     if (json.status === 'ok' && json.data) {
       const d = json.data;
