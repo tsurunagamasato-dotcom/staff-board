@@ -1897,35 +1897,52 @@ async function autoLoadFromGAS() {
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
       const d = json.data;
-      // JSONをそのまま復元
-      if (d.members  && d.members.length)  state.members  = d.members;
-      if (d.projects && d.projects.length) state.projects = d.projects;
-      state.slots = Array.isArray(d.slots) ? d.slots : [];
-
-      // マイグレーション：members
-      state.members.forEach(m=>{
-        // depts: 旧dept(文字列)→新depts(配列)
-        if(!Array.isArray(m.depts)){
-          m.depts = m.dept ? [m.dept] : [];
+      try {
+        // members
+        if(d.members && d.members.length){
+          state.members = d.members.map(m=>({
+            id:   memberNameToId(String(m.name||'')),
+            name: String(m.name||''),
+            color: Number(m.color)||1,
+            processes: Array.isArray(m.processes) ? m.processes : [],
+            depts: Array.isArray(m.depts) ? m.depts : (m.dept ? [m.dept] : []),
+          }));
+          // processesが空なら初期データで補完
+          state.members.forEach(m=>{
+            if(!m.processes.length){
+              const def=DEFAULT_MEMBERS.find(dm=>dm.name===m.name);
+              if(def&&def.processes&&def.processes.length) m.processes=[...def.processes];
+            }
+          });
         }
-        // processes
-        if(!Array.isArray(m.processes)||m.processes.length===0){
-          const def=DEFAULT_MEMBERS.find(dm=>dm.name===m.name);
-          if(def&&def.processes&&def.processes.length>0) m.processes=[...def.processes];
+        // projects
+        if(d.projects && d.projects.length){
+          state.projects = d.projects.map(p=>({
+            id:         projNameToId(String(p.name||'')),
+            name:       String(p.name||''),
+            totalPlanH: Number(p.totalPlanH)||0,
+            deptHours:  (typeof p.deptHours==='object'&&p.deptHours) ? p.deptHours : {},
+          }));
         }
-        m.color=Number(m.color)||1;
-      });
-      // マイグレーション：projects
-      state.projects.forEach(p=>{
-        p.id=projNameToId(p.name);
-        if(!p.totalPlanH) p.totalPlanH=0;
-        if(!p.deptHours)  p.deptHours={};
-      });
-      // マイグレーション：slots
-      state.slots.forEach(s=>{ s.actualH=Number(s.actualH)||0; });
-      // departments
-      if(!state.departments||!state.departments.length){
-        state.departments=Object.keys(DEPT_PROCESSES);
+        // slots
+        state.slots = Array.isArray(d.slots) ? d.slots.map(s=>({
+          id:              String(s.id||''),
+          projId:          projNameToId(String(getProject(projNameToId(String(s.projId||'')))?.name || s.projId||'')),
+          memberId:        memberNameToId(String(getMember(memberNameToId(String(s.memberId||'')))?.name || s.memberId||'')),
+          date:            String(s.date||''),
+          slot:            String(s.slot||'AM'),
+          actualH:         Number(s.actualH)||0,
+          process:         s.process||'',
+          shortfallProcess:s.shortfallProcess||'',
+          shortfallType:   s.shortfallType||'',
+          shortfallOtherProjId: s.shortfallOtherProjId||'',
+        })) : [];
+        // departments
+        if(!state.departments||!state.departments.length){
+          state.departments=Object.keys(DEPT_PROCESSES);
+        }
+      } catch(innerErr){
+        console.error('Migration error:', innerErr);
       }
       saveState();
       renderCalendar();
@@ -1934,9 +1951,11 @@ async function autoLoadFromGAS() {
       setGasStatus('✓ データなし（新規）', 'ok');
     }
   } catch(e) {
-    setGasStatus('✗ 通信エラー（オフライン？）', 'err');
+    console.error('GAS load error:', e);
+    setGasStatus('✗ 通信エラー: ' + e.message, 'err');
   }
 }
+
 
 // =====================================================
 //  テーマ切り替え
