@@ -167,6 +167,60 @@
     padding: 4px 10px; border-radius: 999px;
     font-size: 16px; font-weight: 700;
   }
+
+  /* カードサイズ切替ボタン */
+  .size-btns {
+    position:fixed; bottom:80px; right:20px; z-index:200;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .size-btn {
+    background:rgba(255,255,255,0.85); backdrop-filter:blur(4px);
+    border:1px solid rgba(0,0,0,0.15); border-radius:10px;
+    padding:6px 12px; font-size:12px; font-weight:700;
+    cursor:pointer; font-family:inherit; color:#1a1a1a;
+    transition:.15s;
+  }
+  .size-btn.active { background:#1a1a2e; color:#fff; border-color:#1a1a2e; }
+  .size-btn:hover:not(.active) { background:rgba(255,255,255,1); }
+
+  /* 居場所登録モーダル */
+  .reg-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.5);
+    z-index:500; display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .reg-overlay.hidden { display:none; }
+  .reg-box {
+    background:#fff; border-radius:20px; width:100%; max-width:440px;
+    padding:28px; box-shadow:0 8px 40px rgba(0,0,0,.25);
+  }
+  .reg-title { font-size:18px; font-weight:800; margin-bottom:6px; }
+  .reg-name { font-size:22px; font-weight:700; color:#1a1a2e; margin-bottom:20px; }
+  .reg-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;
+  }
+  .reg-btn {
+    padding:16px 10px; border-radius:14px; border:2px solid #e0e0e0;
+    background:#fff; cursor:pointer; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    transition:.15s; font-size:14px; font-weight:700;
+  }
+  .reg-btn:hover { border-color:#1a1a2e; background:#f0f0f0; }
+  .reg-btn .reg-icon { font-size:26px; }
+  .reg-btn.selected { border-color:#1a1a2e; background:#1a1a2e; color:#fff; }
+  .reg-cancel {
+    width:100%; padding:12px; border-radius:12px; border:1.5px solid #e0e0e0;
+    background:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .reg-submit {
+    width:100%; padding:14px; border-radius:12px; border:none;
+    background:#1a1a2e; color:#fff; font-size:15px; font-weight:800;
+    cursor:pointer; font-family:inherit; margin-bottom:8px;
+  }
+  .reg-submit:disabled { background:#999; cursor:not-allowed; }
+  .staff-card.clickable { cursor:pointer; }
+  .staff-card.clickable:hover { opacity:.85; transform:scale(1.02); transition:.15s; }
+  .staff-card.clickable:active { transform:scale(0.98); }
 </style>
 </head>
 <body>
@@ -186,6 +240,24 @@
 <div class="sync-badge">
   <span class="sync-dot" id="syncDot"></span>
   <span class="sync-text" id="syncText">--</span>
+</div>
+
+<!-- カードサイズ切替 -->
+<div class="size-btns">
+  <button class="size-btn" onclick="setCardSize('small')">小</button>
+  <button class="size-btn active" onclick="setCardSize('medium')">中</button>
+  <button class="size-btn" onclick="setCardSize('large')">大</button>
+</div>
+
+<!-- 居場所登録モーダル -->
+<div class="reg-overlay hidden" id="regOverlay">
+  <div class="reg-box">
+    <div class="reg-title">居場所を登録</div>
+    <div class="reg-name" id="regName"></div>
+    <div class="reg-grid" id="regGrid"></div>
+    <button class="reg-submit" id="regSubmit" onclick="doRegister()" disabled>登録する</button>
+    <button class="reg-cancel" onclick="closeRegModal()">キャンセル</button>
+  </div>
 </div>
 
 <a href="staff_search.html" style="
@@ -395,14 +467,13 @@ function rebuildSlides() {
       ? `<div class="staff-grid">${members.map(m => {
           const st = state[m.id];
           const isNonDefault = st.status !== m.base;
-          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''}">
+          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal(${m.id})">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <div class="card-dept">${m.dept}</div>
             ${(st.status !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${st.memo}</div>`:''}
             ${(st.leaveStart && st.leaveEnd) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${st.leaveStart===st.leaveEnd ? formatDate(st.leaveStart) : formatDate(st.leaveStart)+'〜'+formatDate(st.leaveEnd)}</div>` : ''}
             ${st.updated?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
           </div>`;
-        }).join('')}</div>`
       : `<div class="empty-msg">現在この場所にいる社員はいません</div>`;
 
     slide.innerHTML = `
@@ -545,7 +616,7 @@ function rebuildDeptSlides(filterDept) {
           if (st.status === 'honsha_office' && m.slide) {
             displayLabel = slideLabel[m.slide] || badge.label;
           }
-          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''}">
+          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal(${m.id})">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <span class="status-badge-sm" style="background:${badge.bg};color:${badge.fg};">
               <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
@@ -632,9 +703,139 @@ async function init() {
   setInterval(async () => {
     await fetchAll(true);
   }, FETCH_INTERVAL);
+
+  // カードサイズをlocalStorageから復元
+  const savedSize = localStorage.getItem('monitor_card_size') || 'medium';
+  setCardSize(savedSize);
 }
 
-init();
+// ===== カードサイズ切替 =====
+const CARD_SIZES = {
+  small:  { minWidth:'140px', nameSize:'16px', longSize:'12px' },
+  medium: { minWidth:'200px', nameSize:'22px', longSize:'15px' },
+  large:  { minWidth:'260px', nameSize:'28px', longSize:'18px' },
+};
+let currentSize = 'medium';
+
+function setCardSize(size) {
+  currentSize = size;
+  const s = CARD_SIZES[size];
+  // グリッドのminWidth更新
+  document.querySelectorAll('.staff-grid').forEach(el => {
+    el.style.gridTemplateColumns = `repeat(auto-fill, minmax(${s.minWidth}, 1fr))`;
+  });
+  // 名前フォントサイズ更新
+  document.querySelectorAll('.card-name:not(.long)').forEach(el => {
+    el.style.fontSize = s.nameSize;
+  });
+  document.querySelectorAll('.card-name.long').forEach(el => {
+    el.style.fontSize = s.longSize;
+  });
+  // ボタンのactive状態更新
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === {small:'小',medium:'中',large:'大'}[size]);
+  });
+  // localStorageに保存
+  localStorage.setItem('monitor_card_size', size);
+}
+
+// ===== 居場所登録モーダル =====
+const STATUSES_REG = [
+  { key:'honsha_office',  label:'本社事務所', icon:'🏢' },
+  { key:'honsha_factory', label:'本社工場',   icon:'🏭' },
+  { key:'nezaki',         label:'根崎',       icon:'🔧' },
+  { key:'nezaki2',        label:'根崎第2',    icon:'⚙️' },
+  { key:'gaishutsu',      label:'外出/出張',  icon:'🚗' },
+  { key:'zaitaku',        label:'在宅',       icon:'🏠' },
+  { key:'yasumi',         label:'休み',       icon:'😴' },
+];
+
+let regStaff = null;
+let regStatus = null;
+
+function openRegModal(id) {
+  regStaff = STAFF_MASTER.find(m => m.id === id);
+  if (!regStaff) return;
+  regStatus = null;
+
+  // 会長は出勤のみ
+  const isChairman = regStaff.dept === '会長';
+  const statuses = isChairman
+    ? [{ key:'honsha_office', label:'出勤', icon:'🏢' }]
+    : STATUSES_REG;
+
+  document.getElementById('regName').textContent = regStaff.name;
+  document.getElementById('regGrid').innerHTML = statuses.map(s =>
+    `<button class="reg-btn" onclick="selectRegStatus('${s.key}')" id="regbtn-${s.key}">
+      <span class="reg-icon">${s.icon}</span>
+      <span>${s.label}</span>
+    </button>`
+  ).join('');
+  document.getElementById('regSubmit').disabled = true;
+
+  // 現在のステータスをハイライト
+  const cur = state[id]?.status;
+  if (cur) {
+    const curBtn = document.getElementById('regbtn-' + cur);
+    if (curBtn) { curBtn.classList.add('selected'); regStatus = cur; document.getElementById('regSubmit').disabled = false; }
+  }
+
+  document.getElementById('regOverlay').classList.remove('hidden');
+  // スライドを一時停止
+  if (!isPaused) togglePause();
+}
+
+function selectRegStatus(key) {
+  regStatus = key;
+  document.querySelectorAll('.reg-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('regbtn-' + key)?.classList.add('selected');
+  document.getElementById('regSubmit').disabled = false;
+}
+
+function closeRegModal() {
+  document.getElementById('regOverlay').classList.add('hidden');
+  regStaff = null; regStatus = null;
+  // スライド再開
+  if (isPaused) togglePause();
+}
+
+async function doRegister() {
+  if (!regStaff || !regStatus) return;
+  const btn = document.getElementById('regSubmit');
+  btn.disabled = true;
+  btn.textContent = '登録中...';
+
+  const now = new Date();
+  const updated = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + '更新';
+  const payload = {
+    id: regStaff.id, name: regStaff.name, dept: regStaff.dept,
+    status: regStatus, updated,
+    memo: '', leaveStart: '', leaveEnd: ''
+  };
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if (json.ok) {
+      state[regStaff.id] = { status: regStatus, updated, memo: '', leaveStart: '', leaveEnd: '' };
+      closeRegModal();
+      if (viewMode === 'location') rebuildSlides(); else rebuildDeptSlides();
+      btn.textContent = '登録する';
+    } else { throw new Error(); }
+  } catch(e) {
+    btn.textContent = '✗ エラー';
+    setTimeout(() => { btn.textContent = '登録する'; btn.disabled = false; }, 2000);
+  }
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('regOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('regOverlay')) closeRegModal();
+});
 </script>
 </body>
 </html>
