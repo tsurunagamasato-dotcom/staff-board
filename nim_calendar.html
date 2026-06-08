@@ -644,30 +644,24 @@ const COLORS = {
   5:{bg:'rgba(198,120,221,.2)',fg:'#c678dd'},
 };
 
-// デフォルト担当者
-// 部門ごとの工程マスタ（全部門に999・900を追加）
+// =====================================================
+//  部門・工程マスタ（固定）
+// =====================================================
 const DEPT_PROCESSES = {
-  '加工 / MACHINING':     ['001 部品製作','002 不具合修正','004 部品手配','999 その他','900 その他'],
-  '組付 / Assembly':      ['205 組付','210 運転調整','212 現地工事','215 不具合修正','999 その他','900 その他'],
-  '設計 / Mechanical Design': ['106 スケッチ（打合）','111 部品図修正','113 取説作成','999 その他','900 その他'],
-  '電気 / Electric Work': ['306 ソフト設計','307 ハード設計','308 画面作画','309 部品手配','311 配線工事','312 運転調整','314 現地工事','317 不具合修正','320 取説作成','999 その他','900 その他'],
+  '加工 / MACHINING':          ['001 部品製作','002 不具合修正','004 部品手配','999 その他','900 その他'],
+  '組付 / Assembly':           ['205 組付','210 運転調整','212 現地工事','215 不具合修正','999 その他','900 その他'],
+  '設計 / Mechanical Design':  ['106 スケッチ（打合）','111 部品図修正','113 取説作成','999 その他','900 その他'],
+  '電気 / Electric Work':      ['306 ソフト設計','307 ハード設計','308 画面作画','309 部品手配','311 配線工事','312 運転調整','314 現地工事','317 不具合修正','320 取説作成','999 その他','900 その他'],
   '一般事務・作業 / Routine Work': ['900 その他','999 その他'],
 };
 
-const ALL_PROCESSES = [
-  '001 部品製作','002 不具合修正','004 部品手配',
-  '205 組付','210 運転調整','212 現地工事','215 不具合修正',
-  '106 スケッチ（打合）','111 部品図修正','113 取説作成',
-  '306 ソフト設計','307 ハード設計','308 画面作画','309 部品手配',
-  '311 配線工事','312 運転調整','314 現地工事','317 不具合修正',
-  '320 取説作成','999 その他','900 その他'
-];
+// 初期担当者（工程は部門割当後に設定）
 const DEFAULT_MEMBERS = [
-  {name:'宍倉', color:1, depts:[], processes:ALL_PROCESSES},
-  {name:'福島', color:2, depts:[], processes:ALL_PROCESSES},
-  {name:'貴美', color:3, depts:[], processes:ALL_PROCESSES},
-  {name:'中村', color:4, depts:[], processes:ALL_PROCESSES},
-  {name:'井口', color:5, depts:[], processes:ALL_PROCESSES},
+  {name:'宍倉', color:1, depts:[], processes:['999 その他','900 その他']},
+  {name:'貴美', color:3, depts:[], processes:['999 その他','900 その他']},
+  {name:'福島', color:2, depts:[], processes:['999 その他','900 その他']},
+  {name:'中村', color:4, depts:[], processes:['999 その他','900 その他']},
+  {name:'井口', color:5, depts:[], processes:['999 その他','900 その他']},
 ];
 
 // 担当者IDを名前から生成（固定・どのPCでも同じ）
@@ -683,25 +677,23 @@ if(!state){
   // 初回：デフォルト担当者（工程込み）で初期化
   state = {
     members: DEFAULT_MEMBERS.map(m=>({
-      id:memberNameToId(m.name), name:m.name, color:m.color, processes:m.processes||[]
+      id:memberNameToId(m.name), name:m.name, color:m.color,
+      depts:m.depts||[], processes:m.processes||['999 その他','900 その他']
     })),
     projects: [],
     slots: [],
-    departments: ['組付','電気','設計','加工'],
     baseMonth: null,
     filterMembers: [],
   };
 }
-// マイグレーション：processesが未設定の担当者に補完
+// マイグレーション
 state.members.forEach((m,i)=>{
-  if(!Array.isArray(m.processes)){
-    const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
-    m.processes=(def&&Array.isArray(def.processes))?def.processes:[];
-  }
+  if(!Array.isArray(m.processes)) m.processes=['999 その他','900 その他'];
+  if(!Array.isArray(m.depts)) m.depts=[];
 });
 if(!state.slots) state.slots=[];
 if(!state.filterMembers) state.filterMembers=[];
-if(!state.departments) state.departments=Object.keys(DEPT_PROCESSES);
+// departments廃止（DEPT_PROCESSESを直接参照）
 // projectsにdeptHoursフィールドを補完
 state.projects.forEach(p=>{ if(!p.deptHours) p.deptHours={}; });
 if(!state.baseMonth){
@@ -1846,6 +1838,7 @@ function scheduleSave() {
 async function resetSlotsOnGAS() {
   if(!confirm('カレンダーの配置データ（予定・実績）を全て削除します。\n担当者・案件マスタは残ります。\nよろしいですか？')) return;
   state.slots = [];
+  state.projects = [];
   saveState();
   setGasStatus('⟳ リセット中...', 'loading');
   try {
