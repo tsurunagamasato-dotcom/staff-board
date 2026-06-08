@@ -258,6 +258,18 @@
     <div class="reg-title">居場所を登録</div>
     <div class="reg-name" id="regName"></div>
     <div class="reg-grid" id="regGrid"></div>
+
+    <!-- 期間入力（外出/出張・在宅・休みのみ表示） -->
+    <div id="regPeriodBox" style="display:none;margin-bottom:14px;background:#f8f8f8;border-radius:12px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">📅 期間</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <input type="date" id="regStart" style="flex:1;padding:9px 10px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;">
+        <span id="regRangeLabel" style="font-size:13px;color:#888;flex-shrink:0;">〜</span>
+        <input type="date" id="regEnd" style="flex:1;padding:9px 10px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;">
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:#aaa;">※ 1日のみの場合は開始日だけ入力してください</div>
+    </div>
+
     <button class="reg-submit" id="regSubmit" onclick="doRegister()" disabled>登録する</button>
     <button class="reg-cancel" onclick="closeRegModal()">キャンセル</button>
   </div>
@@ -778,6 +790,10 @@ function openRegModal(id) {
   }
 
   document.getElementById('regOverlay').classList.remove('hidden');
+  // 期間欄リセット
+  document.getElementById('regPeriodBox').style.display = 'none';
+  document.getElementById('regStart').value = '';
+  document.getElementById('regEnd').value = '';
   // スライドを一時停止
   if (!isPaused) togglePause();
 }
@@ -787,6 +803,19 @@ function selectRegStatus(key) {
   document.querySelectorAll('.reg-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('regbtn-' + key)?.classList.add('selected');
   document.getElementById('regSubmit').disabled = false;
+
+  // 外出/出張・在宅・休みのみ期間入力欄を表示
+  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(key);
+  const periodBox = document.getElementById('regPeriodBox');
+  periodBox.style.display = needsPeriod ? 'block' : 'none';
+
+  // デフォルトで今日の日付をセット
+  if (needsPeriod) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!document.getElementById('regStart').value) {
+      document.getElementById('regStart').value = today;
+    }
+  }
 }
 
 function closeRegModal() {
@@ -804,10 +833,19 @@ async function doRegister() {
 
   const now = new Date();
   const updated = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + '更新';
+
+  // 期間取得
+  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(regStatus);
+  const startVal = document.getElementById('regStart').value;
+  const endVal = document.getElementById('regEnd').value;
+  const leaveStart = needsPeriod && startVal ? startVal : '';
+  // 終了日が空or開始日と同じ場合は開始日のみ（当日のみ）
+  const leaveEnd = needsPeriod && endVal && endVal !== startVal ? endVal : leaveStart;
+
   const payload = {
     id: regStaff.id, name: regStaff.name, dept: regStaff.dept,
     status: regStatus, updated,
-    memo: '', leaveStart: '', leaveEnd: ''
+    memo: '', leaveStart, leaveEnd
   };
 
   try {
@@ -818,7 +856,7 @@ async function doRegister() {
     });
     const json = await res.json();
     if (json.ok) {
-      state[regStaff.id] = { status: regStatus, updated, memo: '', leaveStart: '', leaveEnd: '' };
+      state[regStaff.id] = { status: regStatus, updated, memo: '', leaveStart, leaveEnd };
       closeRegModal();
       const dp = new URLSearchParams(location.search).get('dept');
       if (dp) rebuildDeptSlides(dp);
