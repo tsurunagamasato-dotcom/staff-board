@@ -436,7 +436,9 @@
   <div class="master-cols">
     <!-- 担当者マスタ -->
     <div class="card">
-      <div class="card-title">👤 担当者マスタ</div>
+      <div class="card-title">👤 担当者マスタ
+        <button class="btn btn-sm" style="margin-left:8px;font-size:10px;color:#f7b731;border-color:rgba(247,183,49,.4);" onclick="initDefaultMembers()">↺ 初期担当者を設定</button>
+      </div>
       <div class="form-row">
         <input class="form-input" id="member-name-input" placeholder="担当者名を入力" maxlength="20">
         <div class="color-swatch" id="member-color-pick">
@@ -1409,6 +1411,21 @@ function selectColor(n,el){
   document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('selected'));
   el.classList.add('selected');
 }
+function initDefaultMembers(){
+  if(!confirm('宍倉・貴美・福島・中村・井口の5名を初期設定します。\n現在の担当者データは上書きされます。よろしいですか？')) return;
+  state.members = DEFAULT_MEMBERS.map(m=>({
+    id: memberNameToId(m.name),
+    name: m.name,
+    color: m.color,
+    depts: [],
+    processes: [...COMMON_PROCS],
+  }));
+  saveState();
+  scheduleSave();
+  renderMaster();
+  renderCalendar();
+  alert('初期担当者を設定しました！');
+}
 function addMember(){
   const name=document.getElementById('member-name-input').value.trim();
   if(!name){alert('担当者名を入力してください');return;}
@@ -2010,17 +2027,17 @@ async function autoLoadFromGAS() {
     console.log('GAS response:', JSON.stringify(json).slice(0,200));
     if (json.status === 'ok' && json.data) {
       const d = json.data;
-      console.log('members:', d.members ? d.members.length : 'none');
-      console.log('projects:', d.projects ? d.projects.length : 'none');
-      console.log('slots:', d.slots ? d.slots.length : 'none');
-      // シンプルにそのまま使う
-      state.members  = d.members  || state.members;
-      state.projects = d.projects || state.projects;
-      state.slots    = d.slots    || [];
+      // membersはGASが空配列なら上書きしない（初期データを守る）
+      if(Array.isArray(d.members) && d.members.length > 0){
+        state.members = d.members;
+      }
+      if(Array.isArray(d.projects)) state.projects = d.projects;
+      state.slots = Array.isArray(d.slots) ? d.slots : [];
       // 最低限の補完
       state.members.forEach(m=>{
+        m.id = memberNameToId(m.name);
         if(!Array.isArray(m.depts)) m.depts = m.dept ? [m.dept] : [];
-        if(!Array.isArray(m.processes)) m.processes = [];
+        if(!Array.isArray(m.processes) || m.processes.length===0) m.processes = [...COMMON_PROCS];
         m.color = Number(m.color)||1;
       });
       state.projects.forEach(p=>{
@@ -2028,14 +2045,16 @@ async function autoLoadFromGAS() {
         if(!p.deptHours||typeof p.deptHours!=='object') p.deptHours={};
       });
       state.slots.forEach(s=>{ s.actualH=Number(s.actualH)||0; });
-      if(!state.departments||!state.departments.length){
-        state.departments=Object.keys(DEPT_PROCESSES);
-      }
       saveState();
       renderCalendar();
+      renderMaster();
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
     } else {
-      setGasStatus('✓ データなし（新規）', 'ok');
+      // GASにデータなし → 現在の初期データをGASへ保存
+      autoSaveToGAS();
+      renderCalendar();
+      renderMaster();
+      setGasStatus('✓ 初期データで開始', 'ok');
     }
   } catch(e) {
     console.error('GAS load error:', e);
@@ -2071,10 +2090,22 @@ function loadTheme(){
 // =====================================================
 //  INIT：まずlocalStorageで即表示 → バックグラウンドでGAS同期
 // =====================================================
-// ① localStorageのデータで即座にカレンダーを表示（待ち時間ゼロ）
+// ① 担当者が空なら必ずDEFAULT_MEMBERSをセット（15:45版と同じ確実な初期化）
+if(!state.members || state.members.length === 0){
+  state.members = DEFAULT_MEMBERS.map(m=>({
+    id: memberNameToId(m.name),
+    name: m.name,
+    color: m.color,
+    depts: [],
+    processes: [...COMMON_PROCS],
+  }));
+  saveState();
+}
+// ② localStorageのデータで即座に表示（待ち時間ゼロ）
 loadTheme();
 renderCalendar();
-// ② 裏でGASから最新データを取得して静かに更新
+renderMaster();
+// ③ 裏でGASから最新データを取得して静かに更新
 autoLoadFromGAS();
 </script>
 </body>
