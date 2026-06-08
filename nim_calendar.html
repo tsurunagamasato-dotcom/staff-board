@@ -441,18 +441,15 @@
         <button class="btn btn-primary btn-sm" onclick="addMember()">追加</button>
       </div>
       <table class="data-table" id="member-table">
-        <thead><tr><th>名前</th><th>色</th><th></th></tr></thead>
+        <thead><tr><th>名前</th><th>色</th><th>担当部門</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
     <!-- 部門マスタ -->
     <div class="card">
       <div class="card-title">🏭 部門マスタ</div>
-      <div class="form-row">
-        <input class="form-input" id="dept-name-input" placeholder="部門名を入力（例：組付）" maxlength="20">
-        <button class="btn btn-primary btn-sm" onclick="addDept()">追加</button>
-      </div>
-      <div class="process-list" id="dept-list"></div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">担当者マスタで各担当者に部門を割り当てると工程が自動セットされます</div>
+      <div id="dept-overview"></div>
     </div>
     <!-- 案件マスタ -->
     <div class="card">
@@ -639,12 +636,21 @@ const COLORS = {
 };
 
 // デフォルト担当者
+// 部門ごとの工程マスタ
+const DEPT_PROCESSES = {
+  '加工 / MACHINING':     ['001 部品製作','002 不具合修正','004 部品手配'],
+  '組付 / Assembly':      ['205 組付','210 運転調整','212 現地工事','215 不具合修正'],
+  '設計 / Mechanical Design': ['106 スケッチ（打合）','111 部品図修正','113 取説作成'],
+  '電気 / Electric Work': ['306 ソフト設計','307 ハード設計','308 画面作画','309 部品手配','311 配線工事','312 運転調整','314 現地工事','317 不具合修正','320 取説作成','999 その他'],
+  '一般事務・作業 / Routine Work': ['900 その他'],
+};
+
 const DEFAULT_MEMBERS = [
-  {name:'宍倉', color:1, processes:[]},
-  {name:'福島', color:2, processes:["打合せ(社内・客先)", "総組付け", "出荷準備", "段取り作業", "Unit組付け", "塗装", "配管", "BKT製作取付", "カバー製作取付", "運転調整", "現地工事", "立会い", "不具合対応/修正", "納品", "引き取り", "非定常作業", "測定"]},
-  {name:'貴美', color:3, processes:[]},
-  {name:'中村', color:4, processes:["打合せ(社内・客先)", "総組付け", "出荷準備", "段取り作業", "Unit組付け", "塗装", "配管", "BKT製作取付", "カバー製作取付", "運転調整", "現地工事", "立会い", "不具合対応/修正", "納品", "引き取り", "非定常作業", "測定"]},
-  {name:'井口', color:5, processes:["外注打合せ", "客先打合せ", "社内打合せ", "ソフト設計", "ハード図設計・機器構成確認", "各個動作確認", "部品手配", "盤内配線工事", "外部配線工事", "自動運転調整", "段取り作業", "現地運転調整", "立会い", "出荷準備", "取扱説明書作成", "画面作画", "外注管理", "見積資料作成", "現地配線工事", "機器立上作業", "ロボットプログラム設計", "ロボット運転調整", "不具合対応/修正"]},
+  {name:'宍倉', color:1, processes:[], dept:''},
+  {name:'福島', color:2, processes:[], dept:''},
+  {name:'貴美', color:3, processes:[], dept:''},
+  {name:'中村', color:4, processes:[], dept:''},
+  {name:'井口', color:5, processes:[], dept:''},
 ];
 
 // 担当者IDを名前から生成（固定・どのPCでも同じ）
@@ -678,7 +684,7 @@ state.members.forEach((m,i)=>{
 });
 if(!state.slots) state.slots=[];
 if(!state.filterMembers) state.filterMembers=[];
-if(!state.departments) state.departments=['組付','電気','設計','加工'];
+if(!state.departments) state.departments=Object.keys(DEPT_PROCESSES);
 // projectsにdeptHoursフィールドを補完
 state.projects.forEach(p=>{ if(!p.deptHours) p.deptHours={}; });
 if(!state.baseMonth){
@@ -1275,12 +1281,34 @@ function renderMemberTable(){
   tbody.innerHTML='';
   state.members.forEach(m=>{
     const c=COLORS[m.color];
+    const deptOptions=Object.keys(DEPT_PROCESSES).map(d=>
+      `<option value="${d}" ${m.dept===d?'selected':''}>${d}</option>`
+    ).join('');
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>${m.name}</td>
       <td><span style="background:${c.fg};width:12px;height:12px;display:inline-block;border-radius:50%;vertical-align:middle;"></span></td>
+      <td>
+        <select class="form-select" style="font-size:11px;padding:3px 6px;" onchange="assignDept('${m.id}',this.value)">
+          <option value="">部門を選択</option>
+          ${deptOptions}
+        </select>
+      </td>
       <td><button class="del-btn" onclick="deleteMember('${m.id}')">削除</button></td>`;
     tbody.appendChild(tr);
   });
+}
+
+function assignDept(memberId, dept){
+  const mem=getMember(memberId);
+  if(!mem) return;
+  mem.dept=dept;
+  // 部門に対応する工程を自動セット
+  if(dept && DEPT_PROCESSES[dept]){
+    if(confirm('「'+dept+'」の工程リストを自動セットしますか？\n（現在の工程リストは上書きされます）')){
+      mem.processes=[...DEPT_PROCESSES[dept]];
+    }
+  }
+  saveState();scheduleSave();renderMaster();
 }
 function renderProjTable(){
   const tbody=document.querySelector('#proj-table tbody');
@@ -1307,7 +1335,7 @@ function addMember(){
   const name=document.getElementById('member-name-input').value.trim();
   if(!name){alert('担当者名を入力してください');return;}
   if(state.members.length>=5){alert('担当者は最大5名です');return;}
-  state.members.push({id:memberNameToId(name),name,color:selectedColor,processes:[]});
+  state.members.push({id:memberNameToId(name),name,color:selectedColor,processes:[],dept:''});
   document.getElementById('member-name-input').value='';
   saveState();scheduleSave();renderMaster();
 }
