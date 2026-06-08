@@ -1895,8 +1895,12 @@ async function autoLoadFromGAS() {
   try {
     const res  = await fetch(GAS_URL);
     const json = await res.json();
+    console.log('GAS response:', JSON.stringify(json).slice(0,200));
     if (json.status === 'ok' && json.data) {
       const d = json.data;
+      console.log('members:', d.members ? d.members.length : 'none');
+      console.log('projects:', d.projects ? d.projects.length : 'none');
+      console.log('slots:', d.slots ? d.slots.length : 'none');
       try {
         // members
         if(d.members && d.members.length){
@@ -1943,6 +1947,7 @@ async function autoLoadFromGAS() {
         }
       } catch(innerErr){
         console.error('Migration error:', innerErr);
+        setGasStatus('✗ 変換エラー: ' + innerErr.message, 'err');
       }
       saveState();
       renderCalendar();
