@@ -1901,53 +1901,23 @@ async function autoLoadFromGAS() {
       console.log('members:', d.members ? d.members.length : 'none');
       console.log('projects:', d.projects ? d.projects.length : 'none');
       console.log('slots:', d.slots ? d.slots.length : 'none');
-      try {
-        // members
-        if(d.members && d.members.length){
-          state.members = d.members.map(m=>({
-            id:   memberNameToId(String(m.name||'')),
-            name: String(m.name||''),
-            color: Number(m.color)||1,
-            processes: Array.isArray(m.processes) ? m.processes : [],
-            depts: Array.isArray(m.depts) ? m.depts : (m.dept ? [m.dept] : []),
-          }));
-          // processesが空なら初期データで補完
-          state.members.forEach(m=>{
-            if(!m.processes.length){
-              const def=DEFAULT_MEMBERS.find(dm=>dm.name===m.name);
-              if(def&&def.processes&&def.processes.length) m.processes=[...def.processes];
-            }
-          });
-        }
-        // projects
-        if(d.projects && d.projects.length){
-          state.projects = d.projects.map(p=>({
-            id:         projNameToId(String(p.name||'')),
-            name:       String(p.name||''),
-            totalPlanH: Number(p.totalPlanH)||0,
-            deptHours:  (typeof p.deptHours==='object'&&p.deptHours) ? p.deptHours : {},
-          }));
-        }
-        // slots
-        state.slots = Array.isArray(d.slots) ? d.slots.map(s=>({
-          id:              String(s.id||''),
-          projId:          projNameToId(String(getProject(projNameToId(String(s.projId||'')))?.name || s.projId||'')),
-          memberId:        memberNameToId(String(getMember(memberNameToId(String(s.memberId||'')))?.name || s.memberId||'')),
-          date:            String(s.date||''),
-          slot:            String(s.slot||'AM'),
-          actualH:         Number(s.actualH)||0,
-          process:         s.process||'',
-          shortfallProcess:s.shortfallProcess||'',
-          shortfallType:   s.shortfallType||'',
-          shortfallOtherProjId: s.shortfallOtherProjId||'',
-        })) : [];
-        // departments
-        if(!state.departments||!state.departments.length){
-          state.departments=Object.keys(DEPT_PROCESSES);
-        }
-      } catch(innerErr){
-        console.error('Migration error:', innerErr);
-        setGasStatus('✗ 変換エラー: ' + innerErr.message, 'err');
+      // シンプルにそのまま使う
+      state.members  = d.members  || state.members;
+      state.projects = d.projects || state.projects;
+      state.slots    = d.slots    || [];
+      // 最低限の補完
+      state.members.forEach(m=>{
+        if(!Array.isArray(m.depts)) m.depts = m.dept ? [m.dept] : [];
+        if(!Array.isArray(m.processes)) m.processes = [];
+        m.color = Number(m.color)||1;
+      });
+      state.projects.forEach(p=>{
+        if(!p.totalPlanH) p.totalPlanH=0;
+        if(!p.deptHours||typeof p.deptHours!=='object') p.deptHours={};
+      });
+      state.slots.forEach(s=>{ s.actualH=Number(s.actualH)||0; });
+      if(!state.departments||!state.departments.length){
+        state.departments=Object.keys(DEPT_PROCESSES);
       }
       saveState();
       renderCalendar();
