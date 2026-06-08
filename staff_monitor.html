@@ -393,13 +393,14 @@ function rebuildSlides() {
 
     const cardsHtml = members.length > 0
       ? `<div class="staff-grid">${members.map(m => {
-          const isNonDefault = state[m.id].status !== m.base;
+          const st = state[m.id];
+          const isNonDefault = st.status !== m.base;
           return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''}">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <div class="card-dept">${m.dept}</div>
-            ${state[m.id].memo?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${state[m.id].memo}</div>`:''}
-            ${(state[m.id].leaveStart && state[m.id].leaveEnd) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${formatDate(state[m.id].leaveStart)}〜${formatDate(state[m.id].leaveEnd)}</div>` : ''}
-            ${state[m.id].updated?`<div class="card-time" style="color:#333;font-size:13px;">${state[m.id].updated}</div>`:''}
+            ${(st.status !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${st.memo}</div>`:''}
+            ${(st.leaveStart && st.leaveEnd) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${st.leaveStart===st.leaveEnd ? formatDate(st.leaveStart) : formatDate(st.leaveStart)+'〜'+formatDate(st.leaveEnd)}</div>` : ''}
+            ${st.updated?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
           </div>`;
         }).join('')}</div>`
       : `<div class="empty-msg">現在この場所にいる社員はいません</div>`;
@@ -550,7 +551,8 @@ function rebuildDeptSlides(filterDept) {
               <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
               ${displayLabel}
             </span>
-            ${st.memo?`<div class="card-time" style="color:#3d1f00;font-size:12px;font-weight:700;margin-top:2px;">📍 ${st.memo}</div>`:''}
+            ${(st.status !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#3d1f00;font-size:12px;font-weight:700;margin-top:2px;">📍 ${st.memo}</div>`:''}
+            ${(st.leaveStart && st.leaveEnd)?`<div class="card-time" style="color:#00132a;font-size:12px;font-weight:700;margin-top:2px;">📅 ${st.leaveStart===st.leaveEnd ? formatDate(st.leaveStart) : formatDate(st.leaveStart)+'〜'+formatDate(st.leaveEnd)}</div>`:''}
             ${st.updated?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
           </div>`;
         }).join('')}</div>`
