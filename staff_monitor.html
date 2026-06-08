@@ -42,12 +42,15 @@
   /* GRID */
   .slide-body { flex:1; overflow:hidden; padding:0 48px 20px; }
 
+  :root { --card-min-width: 200px; --card-name-size: 22px; --card-name-long-size: 15px; }
   .staff-grid {
     display:grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
     gap:10px;
     align-content:start;
   }
+  .card-name:not(.long) { font-size: var(--card-name-size) !important; }
+  .card-name.long { font-size: var(--card-name-long-size) !important; }
 
   .staff-card {
     background:rgba(255,255,255,0.55);
@@ -74,12 +77,12 @@
   }
 
   .card-name {
-    font-size:22px; font-weight:700;
+    font-size:var(--card-name-size,22px); font-weight:700;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     margin-bottom:4px; line-height:1.3;
   }
   .card-name.long {
-    font-size:15px;
+    font-size:var(--card-name-long-size,15px);
     white-space:normal;
     overflow:visible;
     text-overflow:unset;
@@ -721,17 +724,10 @@ let currentSize = 'medium';
 function setCardSize(size) {
   currentSize = size;
   const s = CARD_SIZES[size];
-  // グリッドのminWidth更新
-  document.querySelectorAll('.staff-grid').forEach(el => {
-    el.style.gridTemplateColumns = `repeat(auto-fill, minmax(${s.minWidth}, 1fr))`;
-  });
-  // 名前フォントサイズ更新
-  document.querySelectorAll('.card-name:not(.long)').forEach(el => {
-    el.style.fontSize = s.nameSize;
-  });
-  document.querySelectorAll('.card-name.long').forEach(el => {
-    el.style.fontSize = s.longSize;
-  });
+  // CSS変数で管理（rebuildで上書きされない）
+  document.documentElement.style.setProperty('--card-min-width', s.minWidth);
+  document.documentElement.style.setProperty('--card-name-size', s.nameSize);
+  document.documentElement.style.setProperty('--card-name-long-size', s.longSize);
   // ボタンのactive状態更新
   document.querySelectorAll('.size-btn').forEach(btn => {
     btn.classList.toggle('active', btn.textContent === {small:'小',medium:'中',large:'大'}[size]);
@@ -824,7 +820,9 @@ async function doRegister() {
     if (json.ok) {
       state[regStaff.id] = { status: regStatus, updated, memo: '', leaveStart: '', leaveEnd: '' };
       closeRegModal();
-      if (viewMode === 'location') rebuildSlides(); else rebuildDeptSlides();
+      const dp = new URLSearchParams(location.search).get('dept');
+      if (dp) rebuildDeptSlides(dp);
+      else if (viewMode === 'location') rebuildSlides(); else rebuildDeptSlides();
       btn.textContent = '登録する';
     } else { throw new Error(); }
   } catch(e) {
