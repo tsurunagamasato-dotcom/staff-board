@@ -7,13 +7,16 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
   :root{
-    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3350;
-    --text:#e2e4ef;--text-dim:#7880a4;--accent:#4f7fff;--success:#3ecf8e;
+    /* 担当者カラーは全テーマ共通 */
     --c1:#4f7fff;--c1-bg:rgba(79,127,255,.18);
     --c2:#ff6b6b;--c2-bg:rgba(255,107,107,.18);
     --c3:#3ecf8e;--c3-bg:rgba(62,207,142,.18);
     --c4:#f7b731;--c4-bg:rgba(247,183,49,.18);
     --c5:#c678dd;--c5-bg:rgba(198,120,221,.18);
+    /* デフォルト（ダーク） */
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3350;
+    --text:#e2e4ef;--text-dim:#7880a4;--accent:#4f7fff;--success:#3ecf8e;
+    --mh-bg:#22263a;--mh-color:#4f7fff;
   }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
@@ -112,7 +115,7 @@
   .months-row.view-1{grid-template-columns:1fr;}
   .months-row.view-3{grid-template-columns:1fr 1fr 1fr;}
   .month-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;min-width:0;}
-  .month-header{background:var(--surface2);padding:8px 14px;font-size:14px;font-weight:700;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;color:var(--accent);}
+  .month-header{padding:8px 14px;font-size:14px;font-weight:700;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;}
   .dow-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}
   .dow-cell{text-align:center;padding:4px 2px;font-size:10px;color:var(--text-dim);font-weight:500;}
   .dow-cell:first-child{color:#ff6b6b;}
@@ -237,6 +240,44 @@
   .btn-reset-slots{font-size:11px;padding:4px 10px;color:#ff6b6b;border-color:rgba(255,107,107,.3);background:transparent;margin-left:auto;}
   .btn-reset-slots:hover{background:rgba(255,107,107,.1);border-color:#ff6b6b;color:#ff6b6b;}
 
+  /* テーマ切り替え */
+  .theme-switcher{display:flex;align-items:center;gap:8px;}
+  .theme-label{font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;}
+  .theme-radio{cursor:pointer;position:relative;}
+  .theme-radio input{position:absolute;opacity:0;width:0;height:0;}
+  .theme-dot{display:block;width:22px;height:22px;border-radius:50%;transition:all .2s;box-sizing:border-box;}
+  .theme-radio input:checked + .theme-dot{transform:scale(1.3);box-shadow:0 0 0 2px var(--accent);}
+  .theme-radio:hover .theme-dot{transform:scale(1.15);}
+
+  /* テーマ変数定義（data-theme属性で切り替え） */
+  [data-theme="dark"]{
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3350;
+    --text:#e2e4ef;--text-dim:#7880a4;--accent:#4f7fff;--success:#3ecf8e;
+    --mh-bg:#22263a;--mh-color:#4f7fff;
+  }
+  [data-theme="light"]{
+    --bg:#f0f4f8;--surface:#ffffff;--surface2:#e8eef5;--border:#c8d4e0;
+    --text:#1a2332;--text-dim:#6b7a90;--accent:#2563eb;--success:#059669;
+    --mh-bg:#2563eb;--mh-color:#ffffff;
+  }
+  [data-theme="forest"]{
+    --bg:#0d1f12;--surface:#132819;--surface2:#1a3422;--border:#2a4a30;
+    --text:#d4e8d0;--text-dim:#7aaa80;--accent:#4caf50;--success:#8bc34a;
+    --mh-bg:#1a3422;--mh-color:#4caf50;
+  }
+  [data-theme="sunset"]{
+    --bg:#1c1008;--surface:#2a1a0e;--surface2:#362214;--border:#4a3020;
+    --text:#f0e0c8;--text-dim:#a08060;--accent:#ff8c42;--success:#ffd54f;
+    --mh-bg:#362214;--mh-color:#ff8c42;
+  }
+  [data-theme="ocean"]{
+    --bg:#071826;--surface:#0d2236;--surface2:#122c44;--border:#1a3a54;
+    --text:#cce8f0;--text-dim:#6098b0;--accent:#00bcd4;--success:#26c6da;
+    --mh-bg:#122c44;--mh-color:#00bcd4;
+  }
+  /* 月ヘッダーをテーマ対応 */
+  .month-header{background:var(--mh-bg,var(--surface2));color:var(--mh-color,var(--accent));}
+
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -246,6 +287,30 @@
 
 <header>
   <div class="logo">◈ SCHEDULE MGR</div>
+  <!-- 配色切り替え -->
+  <div class="theme-switcher">
+    <span class="theme-label">テーマ</span>
+    <label class="theme-radio" title="ダーク（デフォルト）">
+      <input type="radio" name="theme" value="dark" checked onchange="applyTheme('dark')">
+      <span class="theme-dot" style="background:#1a1d27;border:2px solid #4f7fff;"></span>
+    </label>
+    <label class="theme-radio" title="ライト">
+      <input type="radio" name="theme" value="light" onchange="applyTheme('light')">
+      <span class="theme-dot" style="background:#f0f4f8;border:2px solid #2563eb;"></span>
+    </label>
+    <label class="theme-radio" title="フォレスト（緑）">
+      <input type="radio" name="theme" value="forest" onchange="applyTheme('forest')">
+      <span class="theme-dot" style="background:#0d1f12;border:2px solid #4caf50;"></span>
+    </label>
+    <label class="theme-radio" title="サンセット（暖色）">
+      <input type="radio" name="theme" value="sunset" onchange="applyTheme('sunset')">
+      <span class="theme-dot" style="background:#1c1008;border:2px solid #ff8c42;"></span>
+    </label>
+    <label class="theme-radio" title="オーシャン（青緑）">
+      <input type="radio" name="theme" value="ocean" onchange="applyTheme('ocean')">
+      <span class="theme-dot" style="background:#071826;border:2px solid #00bcd4;"></span>
+    </label>
+  </div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchView('calendar')">📅 カレンダー</button>
     <button class="nav-tab" onclick="switchView('master')">⚙ マスタ管理</button>
@@ -1656,9 +1721,34 @@ async function autoLoadFromGAS() {
 }
 
 // =====================================================
+//  テーマ切り替え
+// =====================================================
+const THEMES = {
+  dark:   'ダーク',
+  light:  'ライト',
+  forest: 'フォレスト',
+  sunset: 'サンセット',
+  ocean:  'オーシャン',
+};
+
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('nim_theme', theme);
+}
+
+function loadTheme(){
+  const saved = localStorage.getItem('nim_theme') || 'dark';
+  applyTheme(saved);
+  // ラジオボタンの状態を復元
+  const radio = document.querySelector(`input[name="theme"][value="${saved}"]`);
+  if(radio) radio.checked = true;
+}
+
+// =====================================================
 //  INIT：まずlocalStorageで即表示 → バックグラウンドでGAS同期
 // =====================================================
 // ① localStorageのデータで即座にカレンダーを表示（待ち時間ゼロ）
+loadTheme();
 renderCalendar();
 // ② 裏でGASから最新データを取得して静かに更新
 autoLoadFromGAS();
