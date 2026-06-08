@@ -662,7 +662,6 @@ const ALL_PROCESSES = [
   '311 配線工事','312 運転調整','314 現地工事','317 不具合修正',
   '320 取説作成','999 その他','900 その他'
 ];
-
 const DEFAULT_MEMBERS = [
   {name:'宍倉', color:1, depts:[], processes:ALL_PROCESSES},
   {name:'福島', color:2, depts:[], processes:ALL_PROCESSES},
@@ -681,43 +680,30 @@ function projNameToId(name){ return 'proj_' + name; }
 // =====================================================
 let state = loadState() || null;
 if(!state){
+  // 初回：デフォルト担当者（工程込み）で初期化
   state = {
     members: DEFAULT_MEMBERS.map(m=>({
-      id:memberNameToId(m.name), name:m.name, color:m.color,
-      processes:[...m.processes], depts:[...m.depts]
+      id:memberNameToId(m.name), name:m.name, color:m.color, processes:m.processes||[]
     })),
     projects: [],
     slots: [],
-    departments: Object.keys(DEPT_PROCESSES),
+    departments: ['組付','電気','設計','加工'],
     baseMonth: null,
     filterMembers: [],
   };
 }
-// 担当者が空なら初期データで復元
-if(!state.members || !state.members.length){
-  state.members = DEFAULT_MEMBERS.map(m=>({
-    id:memberNameToId(m.name), name:m.name, color:m.color,
-    processes:[...m.processes], depts:[...m.depts]
-  }));
-}
-// マイグレーション
-state.members.forEach(m=>{
-  if(!m.id) m.id=memberNameToId(m.name);
-  if(!Array.isArray(m.processes)||!m.processes.length){
+// マイグレーション：processesが未設定の担当者に補完
+state.members.forEach((m,i)=>{
+  if(!Array.isArray(m.processes)){
     const def=DEFAULT_MEMBERS.find(d=>d.name===m.name);
-    m.processes=def?[...def.processes]:[...ALL_PROCESSES];
+    m.processes=(def&&Array.isArray(def.processes))?def.processes:[];
   }
-  if(!Array.isArray(m.depts)) m.depts=[];
-  m.color=Number(m.color)||1;
 });
 if(!state.slots) state.slots=[];
 if(!state.filterMembers) state.filterMembers=[];
-if(!state.departments||!state.departments.length) state.departments=Object.keys(DEPT_PROCESSES);
-state.projects.forEach(p=>{
-  if(!p.id) p.id=projNameToId(p.name);
-  if(!p.deptHours) p.deptHours={};
-  if(!p.totalPlanH) p.totalPlanH=0;
-});
+if(!state.departments) state.departments=Object.keys(DEPT_PROCESSES);
+// projectsにdeptHoursフィールドを補完
+state.projects.forEach(p=>{ if(!p.deptHours) p.deptHours={}; });
 if(!state.baseMonth){
   const n=new Date();
   state.baseMonth=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
@@ -1919,62 +1905,53 @@ async function autoLoadFromGAS() {
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
       const d = json.data;
-
-      // members をそのまま使用
+      // members
       if(d.members && d.members.length){
-        state.members = d.members;
-        state.members.forEach(m=>{
-          // IDの二重prefix修正
-          if(m.id && m.id.startsWith('mem_mem_')) m.id = m.id.replace('mem_mem_','mem_');
-          // depts補完
-          if(!Array.isArray(m.depts)) m.depts = m.dept ? [m.dept] : [];
-          if(!Array.isArray(m.processes)) m.processes = [];
-          m.color = Number(m.color)||1;
-        });
+        state.members = d.members.map(m=>({
+          id:   String(m.id||memberNameToId(m.name||'')).replace('mem_mem_','mem_'),
+          name: String(m.name||''),
+          color: Number(m.color)||1,
+          depts: Array.isArray(m.depts) ? m.depts : (m.dept ? [m.dept] : []),
+          processes: (Array.isArray(m.processes) && m.processes.length) ? m.processes : [...ALL_PROCESSES],
+        }));
       }
-
-      // projects をそのまま使用
+      // projects
       if(d.projects && d.projects.length){
-        state.projects = d.projects;
-        state.projects.forEach(p=>{
-          // IDの二重prefix修正
-          if(p.id && p.id.startsWith('proj_proj_')) p.id = p.id.replace('proj_proj_','proj_');
-          if(!p.totalPlanH) p.totalPlanH=0;
-          if(!p.deptHours||typeof p.deptHours!=='object') p.deptHours={};
-        });
+        state.projects = d.projects.map(p=>({
+          id:         String(p.id||projNameToId(p.name||'')).replace('proj_proj_','proj_'),
+          name:       String(p.name||''),
+          totalPlanH: Number(p.totalPlanH)||0,
+          deptHours:  (p.deptHours && typeof p.deptHours==='object') ? p.deptHours : {},
+        }));
       }
-
-      // slots をそのまま使用（IDの二重prefix修正）
-      if(Array.isArray(d.slots)){
-        state.slots = d.slots;
-        state.slots.forEach(s=>{
-          if(s.projId   && s.projId.startsWith('proj_proj_'))   s.projId   = s.projId.replace('proj_proj_','proj_');
-          if(s.memberId && s.memberId.startsWith('mem_mem_'))    s.memberId = s.memberId.replace('mem_mem_','mem_');
-          // 日付のISO形式を日付のみに正規化
-          if(s.date && s.date.length > 10) s.date = s.date.slice(0,10);
-          s.actualH = Number(s.actualH)||0;
-        });
-      } else {
-        state.slots = [];
-      }
-
-      // departments
-      if(!state.departments||!state.departments.length){
-        state.departments = Object.keys(DEPT_PROCESSES);
-      }
-
+      // slots
+      state.slots = (Array.isArray(d.slots)?d.slots:[]).map(s=>({
+        id:               String(s.id||''),
+        projId:           String(s.projId||'').replace('proj_proj_','proj_'),
+        memberId:         String(s.memberId||'').replace('mem_mem_','mem_'),
+        date:             String(s.date||'').slice(0,10),
+        slot:             String(s.slot||'AM'),
+        actualH:          Number(s.actualH)||0,
+        process:          s.process||'',
+        shortfallProcess: s.shortfallProcess||'',
+        shortfallType:    s.shortfallType||'',
+        shortfallOtherProjId: s.shortfallOtherProjId||'',
+      }));
+      if(!state.departments||!state.departments.length)
+        state.departments=Object.keys(DEPT_PROCESSES);
       saveState();
       renderCalendar();
+      if(document.getElementById('view-master').classList.contains('active')) renderMaster();
       setGasStatus('✓ 同期済み ' + new Date().toLocaleTimeString('ja-JP'), 'ok');
     } else {
-      setGasStatus('✓ データなし（新規）', 'ok');
+      saveState();
+      renderCalendar();
+      setGasStatus('✓ 初期データで表示中', 'ok');
     }
   } catch(e) {
-    console.error('GAS load error:', e);
     setGasStatus('✗ 通信エラー: ' + e.message, 'err');
   }
 }
-
 
 async function autoSaveToGAS() {
   if (isSyncing) return;
