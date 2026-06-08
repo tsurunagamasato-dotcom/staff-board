@@ -1320,6 +1320,8 @@ function applyDeptProcesses(memberId){
   mem.depts.forEach(d=>{
     if(DEPT_PROCESSES[d]) DEPT_PROCESSES[d].forEach(p=>{ if(!allProcs.includes(p)) allProcs.push(p); });
   });
+  // 全部署共通：999 その他 と 900 その他 を必ず追加
+  ['999 その他','900 その他'].forEach(p=>{ if(!allProcs.includes(p)) allProcs.push(p); });
   const deptNames=mem.depts.map(d=>d.split(' / ')[0]).join('・');
   if(confirm('「'+deptNames+'」の工程（計'+allProcs.length+'件）をセットします。\n現在の工程リストは上書きされます。よろしいですか？')){
     mem.processes=[...allProcs];
