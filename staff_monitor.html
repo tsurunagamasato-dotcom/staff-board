@@ -348,7 +348,10 @@ async function fetchAll(silent=false) {
     });
     const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
     setSyncStatus('ok', t+' 更新');
-    if (viewMode==='location') rebuildSlides(); else rebuildDeptSlides();
+    const deptParam = new URLSearchParams(location.search).get('dept');
+    if (deptParam) rebuildDeptSlides(deptParam);
+    else if (viewMode==='location') rebuildSlides();
+    else rebuildDeptSlides();
   } catch(e) { setSyncStatus('error','通信エラー'); }
 }
 
@@ -599,35 +602,33 @@ async function init() {
     const cached = localStorage.getItem(STAFF_LSKEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.length > 0) { STAFF_MASTER = parsed; initState(); rebuildSlides(); }
+      if (parsed.length > 0) {
+        STAFF_MASTER = parsed;
+        initState();
+        if (deptParam) rebuildDeptSlides(deptParam);
+        else rebuildSlides();
+      }
     }
   } catch(e) {}
 
   // 部署固定モードの場合はUIを調整
   if (deptParam) {
-    // ヘッダーのモード切替ボタンを非表示
     document.querySelectorAll('.mode-btn').forEach(el => el.style.display = 'none');
-    // 部署名をタイトルに表示
     document.title = deptParam + ' — 所在地ボード';
   }
 
-  // staffマスタ取得と状態取得を並列実行
   document.getElementById('loadingOverlay').style.display = 'none';
-  await Promise.all([ loadStaffMaster(), fetchAll(false) ]);
 
-  if (deptParam) {
-    // 部署固定モード：該当部署のスライドだけ表示
-    rebuildDeptSlides(deptParam);
-  } else {
-    rebuildSlides();
-  }
+  // staffマスタ取得 → state初期化 → 状態取得の順に実行
+  await loadStaffMaster();
+  await fetchAll(false);
+
+  if (deptParam) rebuildDeptSlides(deptParam);
+  else rebuildSlides();
 
   slideTimer = setInterval(nextSlide, slideInterval);
   setInterval(async () => {
     await fetchAll(true);
-    if (deptParam) rebuildDeptSlides(deptParam);
-    else if (viewMode === 'location') rebuildSlides();
-    else rebuildDeptSlides();
   }, FETCH_INTERVAL);
 }
 
