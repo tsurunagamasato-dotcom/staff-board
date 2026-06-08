@@ -464,10 +464,11 @@
       <div class="card-title">📋 案件マスタ</div>
       <div class="form-row">
         <input class="form-input" id="proj-name-input" placeholder="案件名を入力" maxlength="40">
+        <input class="form-input" id="proj-total-plan-h" placeholder="予定工数(H)" type="number" min="0" step="0.5" style="max-width:110px;flex:none;">
         <button class="btn btn-primary btn-sm" onclick="addProject()">追加</button>
       </div>
       <table class="data-table" id="proj-table">
-        <thead><tr><th>案件名</th><th>部門工数</th><th></th></tr></thead>
+        <thead><tr><th>案件名</th><th>予定H</th><th>消費H</th><th>残りH</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -1022,15 +1023,37 @@ function buildSlotEntry(s,date,slot){
   const pct=Math.round(actualH/SLOT_H*100);
 
   const el=document.createElement('div');
+  // 残り工数ステータスに応じて色変化
+  const slotStatus=getSlotStatus(s.projId);
+  const proj2=getProject(s.projId);
+  let bgColor=c.bg;
+  let borderColor=c.fg;
+  let statusBadge='';
+  if(slotStatus==='over'){
+    bgColor='rgba(255,107,107,.2)';
+    borderColor='#ff6b6b';
+    statusBadge='<span style="font-size:7px;color:#ff6b6b;flex-shrink:0;">⚠超過</span>';
+  } else if(slotStatus==='full'){
+    bgColor='rgba(120,128,164,.15)';
+    borderColor='#7880a4';
+    statusBadge='<span style="font-size:7px;color:#7880a4;flex-shrink:0;">上限</span>';
+  } else if(slotStatus==='last'){
+    const{remainH}=calcProjUsage(proj2);
+    bgColor=c.bg;
+    borderColor=c.fg;
+    statusBadge=`<span style="font-size:7px;color:#f7b731;flex-shrink:0;">残${remainH}H</span>`;
+  }
+
   el.className='slot-entry';
-  el.style.borderLeftColor=c.fg;
-  el.style.background=c.bg;
-  el.style.color=c.fg;
+  el.style.borderLeftColor=borderColor;
+  el.style.background=bgColor;
+  el.style.color=borderColor;
   el.draggable=true;
   el.innerHTML=`
     <div class="slot-bar-plan">
       <span class="slot-bar-text" title="${proj?proj.name:''}">${proj?proj.name:'?'}</span>
       ${mem?`<span class="slot-bar-sub">${mem.name}</span>`:''}
+      ${statusBadge}
       ${hasActual?`<span class="slot-bar-result">✓${pct}%</span>`:''}
     </div>`;
   el.addEventListener('click',e=>{e.stopPropagation();openActualModal(s.id);});
@@ -1336,15 +1359,41 @@ function applyDeptProcesses(memberId){
   }
   saveState();scheduleSave();renderMaster();
 }
+// 案件の消費済みH・残りHを計算
+function calcProjUsage(proj){
+  const usedSlots=state.slots.filter(s=>s.projId===proj.id).length;
+  const usedH=usedSlots*SLOT_H;
+  const planH=proj.totalPlanH||0;
+  const remainH=planH>0?planH-usedH:null;
+  return{usedH,planH,remainH};
+}
+
+// スロットの状態を返す（案件の残り工数に基づく）
+function getSlotStatus(projId){
+  const proj=getProject(projId);
+  if(!proj||!proj.totalPlanH) return 'normal'; // 予定工数未設定
+  const{usedH,planH,remainH}=calcProjUsage(proj);
+  if(remainH<0) return 'over';          // 超過
+  if(remainH===0) return 'full';         // 上限到達
+  if(remainH<SLOT_H) return 'last';      // 最後の半端スロット
+  return 'normal';
+}
+
 function renderProjTable(){
   const tbody=document.querySelector('#proj-table tbody');
   tbody.innerHTML='';
   state.projects.forEach(p=>{
-    const dh=p.deptHours||{};
-    const summary=state.departments.map(d=>d+':'+(dh[d]||0)+'H').join(' / ');
+    if(!p.totalPlanH) p.totalPlanH=0;
+    const{usedH,planH,remainH}=calcProjUsage(p);
+    const planStr=planH>0?planH+'H':'未設定';
+    const usedStr=usedH>0?usedH+'H':'-';
+    const remainColor=remainH===null?'var(--text-dim)':remainH<0?'#ff6b6b':remainH<=SLOT_H?'#f7b731':'#3ecf8e';
+    const remainStr=remainH===null?'-':remainH+'H'+(remainH<0?' ⚠超過':'');
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>${p.name}</td>
-      <td style="font-size:10px;color:var(--text-dim);">${summary||'未設定'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;">${planStr}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;">${usedStr}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;color:${remainColor};font-weight:600;">${remainStr}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-sm" style="font-size:10px;margin-right:4px;" onclick="openDeptHoursModal('${p.id}')">工数設定</button>
         <button class="del-btn" onclick="deleteProject('${p.id}')">削除</button>
@@ -1373,8 +1422,10 @@ function deleteMember(id){
 function addProject(){
   const name=document.getElementById('proj-name-input').value.trim();
   if(!name){alert('案件名を入力してください');return;}
-  state.projects.push({id:projNameToId(name),name});
+  const totalPlanH=parseFloat(document.getElementById('proj-total-plan-h').value)||0;
+  state.projects.push({id:projNameToId(name),name,totalPlanH,deptHours:{}});
   document.getElementById('proj-name-input').value='';
+  document.getElementById('proj-total-plan-h').value='';
   saveState();scheduleSave();renderMaster();
 }
 // 部門工数モーダル
