@@ -527,14 +527,44 @@ function renderProjTable(){
   const tbody=document.querySelector('#proj-table tbody');
   tbody.innerHTML='';
   if(!state.projects.length){
-    tbody.innerHTML='<tr><td colspan="2" style="color:var(--text-dim);font-size:12px;">案件が未登録です</td></tr>';
+    tbody.innerHTML='<tr><td colspan="3" style="color:var(--text-dim);font-size:12px;">案件が未登録です</td></tr>';
     return;
   }
   state.projects.forEach(p=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${p.name}</td><td style="text-align:right;"><button class="del-btn" onclick="deleteProject('${p.id}')">削除</button></td>`;
+    tr.id='proj-row-'+p.id;
+    tr.innerHTML=`<td id="proj-name-${p.id}">${p.name}</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="btn btn-sm" style="margin-right:4px;" onclick="startEditProject('${p.id}')">編集</button>
+        <button class="del-btn" onclick="deleteProject('${p.id}')">削除</button>
+      </td>`;
     tbody.appendChild(tr);
   });
+}
+
+function startEditProject(id){
+  const p=state.projects.find(x=>x.id===id);
+  if(!p) return;
+  const nameCell=document.getElementById('proj-name-'+id);
+  const row=document.getElementById('proj-row-'+id);
+  nameCell.innerHTML=`<input class="form-input" id="edit-proj-${id}" value="${p.name}" style="padding:3px 6px;font-size:12px;" maxlength="40">`;
+  const btnCell=row.querySelector('td:last-child');
+  btnCell.innerHTML=`<button class="btn btn-primary btn-sm" style="margin-right:4px;" onclick="saveEditProject('${id}')">保存</button>
+    <button class="btn btn-sm" onclick="renderProjTable()">キャンセル</button>`;
+  document.getElementById('edit-proj-'+id).focus();
+}
+
+async function saveEditProject(id){
+  const input=document.getElementById('edit-proj-'+id);
+  if(!input) return;
+  const newName=input.value.trim();
+  if(!newName){alert('案件名を入力してください');return;}
+  if(state.projects.some(p=>p.name===newName && p.id!==id)){alert('同じ案件名が既にあります');return;}
+  const p=state.projects.find(x=>x.id===id);
+  if(!p) return;
+  p.name=newName;
+  saveState();renderMaster();renderCalendar();
+  await sendAction('updateProject',{id,name:newName});
 }
 async function addProject(){
   const name=document.getElementById('proj-input').value.trim();
