@@ -237,6 +237,18 @@
   <button class="view-toggle-btn active" id="btnLocation" onclick="setViewMode('location')">📍 居場所別</button>
   <button class="view-toggle-btn" id="btnDept" onclick="setViewMode('dept')">🏢 部署別</button>
 </div>
+
+<!-- 目立つ一時停止ボタン -->
+<button id="bigPauseBtn" onclick="togglePause()" style="
+  position:fixed; top:14px; right:200px; z-index:300;
+  background:rgba(255,255,255,0.9); backdrop-filter:blur(4px);
+  border:2px solid rgba(0,0,0,0.15); border-radius:50px;
+  padding:8px 20px; font-size:15px; font-weight:800;
+  cursor:pointer; font-family:inherit; color:#1a1a1a;
+  display:flex; align-items:center; gap:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+  transition:.15s;
+">⏸ 一時停止</button>
 <div class="slide-wrap" id="slideWrap"></div>
 <div class="indicators" id="indicators"></div>
 
@@ -566,6 +578,12 @@ function togglePause() {
   const btn = document.getElementById('pauseBtn');
   btn.textContent = isPaused ? '▶' : '⏸';
   btn.classList.toggle('paused', isPaused);
+  const bigBtn = document.getElementById('bigPauseBtn');
+  if (bigBtn) {
+    bigBtn.textContent = isPaused ? '▶ 再生' : '⏸ 一時停止';
+    bigBtn.style.background = isPaused ? 'rgba(186,117,23,0.9)' : 'rgba(255,255,255,0.9)';
+    bigBtn.style.color = isPaused ? '#fff' : '#1a1a1a';
+  }
   if (isPaused) {
     clearInterval(slideTimer);
     const fill = document.getElementById('progress-'+currentIndex);

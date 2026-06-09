@@ -184,7 +184,7 @@
     <div class="header-sub">Nakashima Manufacturing</div>
   </div>
   <div class="header-right">
-    <a class="back-btn" href="staff_monitor.html">← ダッシュボード</a>
+    <a class="back-btn" id="backBtn" href="staff_monitor.html">← ダッシュボード</a>
   </div>
 </header>
 
@@ -209,6 +209,8 @@
     <div class="result-dept" id="resultDept"></div>
     <div class="result-status-icon" id="resultIcon"></div>
     <div class="result-status-label" id="resultLabel"></div>
+    <div id="resultMemo" style="font-size:15px;font-weight:700;margin-top:6px;opacity:0.9;"></div>
+    <div id="resultPeriod" style="font-size:14px;font-weight:700;margin-top:4px;opacity:0.85;"></div>
     <div id="resultNonDefault"></div>
     <div class="result-time" id="resultTime"></div>
   </div>
@@ -265,7 +267,13 @@ async function fetchAll(silent=false) {
     json.data.forEach(row => {
       const id = parseInt(row.id);
       if (!isNaN(id) && state[id] !== undefined && row.status) {
-        state[id] = { status: row.status, updated: row.updated||'' };
+        state[id] = {
+          status: row.status,
+          updated: row.updated||'',
+          memo: row.memo||'',
+          leaveStart: row.leaveStart||'',
+          leaveEnd: row.leaveEnd||''
+        };
       }
     });
     const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
@@ -316,6 +324,27 @@ function renderResult() {
   document.getElementById('resultLabel').textContent = cfg.label;
   document.getElementById('resultTime').textContent = st.updated ? st.updated : '未登録';
 
+  // メモ表示（休みの場合は非表示）
+  const memoEl = document.getElementById('resultMemo');
+  if (st.memo && st.status !== 'yasumi') {
+    memoEl.textContent = '📍 ' + st.memo;
+    memoEl.style.display = 'block';
+  } else {
+    memoEl.style.display = 'none';
+  }
+
+  // 期間表示
+  const periodEl = document.getElementById('resultPeriod');
+  if (st.leaveStart) {
+    const periodText = (st.leaveEnd && st.leaveEnd !== st.leaveStart)
+      ? `📅 ${st.leaveStart} 〜 ${st.leaveEnd}`
+      : `📅 ${st.leaveStart}`;
+    periodEl.textContent = periodText;
+    periodEl.style.display = 'block';
+  } else {
+    periodEl.style.display = 'none';
+  }
+
   const ndEl = document.getElementById('resultNonDefault');
   if (isNonDefault) {
     ndEl.innerHTML = `<span class="result-non-default">⚠ 通常（${defaultLabel}）と異なります</span>`;
@@ -358,6 +387,13 @@ async function loadStaffMaster() {
 }
 
 async function init() {
+  // deptパラメータをダッシュボードリンクに引き継ぐ
+  const urlParams = new URLSearchParams(location.search);
+  const deptParam = urlParams.get('dept');
+  const backUrl = deptParam
+    ? `staff_monitor.html?dept=${encodeURIComponent(deptParam)}`
+    : 'staff_monitor.html';
+  document.getElementById('backBtn').href = backUrl;
   // localStorageキャッシュで即座に表示
   try {
     const cached = localStorage.getItem(STAFF_LSKEY);

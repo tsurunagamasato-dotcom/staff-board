@@ -170,6 +170,7 @@
     <button class="tab-btn" onclick="switchTab('bulk')">まとめて</button>
     <button class="tab-btn" onclick="switchTab('visitor')">来訪者</button>
     <button class="tab-btn" onclick="switchTab('history')">履歴</button>
+    <button class="tab-btn" onclick="switchTab('today')">本日</button>
     <button class="tab-btn" onclick="switchTab('menu')">メニュー</button>
   </div>
 
@@ -293,6 +294,25 @@
     <div id="historyContent"></div>
   </div>
 
+  <!-- 本日タブ -->
+  <div id="todayTab" class="hidden">
+    <div style="margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px;">🏢 本社</div>
+          <div id="todayHonshaCount" style="font-size:26px;font-weight:800;color:#2e7d32;">-</div>
+          <div style="font-size:11px;color:#888;">普通 <span id="todayHonshaFutsuu">-</span> / 大盛 <span id="todayHonshaOomori">-</span></div>
+        </div>
+        <div style="background:#e3f2fd;border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px;">🏭 根崎</div>
+          <div id="todayNezakiCount" style="font-size:26px;font-weight:800;color:#1565c0;">-</div>
+          <div style="font-size:11px;color:#888;">普通 <span id="todayNezakiFutsuu">-</span> / 大盛 <span id="todayNezakiOomori">-</span></div>
+        </div>
+      </div>
+      <div id="todayOrderList" style="font-size:13px;color:#555;text-align:center;">読み込み中...</div>
+    </div>
+  </div>
+
   <!-- メニュータブ -->
   <div id="menuTab" class="hidden">
     <div id="menuList"></div>
@@ -363,7 +383,7 @@ function getDefaultPlace(staff) {
   return 'honsha';
 }
 
-let deadline = '08:30';
+let deadline = '08:45';
 let permanentNG = {};
 
 function normalizeDeadline(val) {
@@ -424,7 +444,7 @@ async function init() {
   Promise.all([
     fetch(GAS_URL+'?action=getSettings&t='+Date.now()).then(r=>r.json()).then(json => {
       if (json.ok) {
-        deadline = normalizeDeadline(json.settings.deadline) || '08:30';
+        deadline = normalizeDeadline(json.settings.deadline) || '08:45';
         Object.keys(json.settings).forEach(k => {
           if (k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k];
         });
@@ -550,6 +570,11 @@ function updateOrderButtons() {
 // ===== SUBMIT SINGLE =====
 async function submitSingle() {
   if (!selStaff||!selDate||!selOrder) return;
+  // ⑦⑧ 締切チェック
+  if (isDeadlinePassed()) {
+    alert('⚠ 締切時刻（' + deadline + '）を過ぎています。\n総務部へ直接ご連絡ください。');
+    return;
+  }
   const btn = document.getElementById('submitSingle');
   // 二重押し防止：即座にボタンを無効化
   btn.disabled = true;
@@ -782,18 +807,24 @@ async function loadHistory() {
     const today = new Date();
     const year = today.getFullYear(), month = today.getMonth();
     const last = new Date(year,month+1,0).getDate();
-    const results = [];
+    // 月内の営業日リストを作成
+    const workdays = [];
     for (let i=1;i<=last;i++) {
       const d = new Date(year,month,i);
-      if (isWeekend(d)) continue;
-      const ds = fmtDate(d);
-      const res = await fetch(GAS_URL+`?action=getOrders&date=${ds}&t=${Date.now()}`);
-      const json = await res.json();
-      if (json.ok) {
-        const found = json.orders.find(o=>String(o.id)===String(staff.id));
-        results.push({date:ds, day:d, order:found?found.order:null});
-      }
+      if (!isWeekend(d)) workdays.push({date:fmtDate(d), day:d});
     }
+    // 全営業日を並列取得
+    const fetches = workdays.map(w =>
+      fetch(GAS_URL+`?action=getOrders&date=${w.date}&t=${Date.now()}`)
+        .then(r=>r.json())
+        .catch(()=>({ok:false,orders:[]}))
+    );
+    const responses = await Promise.all(fetches);
+    const results = workdays.map((w,i) => {
+      const json = responses[i];
+      const found = json.ok ? json.orders.find(o=>String(o.id)===String(staff.id)) : null;
+      return {date:w.date, day:w.day, order:found?found.order:null};
+    });
     const days=['日','月','火','水','木','金','土'];
     const orderLabel = o => o==='futsuu'?'<span style="color:var(--green-fg);font-weight:700;">○ 普通</span>':o==='oomori'?'<span style="color:var(--blue-fg);font-weight:700;">○ 大盛</span>':o==='nashi'?'<span style="color:var(--text-hint);">× 食べない</span>':'<span style="color:var(--text-hint);">未回答</span>';
     container.innerHTML = `<div style="font-size:12px;color:var(--text-sub);margin:8px 0 6px;">${staff.name}さんの今月の注文履歴</div>
@@ -826,12 +857,53 @@ async function loadMenu() {
 
 // ===== TAB =====
 function switchTab(tab) {
-  ['order','bulk','visitor','history','menu'].forEach(t=>{
+  ['order','bulk','visitor','history','today','menu'].forEach(t=>{
     document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab);
   });
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    b.classList.toggle('active',['order','bulk','visitor','history','menu'][i]===tab);
+    b.classList.toggle('active',['order','bulk','visitor','history','today','menu'][i]===tab);
   });
+  if (tab === 'today') loadToday();
+}
+
+async function loadToday() {
+  const today = fmtDate(new Date());
+  document.getElementById('todayOrderList').textContent = '読み込み中...';
+  try {
+    const res = await fetch(GAS_URL + `?action=getOrders&date=${today}&t=` + Date.now());
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    const orders = json.orders || [];
+
+    let hF=0,hO=0,nF=0,nO=0;
+    const hList=[], nList=[];
+
+    orders.forEach(o => {
+      if (!o.order || o.order==='nashi') return;
+      const isNezaki = o.place==='nezaki' || o.place==='nezaki2';
+      if (isNezaki) {
+        if (o.order==='futsuu') nF++; else nO++;
+        nList.push(o.name + (o.order==='oomori'?'(大)':''));
+      } else {
+        if (o.order==='futsuu') hF++; else hO++;
+        hList.push(o.name + (o.order==='oomori'?'(大)':''));
+      }
+    });
+
+    document.getElementById('todayHonshaCount').textContent = hF+hO;
+    document.getElementById('todayHonshaFutsuu').textContent = hF;
+    document.getElementById('todayHonshaOomori').textContent = hO;
+    document.getElementById('todayNezakiCount').textContent = nF+nO;
+    document.getElementById('todayNezakiFutsuu').textContent = nF;
+    document.getElementById('todayNezakiOomori').textContent = nO;
+
+    const listHtml = [];
+    if (hList.length) listHtml.push(`<div style="margin-bottom:8px;"><span style="font-weight:700;color:#2e7d32;">🏢 本社：</span>${hList.join('、')}</div>`);
+    if (nList.length) listHtml.push(`<div><span style="font-weight:700;color:#1565c0;">🏭 根崎：</span>${nList.join('、')}</div>`);
+    document.getElementById('todayOrderList').innerHTML = listHtml.length ? listHtml.join('') : '<span style="color:#aaa;">注文なし</span>';
+  } catch(e) {
+    document.getElementById('todayOrderList').textContent = '取得に失敗しました';
+  }
 }
 
 async function loadTopics() {
