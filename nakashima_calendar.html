@@ -298,8 +298,9 @@ function renderCalendar(){
     cell.innerHTML=`<span class="date-num">${d}</span>`;
     cell.addEventListener('click',e=>{ if(e.target===cell||e.target.classList.contains('date-num')) openEventModal(key); });
 
-    // その日のイベント（選択中の種類だけ表示）
-    const dayEvents=state.events.filter(ev=>ev.date===key && state.selectedTypes.includes(ev.typeId));
+    // その日のイベント（選択ゼロなら全表示、選択ありなら選んだ種類だけ）
+    const sel=state.selectedTypes||[];
+    const dayEvents=state.events.filter(ev=>ev.date===key && (sel.length===0 || sel.includes(ev.typeId)));
     dayEvents.forEach(ev=>cell.appendChild(buildEventPill(ev)));
     grid.appendChild(cell);
   }
@@ -325,23 +326,23 @@ function buildEventPill(ev){
 }
 
 function renderFilter(){
-  // 選択リストが未初期化なら全種類を選択済みにする
-  if(!Array.isArray(state.selectedTypes) || !state.selectedTypes.length){
-    state.selectedTypes = state.types.map(t=>t.id);
-  }
+  if(!Array.isArray(state.selectedTypes)) state.selectedTypes=[];
   // 削除された種類IDは選択リストから除く
   state.selectedTypes = state.selectedTypes.filter(id=>state.types.some(t=>t.id===id));
 
+  const noneSelected = state.selectedTypes.length===0;
   const wrap=document.getElementById('filter-row');
   wrap.innerHTML='<span style="font-size:11px;color:var(--text-dim);margin-right:4px;">表示：</span>';
   state.types.forEach(t=>{
-    const on=state.selectedTypes.includes(t.id);
+    // 選択ゼロのときは全部がハイライト（＝全表示中）、選択ありのときは選んだものだけハイライト
+    const on = noneSelected || state.selectedTypes.includes(t.id);
     const chip=document.createElement('div');
     chip.className='type-chip'+(on?'':' off');
     chip.innerHTML=`<span class="chip-dot" style="background:${t.color}"></span>${t.name}`;
     chip.addEventListener('click',()=>{
-      if(on) state.selectedTypes=state.selectedTypes.filter(id=>id!==t.id);
-      else state.selectedTypes.push(t.id);
+      const idx=state.selectedTypes.indexOf(t.id);
+      if(idx>=0) state.selectedTypes.splice(idx,1); // 選択解除
+      else state.selectedTypes.push(t.id);          // 選択
       saveState();renderCalendar();
     });
     wrap.appendChild(chip);
@@ -480,7 +481,6 @@ async function addType(){
   if(state.types.some(t=>t.name===name)){alert('同じ種類名が既にあります');return;}
   const t={id:'type_'+uid(),name,color:selectedTypeColor};
   state.types.push(t);
-  if(Array.isArray(state.selectedTypes)) state.selectedTypes.push(t.id);
   document.getElementById('type-input').value='';
   saveState();renderMaster();renderCalendar();
   await sendAction('addType', t);
