@@ -148,6 +148,7 @@
     <button class="btn" onclick="goToday()">今日</button>
     <button class="btn btn-primary" onclick="openEventModal()">＋ 予定を追加</button>
   </div>
+  <div class="filter-row" id="filter-row" style="display:none;"></div>
   <div class="dd-filter-row" style="justify-content:flex-start;">
     <div class="dd-wrap" id="dd-proj-wrap" style="flex:none;width:200px;">
       <div class="dd-btn" id="dd-proj-btn" onclick="toggleDD('proj')">
@@ -670,17 +671,18 @@ async function autoLoadFromGAS(){
   }catch(e){ setGasStatus('✗ 通信エラー: '+e.message,'err'); }
 }
 
-// 30秒ごとに他の人の更新を取り込む（軽い自動更新）
+// 60秒ごとに他の人の更新を取り込む
 function startAutoRefresh(){
   setInterval(()=>{
-    if(document.getElementById('event-modal').classList.contains('show')) return; // 入力中は邪魔しない
+    if(document.getElementById('event-modal').classList.contains('show')) return;
     autoLoadFromGAS();
-  }, 30000);
+  }, 60000);
 }
 
 // =====================================================
 //  INIT
 // =====================================================
+// ① localStorageのキャッシュで即座に表示（待ち時間ゼロ）
 loadState();
 if(!state.types || !state.types.length){
   state.types = DEFAULT_TYPES.map(t=>({...t}));
@@ -688,7 +690,10 @@ if(!state.types || !state.types.length){
 if(!baseMonth){const n=new Date();baseMonth={y:n.getFullYear(),m:n.getMonth()+1};}
 selectedTypeColor=COLORS[0];
 renderCalendar();
+renderMaster();
+// ② GASから最新を取得してバックグラウンドで反映
 autoLoadFromGAS();
+// ③ 60秒ごとに自動更新（他の人の変更を取り込む）
 startAutoRefresh();
 </script>
 </body>
