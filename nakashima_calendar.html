@@ -106,6 +106,23 @@
   .modal-input:focus,.modal-select:focus{outline:none;border-color:var(--accent);}
   .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
 
+  /* ドロップダウンフィルター */
+  .dd-filter-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .dd-wrap{position:relative;flex:1;min-width:180px;}
+  .dd-btn{width:100%;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:border-color .15s;user-select:none;}
+  .dd-btn:hover{border-color:var(--accent);}
+  .dd-btn.open{border-color:var(--accent);}
+  .dd-btn-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left;}
+  .dd-btn-arrow{flex-shrink:0;font-size:10px;color:var(--text-dim);}
+  .dd-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:6px;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.4);}
+  .dd-panel.show{display:block;}
+  .dd-option{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12px;transition:background .1s;}
+  .dd-option:hover{background:rgba(79,127,255,.1);}
+  .dd-option.selected{background:rgba(79,127,255,.15);}
+  .dd-option input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+  .dd-clear{width:100%;margin-top:4px;padding:4px;border-radius:5px;border:1px dashed var(--border);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer;text-align:center;}
+  .dd-clear:hover{border-color:var(--accent);color:var(--accent);}
+
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 </style>
@@ -131,7 +148,28 @@
     <button class="btn" onclick="goToday()">今日</button>
     <button class="btn btn-primary" onclick="openEventModal()">＋ 予定を追加</button>
   </div>
-  <div class="filter-row" id="filter-row"></div>
+  <div class="dd-filter-row" style="justify-content:flex-start;">
+    <div class="dd-wrap" id="dd-proj-wrap" style="flex:none;width:200px;">
+      <div class="dd-btn" id="dd-proj-btn" onclick="toggleDD('proj')">
+        <span class="dd-btn-label" id="dd-proj-label">📁 案件を絞り込む</span>
+        <span class="dd-btn-arrow">▼</span>
+      </div>
+      <div class="dd-panel" id="dd-proj-panel">
+        <div id="dd-proj-options"></div>
+        <button class="dd-clear" onclick="clearDD('proj')">すべて表示に戻す</button>
+      </div>
+    </div>
+    <div class="dd-wrap" id="dd-type-wrap" style="flex:none;width:200px;">
+      <div class="dd-btn" id="dd-type-btn" onclick="toggleDD('type')">
+        <span class="dd-btn-label" id="dd-type-label">🏷 種類を絞り込む</span>
+        <span class="dd-btn-arrow">▼</span>
+      </div>
+      <div class="dd-panel" id="dd-type-panel">
+        <div id="dd-type-options"></div>
+        <button class="dd-clear" onclick="clearDD('type')">すべて表示に戻す</button>
+      </div>
+    </div>
+  </div>
   <div class="month-block">
     <div class="dow-row">
       <div class="dow-cell">日</div><div class="dow-cell">月</div><div class="dow-cell">火</div>
@@ -226,6 +264,7 @@ let state = {
   types: [],         // {id, name, color}
   events: [],        // {id, date(YYYY-MM-DD), projId, typeId, note}
   selectedTypes: [], // 表示する種類ID（空なら描画時に全選択）
+  selectedProjs:  [], // 表示する案件ID（空なら全表示）
 };
 let baseMonth = null;  // {y, m}
 let editingEventId = null;
@@ -300,7 +339,10 @@ function renderCalendar(){
 
     // その日のイベント（選択ゼロなら全表示、選択ありなら選んだ種類だけ）
     const sel=state.selectedTypes||[];
-    const dayEvents=state.events.filter(ev=>ev.date===key && (sel.length===0 || sel.includes(ev.typeId)));
+    const selP=state.selectedProjs||[];
+    const dayEvents=state.events.filter(ev=>ev.date===key
+      && (sel.length===0 || sel.includes(ev.typeId))
+      && (selP.length===0 || selP.includes(ev.projId)));
     dayEvents.forEach(ev=>cell.appendChild(buildEventPill(ev)));
     grid.appendChild(cell);
   }
@@ -324,6 +366,66 @@ function buildEventPill(ev){
   el.addEventListener('click',e=>{e.stopPropagation();openEventModal(ev.date,ev.id);});
   return el;
 }
+
+// =====================================================
+//  ドロップダウンフィルター（案件・種類の複数選択）
+// =====================================================
+function renderDDFilters(){
+  renderOneDDFilter('proj', state.projects, state.selectedProjs||[],
+    p=>({id:p.id, label:p.name, dot:null}), '📁 案件を絞り込む');
+  renderOneDDFilter('type', state.types, state.selectedTypes||[],
+    t=>({id:t.id, label:t.name, dot:t.color}), '🏷 種類を絞り込む');
+}
+
+function renderOneDDFilter(key, items, selected, mapper, placeholder){
+  const optWrap=document.getElementById('dd-'+key+'-options');
+  const lbl=document.getElementById('dd-'+key+'-label');
+  if(!optWrap||!lbl) return;
+  optWrap.innerHTML='';
+  items.forEach(item=>{
+    const{id,label:name,dot}=mapper(item);
+    const on=selected.includes(id);
+    const div=document.createElement('div');
+    div.className='dd-option'+(on?' selected':'');
+    div.innerHTML=`
+      <input type="checkbox" ${on?'checked':''} onchange="toggleDDItem('${key}','${id}',this.checked)">
+      ${dot?`<span style="width:10px;height:10px;border-radius:50%;background:${dot};flex-shrink:0;display:inline-block;"></span>`:''}
+      <span>${name}</span>`;
+    optWrap.appendChild(div);
+  });
+  const names=selected.map(id=>{const it=items.find(x=>x.id===id);return it?mapper(it).label:'';}).filter(Boolean);
+  lbl.textContent=names.length ? names.join('・') : placeholder;
+}
+
+function toggleDD(key){
+  const panel=document.getElementById('dd-'+key+'-panel');
+  const btn=document.getElementById('dd-'+key+'-btn');
+  const isOpen=panel.classList.contains('show');
+  ['proj','type'].forEach(k=>{
+    document.getElementById('dd-'+k+'-panel').classList.remove('show');
+    document.getElementById('dd-'+k+'-btn').classList.remove('open');
+  });
+  if(!isOpen){panel.classList.add('show');btn.classList.add('open');}
+}
+
+function toggleDDItem(key, id, checked){
+  if(key==='proj'){ if(!Array.isArray(state.selectedProjs)) state.selectedProjs=[]; if(checked){if(!state.selectedProjs.includes(id))state.selectedProjs.push(id);}else{const i=state.selectedProjs.indexOf(id);if(i>=0)state.selectedProjs.splice(i,1);} }
+  else { if(!Array.isArray(state.selectedTypes)) state.selectedTypes=[]; if(checked){if(!state.selectedTypes.includes(id))state.selectedTypes.push(id);}else{const i=state.selectedTypes.indexOf(id);if(i>=0)state.selectedTypes.splice(i,1);} }
+  saveState();renderCalendar();
+}
+
+function clearDD(key){
+  if(key==='proj') state.selectedProjs=[];
+  else state.selectedTypes=[];
+  saveState();renderCalendar();
+}
+
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.dd-wrap')){
+    document.querySelectorAll('.dd-panel').forEach(p=>p.classList.remove('show'));
+    document.querySelectorAll('.dd-btn').forEach(b=>b.classList.remove('open'));
+  }
+});
 
 function renderFilter(){
   if(!Array.isArray(state.selectedTypes)) state.selectedTypes=[];
