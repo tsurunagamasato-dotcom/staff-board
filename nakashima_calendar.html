@@ -371,7 +371,7 @@ function openEventModal(date, eventId){
 }
 function closeEventModal(){document.getElementById('event-modal').classList.remove('show');editingEventId=null;}
 
-function saveEvent(){
+async function saveEvent(){
   const date=document.getElementById('ev-date').value;
   const projId=document.getElementById('ev-proj').value;
   const typeId=document.getElementById('ev-type').value;
@@ -383,17 +383,23 @@ function saveEvent(){
   if(editingEventId){
     const ev=state.events.find(e=>e.id===editingEventId);
     Object.assign(ev,{date,projId,typeId,note});
+    saveState();closeEventModal();renderCalendar();
+    await sendAction('updateEvent', ev);
   } else {
-    state.events.push({id:uid(),date,projId,typeId,note});
+    const ev={id:uid(),date,projId,typeId,note};
+    state.events.push(ev);
+    saveState();closeEventModal();renderCalendar();
+    await sendAction('addEvent', ev);
   }
-  saveState();scheduleSave();closeEventModal();renderCalendar();
 }
 
-function deleteEvent(){
+async function deleteEvent(){
   if(!editingEventId)return;
   if(!confirm('この予定を削除しますか？'))return;
-  state.events=state.events.filter(e=>e.id!==editingEventId);
-  saveState();scheduleSave();closeEventModal();renderCalendar();
+  const id=editingEventId;
+  state.events=state.events.filter(e=>e.id!==id);
+  saveState();closeEventModal();renderCalendar();
+  await sendAction('deleteEvent', {id});
 }
 
 // =====================================================
@@ -418,21 +424,24 @@ function renderProjTable(){
     tbody.appendChild(tr);
   });
 }
-function addProject(){
+async function addProject(){
   const name=document.getElementById('proj-input').value.trim();
   if(!name){alert('案件名を入力してください');return;}
   if(state.projects.some(p=>p.name===name)){alert('同じ案件名が既にあります');return;}
-  state.projects.push({id:projNameToId(name),name});
+  const p={id:projNameToId(name),name};
+  state.projects.push(p);
   document.getElementById('proj-input').value='';
-  saveState();scheduleSave();renderMaster();
+  saveState();renderMaster();
+  await sendAction('addProject', p);
 }
-function deleteProject(id){
+async function deleteProject(id){
   const used=state.events.filter(e=>e.projId===id).length;
   const msg=used?`この案件には${used}件の予定があります。案件と関連する予定をすべて削除しますか？`:'この案件を削除しますか？';
   if(!confirm(msg))return;
   state.projects=state.projects.filter(p=>p.id!==id);
   state.events=state.events.filter(e=>e.projId!==id);
-  saveState();scheduleSave();renderMaster();
+  saveState();renderMaster();renderCalendar();
+  await sendAction('deleteProject', {id});
 }
 
 function renderTypeColorPicker(){
@@ -458,52 +467,55 @@ function renderTypeTable(){
     tbody.appendChild(tr);
   });
 }
-function addType(){
+async function addType(){
   const name=document.getElementById('type-input').value.trim();
   if(!name){alert('種類名を入力してください');return;}
   if(state.types.some(t=>t.name===name)){alert('同じ種類名が既にあります');return;}
-  state.types.push({id:'type_'+uid(),name,color:selectedTypeColor});
+  const t={id:'type_'+uid(),name,color:selectedTypeColor};
+  state.types.push(t);
   document.getElementById('type-input').value='';
-  saveState();scheduleSave();renderMaster();
+  saveState();renderMaster();renderCalendar();
+  await sendAction('addType', t);
 }
-function deleteType(id){
+async function deleteType(id){
   const used=state.events.filter(e=>e.typeId===id).length;
   const msg=used?`この種類は${used}件の予定で使われています。種類と関連する予定をすべて削除しますか？`:'この種類を削除しますか？';
   if(!confirm(msg))return;
   state.types=state.types.filter(t=>t.id!==id);
   state.events=state.events.filter(e=>e.typeId!==id);
   state.filterTypes=state.filterTypes.filter(fid=>fid!==id);
-  saveState();scheduleSave();renderMaster();
+  saveState();renderMaster();renderCalendar();
+  await sendAction('deleteType', {id});
 }
 
 // =====================================================
-//  GAS同期
+//  GAS同期（行単位レコード方式・同時編集対応）
+//  変更は1件ずつGASに送る。全体を丸ごと上書きしないので
+//  他の人が同時に入れた予定を消してしまうことがない。
 // =====================================================
-let isSyncing=false;
-let saveTimer=null;
-function scheduleSave(){
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(autoSaveToGAS,800);
-}
 
-async function autoSaveToGAS(){
-  if(GAS_URL.startsWith('ここに')) return; // 未設定なら何もしない
-  if(isSyncing) return;
-  isSyncing=true;
-  setGasStatus('⟳ 同期中...','loading');
+// 1件だけGASに送る（add/update/delete）
+async function sendAction(action, record){
+  if(GAS_URL.startsWith('ここに')) return true; // 未設定ならローカルのみ
+  setGasStatus('⟳ 保存中...','loading');
   try{
-    const payload=JSON.stringify({
-      projects:state.projects, types:state.types, events:state.events,
-    });
-    const url=GAS_URL+'?action=save&payload='+encodeURIComponent(payload);
+    const payload=encodeURIComponent(JSON.stringify(record));
+    const url=GAS_URL+'?action='+action+'&payload='+payload;
     const res=await fetch(url,{redirect:'follow'});
     const json=JSON.parse(await res.text());
-    if(json.status==='ok') setGasStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja-JP'),'ok');
-    else setGasStatus('✗ 保存失敗','err');
-  }catch(e){ setGasStatus('✗ 通信エラー: '+e.message,'err'); }
-  isSyncing=false;
+    if(json.status==='ok'){
+      setGasStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja-JP'),'ok');
+      return true;
+    }
+    setGasStatus('✗ 保存失敗','err');
+    return false;
+  }catch(e){
+    setGasStatus('✗ 通信エラー: '+e.message,'err');
+    return false;
+  }
 }
 
+// GASから全データを読み直す（保存後・定期更新で呼ぶ）
 async function autoLoadFromGAS(){
   if(GAS_URL.startsWith('ここに')){
     setGasStatus('✓ ローカル動作（GAS未設定）','ok');
@@ -515,18 +527,29 @@ async function autoLoadFromGAS(){
     const json=JSON.parse(await res.text());
     if(json.status==='ok' && json.data){
       const d=json.data;
-      if(Array.isArray(d.projects)) state.projects=d.projects;
-      if(Array.isArray(d.types) && d.types.length) state.types=d.types;
-      if(Array.isArray(d.events)) state.events=d.events;
+      if(Array.isArray(d.projects)) state.projects=d.projects.map(p=>({id:String(p.id),name:String(p.name)}));
+      if(Array.isArray(d.types) && d.types.length) state.types=d.types.map(t=>({id:String(t.id),name:String(t.name),color:String(t.color)}));
+      if(Array.isArray(d.events)) state.events=d.events.map(e=>({
+        id:String(e.id), date:String(e.date), projId:String(e.projId),
+        typeId:String(e.typeId), note:e.note==null?'':String(e.note)
+      }));
       saveState();
       renderCalendar();renderMaster();
       setGasStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja-JP'),'ok');
     } else {
-      // データなし → 現在の初期データを保存
-      autoSaveToGAS();
+      // データなし → 初期の種類だけGASに登録
+      for(const t of state.types){ await sendAction('addType', t); }
       setGasStatus('✓ 初期データで開始','ok');
     }
   }catch(e){ setGasStatus('✗ 通信エラー: '+e.message,'err'); }
+}
+
+// 30秒ごとに他の人の更新を取り込む（軽い自動更新）
+function startAutoRefresh(){
+  setInterval(()=>{
+    if(document.getElementById('event-modal').classList.contains('show')) return; // 入力中は邪魔しない
+    autoLoadFromGAS();
+  }, 30000);
 }
 
 // =====================================================
@@ -540,6 +563,7 @@ if(!baseMonth){const n=new Date();baseMonth={y:n.getFullYear(),m:n.getMonth()+1}
 selectedTypeColor=COLORS[0];
 renderCalendar();
 autoLoadFromGAS();
+startAutoRefresh();
 </script>
 </body>
 </html>
