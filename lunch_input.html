@@ -201,7 +201,7 @@
       <option value="">-- 氏名を選択 --</option>
     </select>
 
-    <div id="deadlinePassed" class="deadline-passed hidden">⚠ 本日の締切（<span id="deadlineTime"></span>）を過ぎています</div>
+    <div id="deadlinePassed" class="deadline-passed hidden">⚠ 本日の締切（<span id="deadlineTime"></span>）を過ぎています<br>総務部へ直接ご連絡ください</div>
 
     <!-- 日付 -->
     <div class="section-label">日付</div>
@@ -496,7 +496,9 @@ function onNameChange() {
   }
   updateNGNote(); updateOrderButtons(); updatePlaceButtons();
   updateDateGrid();
-  document.getElementById('submitSingle').disabled = !selStaff || !selDate || !selOrder;
+  const todayStr = fmtDate(new Date());
+  const deadlineLock = isDeadlinePassed() && selDate === todayStr;
+  document.getElementById('submitSingle').disabled = !selStaff || !selDate || !selOrder || deadlineLock;
 }
 
 function updateNGNote() {
@@ -572,11 +574,6 @@ function updateOrderButtons() {
 // ===== SUBMIT SINGLE =====
 async function submitSingle() {
   if (!selStaff||!selDate||!selOrder) return;
-  // ⑦⑧ 締切チェック
-  if (isDeadlinePassed()) {
-    alert('⚠ 締切時刻（' + deadline + '）を過ぎています。\n総務部へ直接ご連絡ください。');
-    return;
-  }
   const btn = document.getElementById('submitSingle');
   // 二重押し防止：即座にボタンを無効化
   btn.disabled = true;
