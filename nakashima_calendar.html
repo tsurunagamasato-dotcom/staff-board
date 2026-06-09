@@ -77,8 +77,8 @@
 
   /* フィルター */
   .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
-  .type-chip{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:11px;cursor:pointer;user-select:none;transition:all .15s;}
-  .type-chip.off{opacity:.35;}
+  .type-chip{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;border:1.5px solid var(--accent);font-size:11px;cursor:pointer;user-select:none;transition:all .15s;background:rgba(79,127,255,.08);}
+  .type-chip.off{opacity:.4;border-color:var(--border);background:transparent;}
   .chip-dot{width:9px;height:9px;border-radius:50%;}
 
   /* マスタ */
@@ -225,7 +225,7 @@ let state = {
   projects: [],      // {id, name}
   types: [],         // {id, name, color}
   events: [],        // {id, date(YYYY-MM-DD), projId, typeId, note}
-  filterTypes: [],   // 非表示にする種類ID
+  selectedTypes: [], // 表示する種類ID（空なら描画時に全選択）
 };
 let baseMonth = null;  // {y, m}
 let editingEventId = null;
@@ -298,8 +298,8 @@ function renderCalendar(){
     cell.innerHTML=`<span class="date-num">${d}</span>`;
     cell.addEventListener('click',e=>{ if(e.target===cell||e.target.classList.contains('date-num')) openEventModal(key); });
 
-    // その日のイベント
-    const dayEvents=state.events.filter(ev=>ev.date===key && !state.filterTypes.includes(ev.typeId));
+    // その日のイベント（選択中の種類だけ表示）
+    const dayEvents=state.events.filter(ev=>ev.date===key && state.selectedTypes.includes(ev.typeId));
     dayEvents.forEach(ev=>cell.appendChild(buildEventPill(ev)));
     grid.appendChild(cell);
   }
@@ -325,16 +325,23 @@ function buildEventPill(ev){
 }
 
 function renderFilter(){
+  // 選択リストが未初期化なら全種類を選択済みにする
+  if(!Array.isArray(state.selectedTypes) || !state.selectedTypes.length){
+    state.selectedTypes = state.types.map(t=>t.id);
+  }
+  // 削除された種類IDは選択リストから除く
+  state.selectedTypes = state.selectedTypes.filter(id=>state.types.some(t=>t.id===id));
+
   const wrap=document.getElementById('filter-row');
   wrap.innerHTML='<span style="font-size:11px;color:var(--text-dim);margin-right:4px;">表示：</span>';
   state.types.forEach(t=>{
-    const off=state.filterTypes.includes(t.id);
+    const on=state.selectedTypes.includes(t.id);
     const chip=document.createElement('div');
-    chip.className='type-chip'+(off?' off':'');
+    chip.className='type-chip'+(on?'':' off');
     chip.innerHTML=`<span class="chip-dot" style="background:${t.color}"></span>${t.name}`;
     chip.addEventListener('click',()=>{
-      if(off) state.filterTypes=state.filterTypes.filter(id=>id!==t.id);
-      else state.filterTypes.push(t.id);
+      if(on) state.selectedTypes=state.selectedTypes.filter(id=>id!==t.id);
+      else state.selectedTypes.push(t.id);
       saveState();renderCalendar();
     });
     wrap.appendChild(chip);
@@ -473,6 +480,7 @@ async function addType(){
   if(state.types.some(t=>t.name===name)){alert('同じ種類名が既にあります');return;}
   const t={id:'type_'+uid(),name,color:selectedTypeColor};
   state.types.push(t);
+  if(Array.isArray(state.selectedTypes)) state.selectedTypes.push(t.id);
   document.getElementById('type-input').value='';
   saveState();renderMaster();renderCalendar();
   await sendAction('addType', t);
@@ -483,7 +491,7 @@ async function deleteType(id){
   if(!confirm(msg))return;
   state.types=state.types.filter(t=>t.id!==id);
   state.events=state.events.filter(e=>e.typeId!==id);
-  state.filterTypes=state.filterTypes.filter(fid=>fid!==id);
+  state.selectedTypes=(state.selectedTypes||[]).filter(fid=>fid!==id);
   saveState();renderMaster();renderCalendar();
   await sendAction('deleteType', {id});
 }
