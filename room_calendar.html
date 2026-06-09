@@ -13,7 +13,7 @@
   --navy:#1a1a2e;--green:#1D9E75;--red:#e24b4a;
   --accent:#e94560;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ヘッダー */
 .header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
@@ -38,13 +38,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
 .room-chip.active{background:var(--green);color:#fff;border-color:var(--green)}
 
 /* カレンダーグリッド */
-.cal-wrap{padding:16px 20px}
-.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px}
+.cal-wrap{padding:8px 16px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px;flex-shrink:0}
 .cal-header-cell{text-align:center;font-size:12px;font-weight:700;color:var(--text-sub);padding:6px 0}
 .cal-header-cell.sun{color:#e24b4a}
 .cal-header-cell.sat{color:#4a8fe2}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border)}
-.cal-cell{background:var(--surface);min-height:100px;padding:6px;cursor:pointer;transition:.1s;position:relative;overflow:hidden}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);flex:1;overflow:hidden}
+.cal-cell{background:var(--surface);padding:6px;cursor:pointer;transition:.1s;position:relative;overflow:hidden;min-height:0}
 .cal-cell:hover{background:var(--surface2)}
 .cal-cell.other-month{opacity:.35}
 .cal-cell.today .day-num{background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
@@ -54,7 +54,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
 .day-num{font-size:13px;font-weight:700;margin-bottom:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
 
 /* 予約ブロック */
-.rsv-item{border-radius:4px;padding:2px 5px;font-size:10px;font-weight:600;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;line-height:1.4}
+.rsv-item{border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;margin-bottom:3px;overflow:hidden;cursor:pointer;line-height:1.5;border-left:3px solid rgba(255,255,255,.5)}
 .more-btn{font-size:10px;color:var(--text-sub);padding:1px 4px;cursor:pointer}
 
 /* 会議室カラー */
@@ -104,9 +104,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
     <div class="header-title">会議室予約</div>
     <div class="header-sub">ナカシマ</div>
   </div>
-  <div class="header-right">
-    <a class="admin-link" href="room_admin.html">管理画面</a>
-  </div>
+  
 </div>
 
 <!-- 月ナビ -->
@@ -139,10 +137,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
   <div class="modal-box">
     <div class="modal-title" id="modalTitle">予約する</div>
     <div class="modal-sub" id="modalSub"></div>
-    <div class="field">
-      <label>会議室</label>
-      <select id="fRoom"></select>
-    </div>
     <div class="field">
       <label>時間</label>
       <div class="time-row">
@@ -193,7 +187,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
 <div class="toast" id="toast"></div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbysRCM8KbC7J8pg90BbZg8S0r3I5MfIfrl1_9xB2rw21qBSNH7UJOvdvErRsrxuEFb2/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx2eL3PXJGj3TTWwUdckqc1uOqE9izDZoV5QuaQj_iAyNsqPDPwatzjeZG33q-446IS/exec';
 const STAFF_GAS_URL = 'https://script.google.com/macros/s/AKfycbwT7aSD1CmIOp_TlVa3yzUZr99b-yzMd5h_--kgweBABdyW8SnRMscd3cdWlTp6GsQzUQ/exec';
 
 // 社員マスタ（所在地ボードGASから取得・キャッシュ）
@@ -247,7 +241,7 @@ const TIME_SLOTS = getTimeSlots();
 let viewYear = new Date().getFullYear();
 let viewMonth = new Date().getMonth();
 let reservations = [];
-let activeRooms = new Set(ROOMS); // 全室表示
+let activeRoom = ROOMS[0]; // デフォルトは本社会議室のみ
 let modalDate = '';
 let detailRsv = null;
 
@@ -270,11 +264,11 @@ function goToday(){
 // 会議室フィルター
 function renderRoomFilter(){
   document.getElementById('roomFilter').innerHTML = ROOMS.map((r,i)=>
-    `<button class="room-chip ${activeRooms.has(r)?'active':''}" onclick="toggleRoom('${r}')" style="${activeRooms.has(r)?`background:var(--green);border-color:var(--green)`:''}">${r}</button>`
+    `<button class="room-chip ${r===activeRoom?'active':''}" onclick="selectRoom('${r}')">${r}</button>`
   ).join('');
 }
-function toggleRoom(room){
-  if(activeRooms.has(room)) activeRooms.delete(room); else activeRooms.add(room);
+function selectRoom(room){
+  activeRoom = room;
   renderRoomFilter();
   renderCalendar();
 }
@@ -315,14 +309,14 @@ function renderCalendar(){
     const isSat = cell.dow===6, isSun = cell.dow===0;
 
     // この日の予約（フィルター適用）
-    const dayRsvs = reservations.filter(r=>r.date===cell.date && activeRooms.has(r.room));
+    const dayRsvs = reservations.filter(r=>r.date===cell.date && r.room===activeRoom);
     const maxShow = 3;
     const shown = dayRsvs.slice(0, maxShow);
     const more = dayRsvs.length - maxShow;
 
     const rsvHtml = shown.map(r=>{
       const ci = ROOMS.indexOf(r.room);
-      return `<div class="rsv-item ${ROOM_COLORS[ci]}" onclick="event.stopPropagation();showDetail('${r.id}')" title="${r.room} ${r.start}〜${r.end} ${r.name}">${r.start} ${r.name}</div>`;
+      return `<div class="rsv-item ${ROOM_COLORS[ci]}" onclick="event.stopPropagation();showDetail('${r.id}')" title="${r.room} ${r.start}〜${r.end} ${r.name}"><div style="font-size:11px;opacity:.85;">${r.start}〜${r.end}</div><div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.purpose}</div></div>`;
     }).join('') + (more>0?`<div class="more-btn">他${more}件</div>`:'');
 
     return `<div class="cal-cell ${cell.otherMonth?'other-month':''} ${isToday?'today':''} ${isSat?'weekend-sat':''} ${isSun?'weekend-sun':''} ${isPast&&!cell.otherMonth?'past':''}"
@@ -342,10 +336,7 @@ function openModal(dateStr){
   const dt = new Date(y,m-1,d);
   const days=['日','月','火','水','木','金','土'];
   document.getElementById('modalTitle').textContent = '予約する';
-  document.getElementById('modalSub').textContent = `${y}年${m}月${d}日（${days[dt.getDay()]}）`;
-
-  // 会議室セレクト
-  document.getElementById('fRoom').innerHTML = ROOMS.map(r=>`<option value="${r}">${r}</option>`).join('');
+  document.getElementById('modalSub').textContent = `${activeRoom} / ${y}年${m}月${d}日（${days[dt.getDay()]}）`;
 
   // 時間セレクト
   document.getElementById('fStart').innerHTML = TIME_SLOTS.slice(0,-1).map(t=>`<option value="${t}">${t}</option>`).join('');
@@ -365,7 +356,7 @@ function openModal(dateStr){
 function closeModal(){document.getElementById('modalOverlay').classList.add('hidden');}
 
 async function submitReservation(){
-  const room = document.getElementById('fRoom').value;
+  const room = activeRoom;
   const start = document.getElementById('fStart').value;
   const end = document.getElementById('fEnd').value;
   const dept = document.getElementById('fDept').value;
@@ -376,6 +367,16 @@ async function submitReservation(){
   if(!name){showToast('氏名を入力してください','error');return;}
   if(!purpose){showToast('目的を入力してください','error');return;}
   if(start>=end){showToast('終了時刻は開始時刻より後にしてください','error');return;}
+
+  // 同じ会議室・日付・時間の重複チェック（UI側）
+  const conflict = reservations.find(r =>
+    r.room === room && r.date === modalDate &&
+    start < r.end && end > r.start
+  );
+  if(conflict){
+    showToast(`${conflict.start}〜${conflict.end} はすでに「${conflict.purpose}」で予約されています`,'error');
+    return;
+  }
 
   const btn = document.getElementById('modalSubmit');
   btn.disabled=true; btn.textContent='予約中...';
@@ -440,8 +441,48 @@ async function loadReservations(){
   try{
     const res = await fetch(GAS_URL+'?action=getReservations&t='+Date.now());
     const json = await res.json();
-    if(json.ok) reservations = json.reservations||[];
+    if(json.ok) {
+      reservations = (json.reservations||[]).map(r => ({
+        ...r,
+        date: normalizeDate(r.date),
+        start: normalizeTime(r.start),
+        end: normalizeTime(r.end)
+      }));
+    }
   }catch(e){console.log('取得失敗:',e);}
+}
+
+function normalizeDate(val) {
+  if (!val) return '';
+  const s = String(val);
+  // すでにYYYY-MM-DD形式
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Date文字列（Thu Jun 11 2026...）
+  try {
+    const d = new Date(s);
+    if (!isNaN(d)) {
+      return d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0');
+    }
+  } catch(e) {}
+  return s;
+}
+
+function normalizeTime(val) {
+  if (!val) return '';
+  const s = String(val);
+  // すでにHH:MM形式
+  if (/^\d{1,2}:\d{2}$/.test(s)) return s.padStart(5,'0');
+  // Date文字列（Sat Dec 30 1899 13:00:00...）
+  try {
+    const d = new Date(s);
+    if (!isNaN(d)) {
+      return String(d.getHours()).padStart(2,'0') + ':' +
+        String(d.getMinutes()).padStart(2,'0');
+    }
+  } catch(e) {}
+  return s;
 }
 
 function showToast(msg,type){
