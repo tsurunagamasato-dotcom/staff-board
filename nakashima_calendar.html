@@ -317,6 +317,7 @@ function renderCalendar(){
   const {y,m}=baseMonth;
   document.getElementById('cal-label').textContent=`${y}年 ${m}月`;
   renderFilter();
+  renderDDFilters();
 
   const grid=document.getElementById('cal-grid');
   grid.innerHTML='';
