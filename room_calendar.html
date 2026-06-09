@@ -94,6 +94,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.success{border-color:var(--green);color:var(--green)}
 .toast.error{border-color:var(--red);color:var(--red)}
+
+  /* テーマ */
+  .theme-bar{display:flex;gap:6px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+  .theme-label{font-size:11px;color:var(--text-sub);font-weight:700;margin-right:4px;flex-shrink:0}
+  .theme-btn{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s;flex-shrink:0}
+  .theme-btn.active{border-color:#fff;transform:scale(1.2)}
+  .theme-btn:hover{transform:scale(1.15)}
 </style>
 </head>
 <body>
@@ -105,6 +112,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
     <div class="header-sub">ナカシマ</div>
   </div>
   
+</div>
+
+<!-- テーマバー -->
+<div class="theme-bar">
+  <span class="theme-label">🎨</span>
+  <button class="theme-btn active" id="theme0" onclick="setTheme(0)" style="background:linear-gradient(135deg,#1a1a2e,#16213e)" title="ダークネイビー"></button>
+  <button class="theme-btn" id="theme1" onclick="setTheme(1)" style="background:linear-gradient(135deg,#1a2e1a,#163016)" title="ダークグリーン"></button>
+  <button class="theme-btn" id="theme2" onclick="setTheme(2)" style="background:linear-gradient(135deg,#2e1a1a,#301616)" title="ダークレッド"></button>
+  <button class="theme-btn" id="theme3" onclick="setTheme(3)" style="background:linear-gradient(135deg,#1a1a2e,#0d1b4a)" title="ロイヤルブルー"></button>
+  <button class="theme-btn" id="theme4" onclick="setTheme(4)" style="background:linear-gradient(135deg,#2e2a1a,#3d3010)" title="ダークゴールド"></button>
+  <button class="theme-btn" id="theme5" onclick="setTheme(5)" style="background:linear-gradient(135deg,#f4f4f2,#e8e8e4)" title="ライトグレー"></button>
+  <button class="theme-btn" id="theme6" onclick="setTheme(6)" style="background:linear-gradient(135deg,#fff,#f0f4ff)" title="ホワイト"></button>
+  <button class="theme-btn" id="theme7" onclick="setTheme(7)" style="background:linear-gradient(135deg,#e8f5f0,#d0ede6)" title="ミントグリーン"></button>
+  <button class="theme-btn" id="theme8" onclick="setTheme(8)" style="background:linear-gradient(135deg,#f0e8ff,#e4d0ff)" title="ラベンダー"></button>
+  <button class="theme-btn" id="theme9" onclick="setTheme(9)" style="background:linear-gradient(135deg,#fff8e0,#fff0c0)" title="クリーム"></button>
 </div>
 
 <!-- 月ナビ -->
@@ -495,6 +517,50 @@ async function init(){
   await Promise.all([loadReservations(), loadStaffMaster()]);
   renderCalendar();
 }
+
+const THEMES = [
+  // 0: ダークネイビー（デフォルト）
+  {bg:'#1a1a2e',surface:'#16213e',surface2:'#0f3460',border:'rgba(255,255,255,.08)',border2:'rgba(255,255,255,.15)',text:'#e8e8f0',textSub:'#9090b0',textHint:'#5a5a7a',accent:'#e94560'},
+  // 1: ダークグリーン
+  {bg:'#1a2e1a',surface:'#163016',surface2:'#0f3010',border:'rgba(255,255,255,.08)',border2:'rgba(255,255,255,.15)',text:'#e8f0e8',textSub:'#90b090',textHint:'#5a7a5a',accent:'#4ce94f'},
+  // 2: ダークレッド
+  {bg:'#2e1a1a',surface:'#301616',surface2:'#3d1010',border:'rgba(255,255,255,.08)',border2:'rgba(255,255,255,.15)',text:'#f0e8e8',textSub:'#b09090',textHint:'#7a5a5a',accent:'#e94545'},
+  // 3: ロイヤルブルー
+  {bg:'#0d1b4a',surface:'#1a2a6e',surface2:'#1e3580',border:'rgba(255,255,255,.1)',border2:'rgba(255,255,255,.2)',text:'#e8ecff',textSub:'#8090cc',textHint:'#5060aa',accent:'#5bc4ff'},
+  // 4: ダークゴールド
+  {bg:'#2e2a1a',surface:'#3d3010',surface2:'#4a3a14',border:'rgba(255,255,255,.08)',border2:'rgba(255,255,255,.15)',text:'#f0ece0',textSub:'#b0a878',textHint:'#7a7050',accent:'#f0c040'},
+  // 5: ライトグレー
+  {bg:'#f4f4f2',surface:'#ffffff',surface2:'#eeeeed',border:'rgba(0,0,0,.08)',border2:'rgba(0,0,0,.15)',text:'#1a1a1a',textSub:'#6b6965',textHint:'#b0ada8',accent:'#e94560'},
+  // 6: ホワイト
+  {bg:'#ffffff',surface:'#f8f9ff',surface2:'#eef0ff',border:'rgba(0,0,0,.06)',border2:'rgba(0,0,0,.12)',text:'#1a1a2e',textSub:'#5a5a7a',textHint:'#a0a0c0',accent:'#4a6cf7'},
+  // 7: ミントグリーン
+  {bg:'#e8f5f0',surface:'#ffffff',surface2:'#d0ede6',border:'rgba(0,0,0,.06)',border2:'rgba(0,0,0,.12)',text:'#1a2e28',textSub:'#3d6b5a',textHint:'#80b0a0',accent:'#1D9E75'},
+  // 8: ラベンダー
+  {bg:'#f0e8ff',surface:'#ffffff',surface2:'#e4d0ff',border:'rgba(0,0,0,.06)',border2:'rgba(0,0,0,.12)',text:'#2a1a3e',textSub:'#6a5a8e',textHint:'#a090c0',accent:'#7c4dff'},
+  // 9: クリーム
+  {bg:'#fff8e0',surface:'#ffffff',surface2:'#fff0c0',border:'rgba(0,0,0,.06)',border2:'rgba(0,0,0,.12)',text:'#2e2a10',textSub:'#6e6040',textHint:'#a09060',accent:'#f0a020'},
+];
+
+function setTheme(idx) {
+  const t = THEMES[idx];
+  const r = document.documentElement.style;
+  r.setProperty('--bg', t.bg);
+  r.setProperty('--surface', t.surface);
+  r.setProperty('--surface2', t.surface2);
+  r.setProperty('--border', t.border);
+  r.setProperty('--border2', t.border2);
+  r.setProperty('--text', t.text);
+  r.setProperty('--text-sub', t.textSub);
+  r.setProperty('--text-hint', t.textHint);
+  r.setProperty('--accent', t.accent);
+  document.querySelectorAll('.theme-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  localStorage.setItem('room_theme', idx);
+}
+
+// テーマ復元
+const savedTheme = parseInt(localStorage.getItem('room_theme')||'0');
+setTheme(savedTheme);
+
 init();
 </script>
 </body>
