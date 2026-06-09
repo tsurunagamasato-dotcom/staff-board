@@ -441,7 +441,7 @@ function showDetail(id){
 function closeDetail(){document.getElementById('detailOverlay').classList.add('hidden');}
 
 async function cancelRsv(id, name){
-  if(!confirm(`${name}さんの予約を取り消しますか？`)) return;
+  if(!confirm(`${name}さんの予約を取り消してよいですか？`)) return;
   try{
     const res = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
       body:JSON.stringify({action:'cancelReservation',id})});
