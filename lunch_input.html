@@ -297,6 +297,7 @@
   <!-- 本日タブ -->
   <div id="todayTab" class="hidden">
     <div style="margin-bottom:12px;">
+      <!-- サマリー -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
         <div style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center;">
           <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px;">🏢 本社</div>
@@ -309,7 +310,8 @@
           <div style="font-size:11px;color:#888;">普通 <span id="todayNezakiFutsuu">-</span> / 大盛 <span id="todayNezakiOomori">-</span></div>
         </div>
       </div>
-      <div id="todayOrderList" style="font-size:13px;color:#555;text-align:center;">読み込み中...</div>
+      <!-- 部署別折りたたみ -->
+      <div id="todayDeptList"></div>
     </div>
   </div>
 
@@ -868,7 +870,7 @@ function switchTab(tab) {
 
 async function loadToday() {
   const today = fmtDate(new Date());
-  document.getElementById('todayOrderList').textContent = '読み込み中...';
+  document.getElementById('todayDeptList').innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-hint);font-size:13px;">読み込み中...</div>';
   try {
     const res = await fetch(GAS_URL + `?action=getOrders&date=${today}&t=` + Date.now());
     const json = await res.json();
@@ -876,18 +878,20 @@ async function loadToday() {
     const orders = json.orders || [];
 
     let hF=0,hO=0,nF=0,nO=0;
-    const hList=[], nList=[];
 
+    // 部署ごとに集計
+    const deptMap = {};
     orders.forEach(o => {
       if (!o.order || o.order==='nashi') return;
       const isNezaki = o.place==='nezaki' || o.place==='nezaki2';
       if (isNezaki) {
         if (o.order==='futsuu') nF++; else nO++;
-        nList.push(o.name + (o.order==='oomori'?'(大)':''));
       } else {
         if (o.order==='futsuu') hF++; else hO++;
-        hList.push(o.name + (o.order==='oomori'?'(大)':''));
       }
+      const dept = o.dept || '不明';
+      if (!deptMap[dept]) deptMap[dept] = [];
+      deptMap[dept].push({ name: o.name, order: o.order, place: o.place });
     });
 
     document.getElementById('todayHonshaCount').textContent = hF+hO;
@@ -897,13 +901,54 @@ async function loadToday() {
     document.getElementById('todayNezakiFutsuu').textContent = nF;
     document.getElementById('todayNezakiOomori').textContent = nO;
 
-    const listHtml = [];
-    if (hList.length) listHtml.push(`<div style="margin-bottom:8px;"><span style="font-weight:700;color:#2e7d32;">🏢 本社：</span>${hList.join('、')}</div>`);
-    if (nList.length) listHtml.push(`<div><span style="font-weight:700;color:#1565c0;">🏭 根崎：</span>${nList.join('、')}</div>`);
-    document.getElementById('todayOrderList').innerHTML = listHtml.length ? listHtml.join('') : '<span style="color:#aaa;">注文なし</span>';
+    // 部署別折りたたみ
+    const deptOrder = ['社長','役員','総務部','営業部','設計課','電気課','購買課','加工課','組付課','第一製造部','来訪者'];
+    const sortedDepts = Object.keys(deptMap).sort((a,b) => {
+      const ai = deptOrder.indexOf(a), bi = deptOrder.indexOf(b);
+      return (ai<0?99:ai) - (bi<0?99:bi);
+    });
+
+    if (sortedDepts.length === 0) {
+      document.getElementById('todayDeptList').innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-hint);font-size:13px;">本日の注文はまだありません</div>';
+      return;
+    }
+
+    const html = sortedDepts.map((dept, idx) => {
+      const members = deptMap[dept];
+      const f = members.filter(m=>m.order==='futsuu').length;
+      const o = members.filter(m=>m.order==='oomori').length;
+      const memberHtml = members.map(m => {
+        const label = m.order==='futsuu'?'普通':'大盛';
+        const color = m.order==='futsuu'?'var(--green-fg)':'var(--blue-fg)';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;">${m.name}</span>
+          <span style="font-size:12px;font-weight:700;color:${color};">○${label}</span>
+        </div>`;
+      }).join('');
+      return `<div style="background:var(--surface);border-radius:12px;margin-bottom:8px;overflow:hidden;border:1px solid var(--border);">
+        <div onclick="toggleDept('dept${idx}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;">
+          <span style="font-size:13px;font-weight:700;">${dept}</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:var(--green-fg);">普通 ${f}</span>
+            <span style="font-size:12px;color:var(--blue-fg);">大盛 ${o}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--text-sub);">${members.length}名 ▼</span>
+          </div>
+        </div>
+        <div id="dept${idx}" style="display:none;padding:0 14px 10px;">
+          ${memberHtml}
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('todayDeptList').innerHTML = html;
   } catch(e) {
-    document.getElementById('todayOrderList').textContent = '取得に失敗しました';
+    document.getElementById('todayDeptList').innerHTML = '<div style="padding:16px;text-align:center;color:var(--red-fg);font-size:13px;">取得に失敗しました</div>';
   }
+}
+
+function toggleDept(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 async function loadTopics() {
