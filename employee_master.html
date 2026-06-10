@@ -556,11 +556,14 @@ async function saveEmployee() {
 
   isSaving = true;
   try {
-    const res = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
-    const json = await res.json();
-    if (!json.ok) throw new Error('GAS error');
+    // GASにPOST送信（CORSの制約でレスポンスのJSONは読まない）
+    fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) })
+      .catch(e => console.log('GAS post error:', e));
 
-    // GAS保存成功後にローカルを更新
+    // 1秒待ってGASが処理完了するのを待つ
+    await new Promise(r => setTimeout(r, 1000));
+
+    // ローカルを更新
     if (editId) {
       const idx = employees.findIndex(e => String(e.id) === String(editId));
       if (idx >= 0) employees[idx] = { ...employees[idx], ...payload };
@@ -589,9 +592,10 @@ async function toggleRetire(id) {
   isSaving = true;
   try {
     const payload = { action:'saveEmployee', ...e, active: newActive };
-    const res = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
-    const json = await res.json();
-    if (!json.ok) throw new Error();
+    fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) })
+      .catch(err => console.log('GAS post error:', err));
+
+    await new Promise(r => setTimeout(r, 1000));
     e.active = newActive;
     localStorage.setItem(LS_KEY, JSON.stringify(employees));
     renderTable();
