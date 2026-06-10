@@ -526,6 +526,9 @@ function openModal(id) {
     document.getElementById('fShowLunch').checked = true;
     document.getElementById('fShowBirthday').checked = true;
   }
+  // 保存ボタンを必ずリセット
+  const saveBtn = document.querySelector('.modal-save');
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存する'; }
   document.getElementById('modalOverlay').classList.remove('hidden');
   document.getElementById('fName').focus();
 }
