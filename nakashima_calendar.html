@@ -9,7 +9,41 @@
   :root{
     --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3350;
     --text:#e2e4ef;--text-dim:#7880a4;--accent:#4f7fff;--success:#3ecf8e;
+    --cal-border:var(--border);
   }
+  /* ===== テーマ定義 ===== */
+  [data-theme="dark"]{
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3350;
+    --text:#e2e4ef;--text-dim:#7880a4;--accent:#4f7fff;--cal-border:#2e3350;
+  }
+  [data-theme="light"]{
+    --bg:#f0f4f8;--surface:#ffffff;--surface2:#e8eef5;--border:#b0bece;
+    --text:#1a2332;--text-dim:#5a6a80;--accent:#2563eb;--cal-border:#8fa0b4;
+  }
+  [data-theme="forest"]{
+    --bg:#0d1a12;--surface:#152318;--surface2:#1c2e20;--border:#2a4030;
+    --text:#d4e8d0;--text-dim:#6a9070;--accent:#3ecf8e;--cal-border:#2a4030;
+  }
+  [data-theme="sunset"]{
+    --bg:#1a0f0a;--surface:#261510;--surface2:#321c14;--border:#50301e;
+    --text:#f0ddd0;--text-dim:#a07060;--accent:#f7843a;--cal-border:#50301e;
+  }
+  [data-theme="ocean"]{
+    --bg:#050e1a;--surface:#0a1828;--surface2:#102030;--border:#1a3048;
+    --text:#cce4f8;--text-dim:#4a80a8;--accent:#41c9e2;--cal-border:#1a3048;
+  }
+  /* ライトテーマ時はカレンダーの線を濃く */
+  [data-theme="light"] .cal-cell{border-right:1.5px solid var(--cal-border);border-bottom:1.5px solid var(--cal-border);}
+  [data-theme="light"] .dow-row{border-bottom:3px solid var(--cal-border);}
+  [data-theme="light"] .month-block{border:2px solid var(--cal-border);}
+  /* ライトテーマ時は予定バーを濃く */
+  [data-theme="light"] .event-pill{filter:saturate(1.6) brightness(0.85);border-left-width:4px;font-weight:600;}
+  [data-theme="light"] .event-proj{color:#111;}
+  /* テーマラジオボタン */
+  .theme-radio-wrap{display:flex;align-items:center;gap:8px;}
+  .theme-radio-wrap label{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:var(--text-dim);}
+  .theme-radio-wrap input[type=radio]{accent-color:var(--accent);cursor:pointer;}
+  .theme-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.3);}
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
@@ -130,6 +164,7 @@
 <body>
 <header>
   <div class="logo">◈ 全社予定カレンダー</div>
+  <div class="theme-radio-wrap" id="theme-radios"></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchView(0)">📅 カレンダー</button>
     <button class="nav-tab" onclick="switchView(1)">⚙ マスタ管理</button>
@@ -721,9 +756,46 @@ function startAutoRefresh(){
 }
 
 // =====================================================
+//  テーマ切り替え
+// =====================================================
+const THEMES = [
+  {id:'dark',   label:'ダーク',    dot:'#1a1d27'},
+  {id:'light',  label:'ライト',    dot:'#f0f4f8'},
+  {id:'forest', label:'フォレスト', dot:'#152318'},
+  {id:'sunset', label:'サンセット', dot:'#261510'},
+  {id:'ocean',  label:'オーシャン', dot:'#0a1828'},
+];
+
+function applyTheme(id){
+  document.documentElement.setAttribute('data-theme', id);
+  localStorage.setItem('nakashima_theme', id);
+}
+
+function loadTheme(){
+  const saved = localStorage.getItem('nakashima_theme') || 'dark';
+  applyTheme(saved);
+  renderThemeRadios(saved);
+}
+
+function renderThemeRadios(current){
+  const wrap = document.getElementById('theme-radios');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  THEMES.forEach(t=>{
+    const label = document.createElement('label');
+    label.innerHTML = `
+      <input type="radio" name="nakashima_theme" value="${t.id}" ${t.id===current?'checked':''} onchange="applyTheme('${t.id}');renderThemeRadios('${t.id}')">
+      <span class="theme-dot" style="background:${t.dot};"></span>
+      ${t.label}`;
+    wrap.appendChild(label);
+  });
+}
+
+// =====================================================
 //  INIT
 // =====================================================
 // ① localStorageのキャッシュで即座に表示（待ち時間ゼロ）
+loadTheme();
 loadState();
 if(!state.types || !state.types.length){
   state.types = DEFAULT_TYPES.map(t=>({...t}));
