@@ -575,13 +575,6 @@ function renderPeriodBars(grid, y, m, days, firstDow){
       }
     });
 
-    // 旬ごとにバーを1本描く
-    const ranges = [
-      {type:'joujun',  start:1,  end:10},
-      {type:'chuujun', start:11, end:20},
-      {type:'gejun',   start:21, end:days},
-    ];
-
     // バーの縦位置をずらすためのオフセット管理（同じ旬に複数イベントがある場合）
     const rowOffset = {};
 
@@ -589,12 +582,13 @@ function renderPeriodBars(grid, y, m, days, firstDow){
       const proj  = getProject(ev.projId);
       const type  = getType(ev.typeId);
       const color = type ? type.color : '#a0a0a0';
-      const range = ranges.find(r => r.type === (ev.periodType||'joujun'));
-      if(!range) return;
+      const periodType = ev.periodType || 'joujun';
 
-      // 開始・終了セルを取得（月内に存在する範囲でクリップ）
-      const startD = range.start;
-      const endD   = Math.min(range.end, days);
+      // 週ベースで開始・終了日を計算
+      const weekIdx = getPeriodWeekIndex(periodType, y, m);
+      const {startDay, endDay} = getWeekDayRange(y, m, weekIdx);
+      const startD = startDay;
+      const endD   = endDay;
       const startCell = cellMap[startD];
       const endCell   = cellMap[endD];
       if(!startCell || !endCell) return;
@@ -607,7 +601,7 @@ function renderPeriodBars(grid, y, m, days, firstDow){
       const width  = endRect.right  - startRect.left;
 
       // 同じ旬に複数バーがあれば上にずらす（セル下から積み上げ）
-      const key = range.type;
+      const key = periodType;
       if(rowOffset[key] === undefined) rowOffset[key] = 0;
       // セルの bottom 基準で上に積み上げ（1本=32px、余白4px）
       const cellBottom = startRect.bottom - gridRect.top;
@@ -869,20 +863,55 @@ function renderCalendar2Week(){
 }
 
 // =====================================================
+//  月の週数を計算（何週あるか）
+// =====================================================
+function getWeekCount(y, m){
+  const firstDow = new Date(y, m-1, 1).getDay(); // 1日の曜日
+  const days = daysInMonth(y, m);
+  return Math.ceil((firstDow + days) / 7);
+}
+
+// 旬→何週目に表示するか（0始まり）
+function getPeriodWeekIndex(periodType, y, m){
+  const weeks = getWeekCount(y, m);
+  if(weeks >= 5){
+    // 5週以上 → 上旬=0週目,中旬=2週目,下旬=4週目
+    if(periodType === 'joujun')  return 0;
+    if(periodType === 'chuujun') return 2;
+    if(periodType === 'gejun')   return 4;
+  } else {
+    // 4週以下 → 上旬=0週目,中旬=1週目,下旬=3週目
+    if(periodType === 'joujun')  return 0;
+    if(periodType === 'chuujun') return 1;
+    if(periodType === 'gejun')   return 3;
+  }
+  return 0;
+}
+
+// 指定週のセル（日〜土）の日付範囲を返す
+function getWeekDayRange(y, m, weekIndex){
+  const firstDow = new Date(y, m-1, 1).getDay();
+  const days = daysInMonth(y, m);
+  const startDay = weekIndex * 7 - firstDow + 1;
+  const endDay   = startDay + 6;
+  // 月内にクリップ
+  const clampStart = Math.max(1, startDay);
+  const clampEnd   = Math.min(days, endDay);
+  return { startDay: clampStart, endDay: clampEnd };
+}
+
+// =====================================================
 //  期間マッチ判定（時期指定イベント）
 // =====================================================
 function isPeriodMatch(ev, y, m, d){
   if(!ev.period) return false;
   const [py, pm] = ev.period.split('-').map(Number);
-  // 年・月が一致する場合だけ表示
   if(y !== py || m !== pm) return false;
   const periodType = ev.periodType || 'joujun';
+  const weekIdx = getPeriodWeekIndex(periodType, y, m);
+  const {startDay, endDay} = getWeekDayRange(y, m, weekIdx);
   const day = parseInt(d);
-  const lastDay = daysInMonth(y, m);
-  if(periodType === 'joujun')  return day >= 1  && day <= 10;
-  if(periodType === 'chuujun') return day >= 11 && day <= 20;
-  if(periodType === 'gejun')   return day >= 21 && day <= lastDay;
-  return false;
+  return day >= startDay && day <= endDay;
 }
 
 // =====================================================
