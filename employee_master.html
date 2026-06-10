@@ -474,11 +474,16 @@ function importCSV(e) {
     renderStats();
     showToast(`${imported.length}名をインポートしました`, 'success');
 
-    // GASに一括保存
-    for (const emp of imported) {
-      try {
-        await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({ action:'saveEmployee', ...emp }) });
-      } catch(err) {}
+    // GASに一括保存（saveEmployeesで一括）
+    try {
+      await fetch(GAS_URL, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({ action:'saveEmployees', employees: imported })
+      });
+      showToast(`✅ ${imported.length}名をGASに保存しました`, 'success');
+    } catch(err) {
+      showToast('ローカルには保存済み。GAS保存に失敗しました', 'error');
     }
   };
   reader.readAsText(file, 'UTF-8');
