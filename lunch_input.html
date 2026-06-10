@@ -270,8 +270,6 @@
   <!-- 来訪者タブ -->
   <div id="visitorTab" class="hidden">
     <div class="section-label" style="margin-bottom:10px;">来訪者の注文を入力してください</div>
-    <div class="section-label">日付</div>
-    <div id="visitorDateGrid" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;"></div>
     <div id="visitorList"></div>
     <button class="add-visitor-btn" onclick="addVisitor()">＋ 来訪者を追加</button>
     <div style="height:12px;"></div>
@@ -714,7 +712,7 @@ selectVisitorPlace('honsha');
 function addVisitor() {
   visitorIdCounter++;
   const id = visitorIdCounter;
-  visitorList.push({id, name:'', count:1, order:'futsuu'});
+  visitorList.push({id, name:'', count:1, order:'futsuu', date:fmtDate(new Date())});
   renderVisitorList();
 }
 
@@ -730,6 +728,12 @@ function renderVisitorList() {
         <input class="visitor-input" type="text" placeholder="来訪者名（会社名など）" value="${v.name}"
           oninput="updateVisitor(${v.id},'name',this.value)" />
         <button class="del-visitor-btn" onclick="removeVisitor(${v.id})">×</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--text-sub);white-space:nowrap;">📅 来訪日</span>
+        <input type="date" value="${v.date||fmtDate(new Date())}"
+          onchange="updateVisitor(${v.id},'date',this.value)"
+          style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;">
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <div class="visitor-count">
@@ -852,33 +856,16 @@ function switchTab(tab) {
     b.classList.toggle('active',['order','bulk','visitor','history','today','menu'][i]===tab);
   });
   if (tab === 'today') loadToday();
-  if (tab === 'visitor') renderVisitorDateGrid();
+  if (tab === 'visitor') initVisitorDate();
 }
 
-function renderVisitorDateGrid() {
-  const grid = document.getElementById('visitorDateGrid');
-  if (!grid) return;
-  const dates = getWorkDates(10);
-  const days = ['日','月','火','水','木','金','土'];
-  grid.innerHTML = dates.map(d => {
-    const dt = new Date(d.ds);
-    const dow = days[dt.getDay()];
-    const isActive = d.ds === visitorDate;
-    return `<button onclick="selectVisitorDate('${d.ds}')"
-      style="flex-shrink:0;min-width:48px;padding:6px 4px;border-radius:10px;
-      border:1.5px solid ${isActive?'var(--navy)':'var(--border)'};
-      background:${isActive?'var(--navy)':'var(--surface)'};
-      color:${isActive?'#fff':'var(--text)'};
-      font-family:inherit;cursor:pointer;text-align:center;">
-      <div style="font-size:10px;opacity:.7;">${dow}</div>
-      <div style="font-size:16px;font-weight:800;">${dt.getDate()}</div>
-    </button>`;
-  }).join('');
-}
-
-function selectVisitorDate(ds) {
-  visitorDate = ds;
-  renderVisitorDateGrid();
+function initVisitorDate() {
+  const picker = document.getElementById('visitorDatePicker');
+  if (!picker) return;
+  if (!picker.value) {
+    picker.value = fmtDate(new Date());
+    visitorDate = picker.value;
+  }
 }
 
 async function loadToday() {
