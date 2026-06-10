@@ -272,16 +272,19 @@ async function loadStaffMaster() {
 }
 
 function _applyEmployees(emps) {
-  STAFF_MASTER = emps.map(e => ({
-    id: e.id,
-    name: String(e.name),
-    dept: String(e.dept),
-    base: e.defaultPlace || 'honsha_office',
-    slide: e.slide || 'honsha1',
-    empNo: e.empNo || '',
-    category: e.category || '社員',
-    location: e.place || ''
-  }));
+  // 所在地ボード：showLocation !== '0' の社員のみ表示
+  STAFF_MASTER = emps
+    .filter(e => e.showLocation !== '0')
+    .map(e => ({
+      id: e.id,
+      name: String(e.name),
+      dept: String(e.dept),
+      base: e.defaultPlace || 'honsha_office',
+      slide: e.slide || 'honsha1',
+      empNo: e.empNo || '',
+      category: e.category || '社員',
+      location: e.place || ''
+    }));
   STAFF_MASTER.forEach(s => {
     if (!state[s.id]) state[s.id] = { status: s.base, updated: '', memo: '', leaveStart: '', leaveEnd: '' };
   });

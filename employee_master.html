@@ -160,6 +160,7 @@ tr.retired td{opacity:.45}
           <th>スライド</th>
           <th>拠点</th>
           <th>誕生日</th>
+          <th>表示アプリ</th>
           <th>状況</th>
           <th style="text-align:right;">操作</th>
         </tr>
@@ -232,6 +233,20 @@ tr.retired td{opacity:.45}
       <div class="field">
         <label>誕生日</label>
         <input type="date" id="fBirthday">
+      </div>
+      <div class="field full" style="margin-top:4px;">
+        <label>アプリ表示設定</label>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 0;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+            <input type="checkbox" id="fShowLocation" checked> 📍 所在地ボード
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+            <input type="checkbox" id="fShowLunch" checked> 🍱 昼食注文
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;">
+            <input type="checkbox" id="fShowBirthday" checked> 🎂 誕生日
+          </label>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -376,6 +391,11 @@ function renderTable() {
       <td style="color:var(--text-sub);font-size:12px;">${slideLabel}</td>
       <td style="color:var(--text-sub);font-size:12px;">${e.place||'自動'}</td>
       <td style="color:var(--text-sub);font-size:12px;">${bday}</td>
+      <td style="font-size:12px;">
+        ${e.showLocation!=='0'?'<span style="opacity:.9;">📍</span>':'<span style="opacity:.2;">📍</span>'}
+        ${e.showLunch!=='0'?'<span style="opacity:.9;">🍱</span>':'<span style="opacity:.2;">🍱</span>'}
+        ${e.showBirthday!=='0'?'<span style="opacity:.9;">🎂</span>':'<span style="opacity:.2;">🎂</span>'}
+      </td>
       <td><span class="status-badge ${retired?'status-retired':'status-active'}">${retired?'退職':'在籍'}</span></td>
       <td>
         <div class="action-btns">
@@ -402,6 +422,9 @@ function openModal(id) {
       document.getElementById('fSlide').value = e.slide || 'honsha1';
       document.getElementById('fPlaceLunch').value = e.place || '';
       document.getElementById('fBirthday').value = e.birthday ? String(e.birthday).slice(0,10) : '';
+      document.getElementById('fShowLocation').checked = e.showLocation !== '0';
+      document.getElementById('fShowLunch').checked = e.showLunch !== '0';
+      document.getElementById('fShowBirthday').checked = e.showBirthday !== '0';
     }
   } else {
     document.getElementById('fEmpNo').value = '';
@@ -412,6 +435,9 @@ function openModal(id) {
     document.getElementById('fSlide').value = 'honsha1';
     document.getElementById('fPlaceLunch').value = '';
     document.getElementById('fBirthday').value = '';
+    document.getElementById('fShowLocation').checked = true;
+    document.getElementById('fShowLunch').checked = true;
+    document.getElementById('fShowBirthday').checked = true;
   }
   document.getElementById('modalOverlay').classList.remove('hidden');
   document.getElementById('fName').focus();
@@ -431,11 +457,14 @@ async function saveEmployee() {
   const slide = document.getElementById('fSlide').value;
   const place = document.getElementById('fPlaceLunch').value;
   const birthday = document.getElementById('fBirthday').value;
+  const showLocation = document.getElementById('fShowLocation').checked ? '1' : '0';
+  const showLunch = document.getElementById('fShowLunch').checked ? '1' : '0';
+  const showBirthday = document.getElementById('fShowBirthday').checked ? '1' : '0';
 
   if (!name || !dept) { showToast('氏名と部署を入力してください', 'error'); return; }
 
   const id = editId || 'E-' + Date.now();
-  const payload = { action:'saveEmployee', id, empNo, name, category, dept, defaultPlace, slide, place, birthday, active: editId ? (employees.find(e=>String(e.id)===String(editId))?.active||'在籍') : '在籍' };
+  const payload = { action:'saveEmployee', id, empNo, name, category, dept, defaultPlace, slide, place, birthday, showLocation, showLunch, showBirthday, active: editId ? (employees.find(e=>String(e.id)===String(editId))?.active||'在籍') : '在籍' };
 
   // オプティミスティック更新
   if (editId) {
@@ -473,7 +502,7 @@ async function toggleRetire(id) {
 // CSV出力
 function exportCSV() {
   const BOM = '\uFEFF';
-  const headers = ['id','empNo','name','category','dept','defaultPlace','slide','place','birthday','active'];
+  const headers = ['id','empNo','name','category','dept','defaultPlace','slide','place','birthday','showLocation','showLunch','showBirthday','active'];
   const rows = [headers];
   employees.forEach(e => rows.push(headers.map(h => e[h]||'')));
   const csv = BOM + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
