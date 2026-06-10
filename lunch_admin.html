@@ -231,23 +231,12 @@
   <!-- お知らせ管理 -->
   <div id="topicsTab" class="hidden">
     <div class="settings-card">
-      <div class="settings-title">📢 お知らせ管理</div>
-      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">従業員用画面のトップに表示されます。期限を過ぎると自動で非表示になります。</p>
-      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
-        <div class="settings-label">お知らせ内容</div>
-        <textarea id="topicText" rows="4" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;resize:vertical;"
-          placeholder="例：本日はAランチのみの提供です。"></textarea>
-      </div>
-      <div class="settings-row" style="margin-top:12px;">
-        <div class="settings-label">掲載期限</div>
-        <input type="date" class="settings-input" id="topicExpiry">
-        <button class="icon-btn primary" onclick="saveTopic()">保存・公開</button>
-      </div>
-      <div style="margin-top:10px;">
-        <button class="icon-btn" style="color:#E24B4A;border-color:#f5c0bf;" onclick="deleteTopic()">お知らせを削除</button>
-      </div>
+      <div class="settings-title">📢 お知らせ管理（最大3件）</div>
+      <div id="topicsAdminList"></div>
+      <button class="icon-btn primary" onclick="saveTopicsAdmin()" style="margin-top:14px;">💾 保存・公開</button>
       <div id="topicStatus" style="margin-top:10px;font-size:13px;color:var(--text-sub);"></div>
     </div>
+  </div>
     <div class="settings-card" id="topicPreview" style="display:none;">
       <div class="settings-title">現在のお知らせ</div>
       <div style="background:#fff8e8;border:1.5px solid #f0c060;border-radius:10px;padding:12px 16px;">
@@ -939,19 +928,48 @@ async function loadTopicAdmin() {
   try {
     const res = await fetch(GAS_URL+'?action=getTopics&t='+Date.now());
     const json = await res.json();
-    if (json.ok && json.text) {
-      document.getElementById('topicText').value = json.text;
-      document.getElementById('topicExpiry').value = json.expiry||'';
-      const exp = json.expiry ? new Date(json.expiry) : null;
-      document.getElementById('topicPreview').style.display = 'block';
-      document.getElementById('topicPreviewText').textContent = json.text;
-      document.getElementById('topicPreviewExpiry').textContent = exp
-        ? `掲載期限：${(exp.getMonth()+1)}/${exp.getDate()}まで` : '';
-    } else {
-      document.getElementById('topicPreview').style.display = 'none';
+    const topics = json.topics || [];
+    const list = document.getElementById('topicsAdminList');
+    let html = '';
+    for (let i = 1; i <= 3; i++) {
+      const t = topics.find(x => x.id === i) || { id: i, text: '', expiry: '' };
+      html += `<div style="border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">お知らせ ${i}</div>
+        <textarea id="topicText${i}" rows="3" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical;margin-bottom:8px;"
+          placeholder="お知らせ内容（空欄で非表示）">${t.text||''}</textarea>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:12px;color:var(--text-sub);white-space:nowrap;">掲載期限</label>
+          <input type="date" id="topicExpiry${i}" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;" value="${t.expiry||''}">
+        </div>
+      </div>`;
     }
-  } catch(e) {}
+    list.innerHTML = html;
+  } catch(e) { console.log('お知らせ取得失敗:', e); }
 }
+
+async function saveTopicsAdmin() {
+  const topics = [];
+  for (let i = 1; i <= 3; i++) {
+    topics.push({
+      id: i,
+      text: document.getElementById(`topicText${i}`).value.trim(),
+      expiry: document.getElementById(`topicExpiry${i}`).value
+    });
+  }
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'saveTopics', topics })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      document.getElementById('topicStatus').textContent = '✅ 保存しました';
+      setTimeout(() => document.getElementById('topicStatus').textContent = '', 3000);
+    }
+  } catch(e) { showToast('保存に失敗しました'); }
+}
+
 
 async function saveTopic() {
   const text = document.getElementById('topicText').value.trim();
