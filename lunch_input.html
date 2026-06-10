@@ -562,6 +562,13 @@ function updateOrderButtons() {
 // ===== SUBMIT SINGLE =====
 async function submitSingle() {
   if (!selStaff||!selDate||!selOrder) return;
+  // 締切チェック（今日の注文のみ）
+  const todayStr = fmtDate(new Date());
+  if (selDate === todayStr && isDeadlinePassed()) {
+    showToast(`本日の締切（${deadline}）を過ぎています`);
+    document.getElementById('deadlinePassed').classList.remove('hidden');
+    return;
+  }
   const btn = document.getElementById('submitSingle');
   // 二重押し防止：即座にボタンを無効化
   btn.disabled = true;

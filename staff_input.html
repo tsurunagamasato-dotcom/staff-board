@@ -333,13 +333,13 @@ function renderNames() {
     : STAFF_MASTER.filter(s => s.dept === selDept);
   document.getElementById('step2Label').textContent = `${selDept}の方を選んでください`;
   document.getElementById('nameList').innerHTML = members.map(s =>
-    `<button class="name-btn ${selStaff&&selStaff.id===s.id?'selected':''}" onclick="selectName(${s.id})">
+    `<button class="name-btn ${selStaff&&String(selStaff.id)===String(s.id)?'selected':''}" onclick="selectName('${s.id}')">
       <span>${s.name}</span><span class="check">✓</span>
     </button>`
   ).join('');
 }
 
-function selectName(id) { selStaff = STAFF_MASTER.find(s => s.id === id); selStatus = null; goStep(3); }
+function selectName(id) { selStaff = STAFF_MASTER.find(s => String(s.id) === String(id)); selStatus = null; goStep(3); }
 
 function renderStatus() {
   document.getElementById('step3Label').textContent = `${selStaff.name}さんの居場所を選んでください`;
