@@ -75,7 +75,7 @@
   .gas-status.loading{color:var(--text-dim);}
 
   /* カレンダー */
-  .month-block{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .month-block{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:visible;}
   .dow-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:2px solid var(--border);background:var(--surface2);}
   .dow-cell{text-align:left;padding:6px 8px;font-size:11px;font-weight:700;color:var(--text-dim);letter-spacing:.05em;}
   .dow-cell:first-child{color:#ff6b6b;}
@@ -84,7 +84,7 @@
   .cal-cell{
     border-right:1px solid var(--border);border-bottom:1px solid var(--border);
     padding:4px 4px 6px;position:relative;min-height:130px;
-    height:calc((100vh - 160px) / 6);overflow-y:auto;cursor:pointer;transition:background .1s;
+    overflow-y:auto;cursor:pointer;transition:background .1s;
   }
   .cal-cell:hover{background:rgba(79,127,255,.04);}
   .cal-cell:nth-child(7n){border-right:none;}
@@ -628,6 +628,39 @@ function renderFilter(){
     });
     wrap.appendChild(chip);
   });
+}
+
+// 月ビュー用 2週間表示（未実装・スキップ）
+function renderCalendar2Week(){
+  // 2週間ビューはまだ未実装です
+  console.log('2週間ビューは現在開発中です');
+}
+
+// 期間マッチ判定
+function isPeriodMatch(ev, y, m, d){
+  if(!ev.period) return false;
+  const[py,pm]=ev.period.split('-').map(Number);
+  if(y!==py) return false;
+  const periodType=ev.periodType||'joujun';
+  const targetDay=parseInt(d);
+  const monthDays=daysInMonth(y, m);
+  if(periodType==='joujun') return targetDay===pm;
+  if(periodType==='tyuushun') return targetDay>10 && targetDay<=20;
+  if(periodType==='matsujun') return targetDay>20;
+  return false;
+}
+
+// 期間バンド表示
+function buildPeriodBand(ev){
+  const proj=getProject(ev.projId);
+  const type=getType(ev.typeId);
+  const color=type?type.color:'#a0a0a0';
+  
+  const el=document.createElement('div');
+  el.style.cssText=`padding:1px 4px;margin-bottom:1px;font-size:10px;border-radius:2px;background:${color}18;border-left:3px solid ${color};cursor:pointer;`;
+  el.textContent=`${proj?proj.name:'(案件)'}`;
+  el.addEventListener('click',e=>{e.stopPropagation();openEventModal('',ev.id);});
+  return el;
 }
 
 // =====================================================
