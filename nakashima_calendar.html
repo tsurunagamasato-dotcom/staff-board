@@ -686,7 +686,17 @@ async function autoLoadFromGAS(){
     if(json.status==='ok' && json.data){
       const d=json.data;
       if(Array.isArray(d.projects)) state.projects=d.projects.map(p=>({id:String(p.id),name:String(p.name)}));
-      if(Array.isArray(d.types) && d.types.length) state.types=d.types.map(t=>({id:String(t.id),name:String(t.name),color:String(t.color)}));
+      // typesはGASに存在するものを使う。ただし初期8種類に存在しないものはGASに追加登録する
+      if(Array.isArray(d.types) && d.types.length){
+        const gasTypes = d.types.map(t=>({id:String(t.id),name:String(t.name),color:String(t.color)}));
+        // 初期種類のうちGASにないものを追加
+        const missingTypes = DEFAULT_TYPES.filter(dt=>!gasTypes.some(gt=>gt.id===dt.id));
+        for(const t of missingTypes){ await sendAction('addType', t); gasTypes.push(t); }
+        state.types = gasTypes;
+      } else {
+        // typesが空なら初期8種類を全部登録
+        for(const t of state.types){ await sendAction('addType', t); }
+      }
       if(Array.isArray(d.events)) state.events=d.events.map(e=>({
         id:String(e.id), date:normalizeDate(e.date), projId:String(e.projId),
         typeId:String(e.typeId), note:e.note==null?'':String(e.note)
