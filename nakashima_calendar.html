@@ -86,6 +86,10 @@
     padding:4px 4px 6px;position:relative;min-height:130px;
     overflow-y:auto;cursor:pointer;transition:background .1s;
   }
+  /* 2週間ビュー：14セルしかないのでセルを2倍の高さにする */
+  .cal-cell-2week{
+    min-height:260px;
+  }
   .cal-cell:hover{background:rgba(79,127,255,.04);}
   .cal-cell:nth-child(7n){border-right:none;}
   .cal-cell.empty{background:rgba(0,0,0,.08);cursor:default;}
@@ -631,36 +635,138 @@ function renderFilter(){
 }
 
 // 月ビュー用 2週間表示（未実装・スキップ）
+// =====================================================
+//  2週間ビュー（今日を含む週の日曜〜翌週土曜まで2週間）
+// =====================================================
 function renderCalendar2Week(){
-  // 2週間ビューはまだ未実装です
-  console.log('2週間ビューは現在開発中です');
+  const today = new Date();
+  // 今日が含まれる週の日曜日を起点にする
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - today.getDay()); // 今週の日曜
+  // 14日分のセルを生成（日〜土 × 2週）
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 13); // 翌週の土曜
+
+  const todayKey = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+
+  // ラベル更新
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  document.getElementById('cal-label').textContent =
+    `${fmt(startDate)}（日）〜 ${fmt(endDate)}（土）`;
+
+  renderFilter();
+  renderDDFilters();
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  // 2週間ビュー時はセルを大きく（4週分のスペースを2週で使う）
+  grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+
+  const sel  = state.selectedTypes || [];
+  const selP = state.selectedProjs || [];
+
+  for(let i = 0; i < 14; i++){
+    const cur = new Date(startDate);
+    cur.setDate(startDate.getDate() + i);
+    const y = cur.getFullYear();
+    const m = cur.getMonth() + 1;
+    const d = cur.getDate();
+    const key = `${y}-${pad(m)}-${pad(d)}`;
+    const dow = cur.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+
+    const cell = document.createElement('div');
+    // 2週間ビューはセルを高くする（通常の約2倍）
+    cell.className = 'cal-cell cal-cell-2week' + (key === todayKey ? ' today' : '') + (isWeekend ? ' weekend' : '');
+    cell.innerHTML = `<span class="date-num">${m}/${d}</span>`;
+    cell.addEventListener('click', e => {
+      if(e.target === cell || e.target.classList.contains('date-num')) openEventModal(key);
+    });
+
+    // 日付指定イベント
+    const dayEvents = state.events.filter(ev =>
+      ev.date === key && (!ev.dateType || ev.dateType === 'date') &&
+      (sel.length === 0 || sel.includes(ev.typeId)) &&
+      (selP.length === 0 || selP.includes(ev.projId)));
+    dayEvents.forEach(ev => cell.appendChild(buildEventPill(ev)));
+
+    // 時期指定イベント
+    const periodEvents = state.events.filter(ev =>
+      ev.dateType === 'period' && isPeriodMatch(ev, y, m, d) &&
+      (sel.length === 0 || sel.includes(ev.typeId)) &&
+      (selP.length === 0 || selP.includes(ev.projId)));
+    periodEvents.forEach(ev => cell.appendChild(buildPeriodBand(ev)));
+
+    grid.appendChild(cell);
+  }
+  saveState();
 }
 
-// 期間マッチ判定
+// =====================================================
+//  期間マッチ判定（時期指定イベント）
+// =====================================================
 function isPeriodMatch(ev, y, m, d){
   if(!ev.period) return false;
-  const[py,pm]=ev.period.split('-').map(Number);
-  if(y!==py) return false;
-  const periodType=ev.periodType||'joujun';
-  const targetDay=parseInt(d);
-  const monthDays=daysInMonth(y, m);
-  if(periodType==='joujun') return targetDay===pm;
-  if(periodType==='tyuushun') return targetDay>10 && targetDay<=20;
-  if(periodType==='matsujun') return targetDay>20;
+  const [py, pm] = ev.period.split('-').map(Number);
+  // 年・月が一致する場合だけ表示
+  if(y !== py || m !== pm) return false;
+  const periodType = ev.periodType || 'joujun';
+  const day = parseInt(d);
+  const lastDay = daysInMonth(y, m);
+  if(periodType === 'joujun')  return day >= 1  && day <= 10;
+  if(periodType === 'chuujun') return day >= 11 && day <= 20;
+  if(periodType === 'gejun')   return day >= 21 && day <= lastDay;
   return false;
 }
 
-// 期間バンド表示
+// =====================================================
+//  期間バンド表示（時期指定イベント用ピル）
+// =====================================================
 function buildPeriodBand(ev){
-  const proj=getProject(ev.projId);
-  const type=getType(ev.typeId);
-  const color=type?type.color:'#a0a0a0';
-  
-  const el=document.createElement('div');
-  el.style.cssText=`padding:1px 4px;margin-bottom:1px;font-size:10px;border-radius:2px;background:${color}18;border-left:3px solid ${color};cursor:pointer;`;
-  el.textContent=`${proj?proj.name:'(案件)'}`;
-  el.addEventListener('click',e=>{e.stopPropagation();openEventModal('',ev.id);});
-  return el;
+  const proj = getProject(ev.projId);
+  const type = getType(ev.typeId);
+  const color = type ? type.color : '#a0a0a0';
+  const wrap = document.createElement('div');
+  wrap.className = 'tooltip-wrap';
+  const el = document.createElement('div');
+  el.className = 'event-pill';
+  el.style.borderLeftColor = color;
+  el.innerHTML = `
+    <span class="event-type-dot" style="background:${color}"></span>
+    <span class="event-text">
+      <span class="event-proj">${proj ? proj.name : '(案件なし)'}</span>
+      <span class="event-type-label">${type ? type.name : ''}</span>
+    </span>`;
+  el.addEventListener('click', e => { e.stopPropagation(); openEventModal('', ev.id); });
+  // ツールチップ
+  let timer;
+  el.addEventListener('mouseenter', e => {
+    const tipEl = document.getElementById('cal-tooltip');
+    const [py, pm] = (ev.period||'').split('-');
+    const periodLabel = {'joujun':'上旬','chuujun':'中旬','gejun':'下旬'}[ev.periodType] || '';
+    tipEl.innerHTML = `
+      <div class="tooltip-proj">${proj ? proj.name : '(案件なし)'}</div>
+      <div class="tooltip-type">${type ? '🏷 '+type.name : ''}</div>
+      <div class="tooltip-note">📅 ${py}年${pm}月 ${periodLabel}</div>
+      ${ev.note ? `<div class="tooltip-note">📝 ${ev.note}</div>` : '<div class="tooltip-note" style="color:var(--text-dim);font-size:11px;">メモなし</div>'}`;
+    const x = Math.min(e.clientX + 12, window.innerWidth - 320);
+    const y2 = Math.max(e.clientY - 80, 10);
+    tipEl.style.left = x + 'px'; tipEl.style.top = y2 + 'px';
+    timer = setTimeout(() => tipEl.classList.add('show'), 120);
+  });
+  el.addEventListener('mousemove', e => {
+    const tipEl = document.getElementById('cal-tooltip');
+    const x = Math.min(e.clientX + 12, window.innerWidth - 320);
+    const y2 = Math.max(e.clientY - 80, 10);
+    tipEl.style.left = x + 'px'; tipEl.style.top = y2 + 'px';
+  });
+  el.addEventListener('mouseleave', () => {
+    clearTimeout(timer);
+    const tipEl = document.getElementById('cal-tooltip');
+    tipEl.classList.remove('show');
+  });
+  wrap.appendChild(el);
+  return wrap;
 }
 
 // =====================================================
