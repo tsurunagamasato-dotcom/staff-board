@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>総務部 管理メニュー</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI',sans-serif;
+  background:#1a1a2e;
+  color:#fff;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:24px;
+  padding:24px;
+}
+.title{
+  font-size:16px;
+  font-weight:700;
+  opacity:.5;
+  letter-spacing:2px;
+  text-transform:uppercase;
+}
+.cards{
+  display:flex;
+  gap:24px;
+  flex-wrap:wrap;
+  justify-content:center;
+  width:100%;
+  max-width:900px;
+}
+.card{
+  flex:1;
+  min-width:280px;
+  max-width:400px;
+  border-radius:24px;
+  padding:48px 32px;
+  text-align:center;
+  cursor:pointer;
+  text-decoration:none;
+  color:#fff;
+  transition:transform .15s, box-shadow .15s;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+}
+.card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 20px 60px rgba(0,0,0,.4);
+}
+.card:active{transform:translateY(-2px)}
+.card-master{background:linear-gradient(135deg,#1D9E75,#0d6e50)}
+.card-lunch{background:linear-gradient(135deg,#185FA5,#0d3d6e)}
+.card-icon{font-size:72px;line-height:1}
+.card-title{font-size:28px;font-weight:900;letter-spacing:-0.5px}
+.card-desc{font-size:14px;opacity:.75;line-height:1.6}
+.footer{font-size:12px;opacity:.3}
+</style>
+</head>
+<body>
+
+<div class="title">ナカシマ — 総務部 管理メニュー</div>
+
+<div class="cards">
+  <a class="card card-master"
+     href="https://tsurunagamasato-dotcom.github.io/staff-board/employee_master.html">
+    <div class="card-icon">👥</div>
+    <div class="card-title">従業員マスタ</div>
+    <div class="card-desc">社員情報の追加・編集・退職処理<br>各アプリへの一括反映</div>
+  </a>
+  <a class="card card-lunch"
+     href="https://tsurunagamasato-dotcom.github.io/staff-board/lunch_admin.html">
+    <div class="card-icon">🍱</div>
+    <div class="card-title">昼食注文 管理</div>
+    <div class="card-desc">注文集計・お知らせ管理<br>締切設定・Excel出力</div>
+  </a>
+</div>
+
+<div class="footer">このページのURLは総務部のみ保管してください</div>
+
+</body>
+</html>
