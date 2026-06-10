@@ -127,7 +127,7 @@
   .event-pill{
     display:flex;align-items:center;gap:6px;border-radius:4px;border-left:4px solid;
     padding:5px 8px;margin-bottom:3px;font-size:16px;line-height:1.4;cursor:pointer;
-    background:var(--surface2);transition:filter .1s;
+    transition:filter .1s;
   }
   .event-pill:hover{filter:brightness(1.15);}
   .event-type-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
@@ -531,6 +531,8 @@ function buildEventPill(ev){
   const el=document.createElement('div');
   el.className='event-pill';
   el.style.borderLeftColor=color;
+  el.style.background=color+'22';
+  el.style.color=color;
   el.innerHTML=`
     <span class="event-type-dot" style="background:${color}"></span>
     <span class="event-text">
@@ -780,6 +782,8 @@ function buildPeriodBand(ev, is2week, isFirstDay){
   } else {
     el.className = 'event-pill';
     el.style.borderLeftColor = color;
+    el.style.background = color + '22';
+    el.style.color = color;
     el.innerHTML = `
       <span class="event-type-dot" style="background:${color}"></span>
       <span class="event-text">
