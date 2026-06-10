@@ -152,10 +152,10 @@ tr.retired td{opacity:.45}
     <table>
       <thead>
         <tr>
-          <th>社員番号</th>
+          <th onclick="sortBy('empNo')" style="cursor:pointer;user-select:none;">社員番号 <span id="sort-empNo">▲</span></th>
           <th>氏名</th>
-          <th>部署</th>
-          <th>区分</th>
+          <th onclick="sortBy('dept')" style="cursor:pointer;user-select:none;">部署 <span id="sort-dept">⇅</span></th>
+          <th onclick="sortBy('category')" style="cursor:pointer;user-select:none;">区分 <span id="sort-category">⇅</span></th>
           <th>居場所(デフォルト)</th>
           <th>スライド</th>
           <th>拠点</th>
@@ -264,6 +264,26 @@ const SLIDE_LABELS = {
 
 let employees = [];
 let editId = null;
+let sortCol = 'empNo';  // デフォルトは社員番号順
+let sortDir = 1;        // 1=昇順 -1=降順
+
+// ソート
+function sortBy(col) {
+  if (sortCol === col) {
+    sortDir *= -1;
+  } else {
+    sortCol = col;
+    sortDir = 1;
+  }
+  // インジケーター更新
+  ['empNo','dept','category'].forEach(c => {
+    const el = document.getElementById('sort-' + c);
+    if (!el) return;
+    if (c === sortCol) el.textContent = sortDir === 1 ? '▲' : '▼';
+    else el.textContent = '⇅';
+  });
+  renderTable();
+}
 
 // データ取得
 async function loadEmployees() {
@@ -312,11 +332,25 @@ function renderTable() {
     return true;
   });
 
-  // 社員番号順→部署順
+  // ソート処理
   filtered.sort((a, b) => {
-    const an = parseInt(a.empNo) || 9999;
-    const bn = parseInt(b.empNo) || 9999;
-    return an - bn;
+    let av, bv;
+    if (sortCol === 'empNo') {
+      av = parseInt(a.empNo) || 9999;
+      bv = parseInt(b.empNo) || 9999;
+      return (av - bv) * sortDir;
+    } else if (sortCol === 'dept') {
+      const DEPT_ORDER = ['会長','社長','役員','総務部','営業部','設計課','電気課','購買課','加工課','組付課','第一製造部'];
+      av = DEPT_ORDER.indexOf(a.dept); if(av<0) av=99;
+      bv = DEPT_ORDER.indexOf(b.dept); if(bv<0) bv=99;
+      return (av - bv) * sortDir;
+    } else if (sortCol === 'category') {
+      const CAT_ORDER = ['役員','社員','パート'];
+      av = CAT_ORDER.indexOf(a.category); if(av<0) av=99;
+      bv = CAT_ORDER.indexOf(b.category); if(bv<0) bv=99;
+      return (av - bv) * sortDir;
+    }
+    return 0;
   });
 
   document.getElementById('countBadge').textContent = `${filtered.length}名 / 全${employees.length}名`;
