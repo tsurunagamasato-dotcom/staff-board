@@ -271,6 +271,35 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbwFE4wAC6cdFT8H2JmwW2XO
 const LS_KEY = 'employee_master_data';       // マスタ専用キャッシュ
 const PUBLISH_KEY = 'employee_master_cache'; // 各アプリが参照するキャッシュ（手動反映）
 
+// 誕生日文字列を YYYY-MM-DD 形式に変換するヘルパー
+function parseBirthdayToYMD(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  // すでに YYYY-MM-DD 形式
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // M/D 形式（例: 6/13）
+  if (/^\d{1,2}\/\d{1,2}$/.test(s)) {
+    const [m, d] = s.split('/');
+    return `1900-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  // JS Date文字列（例: Wed Jun 13 1900 00:00:00 GMT+0900...）
+  try {
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    }
+  } catch(e) {}
+  return '';
+}
+
+// 誕生日を「6/13」形式で表示するヘルパー
+function formatBirthdayDisplay(val) {
+  const ymd = parseBirthdayToYMD(val);
+  if (!ymd) return '-';
+  const [, m, d] = ymd.split('-');
+  return `${parseInt(m)}/${parseInt(d)}`;
+}
+
 const DEPT_COLORS = {
   '会長':'#7B2D8B','社長':'#1a1a2e','役員':'#534AB7',
   '総務部':'#1D9E75','営業部':'#185FA5','設計課':'#0e7fa8',
@@ -423,7 +452,7 @@ function renderTable() {
     const placeLabel = PLACE_LABELS[e.defaultPlace] || e.defaultPlace || '-';
     const slideLabel = SLIDE_LABELS[e.slide] || e.slide || '-';
     const retired = e.active === '退職';
-    const bday = e.birthday ? String(e.birthday).slice(0, 10) : '-';
+    const bday = formatBirthdayDisplay(e.birthday);
     return `<tr class="${retired?'retired':''}">
       <td style="font-weight:600;color:var(--text-sub);">${e.empNo||'-'}</td>
       <td><strong>${e.name}</strong></td>
@@ -475,7 +504,7 @@ function openModal(id) {
       document.getElementById('fPlace').value = e.defaultPlace || 'honsha_office';
       document.getElementById('fSlide').value = e.slide || 'honsha1';
       document.getElementById('fPlaceLunch').value = e.place || '';
-      document.getElementById('fBirthday').value = e.birthday ? String(e.birthday).slice(0,10) : '';
+      document.getElementById('fBirthday').value = parseBirthdayToYMD(e.birthday);
       document.getElementById('fShowLocation').checked = e.showLocation !== '0';
       document.getElementById('fShowLunch').checked = e.showLunch !== '0';
       document.getElementById('fShowBirthday').checked = e.showBirthday !== '0';
@@ -510,7 +539,8 @@ async function saveEmployee() {
   const defaultPlace = document.getElementById('fPlace').value;
   const slide = document.getElementById('fSlide').value;
   const place = document.getElementById('fPlaceLunch').value;
-  const birthday = document.getElementById('fBirthday').value;
+  const birthdayRaw = document.getElementById('fBirthday').value;
+  const birthday = parseBirthdayToYMD(birthdayRaw);
   const showLocation = document.getElementById('fShowLocation').checked ? '1' : '0';
   const showLunch = document.getElementById('fShowLunch').checked ? '1' : '0';
   const showBirthday = document.getElementById('fShowBirthday').checked ? '1' : '0';
