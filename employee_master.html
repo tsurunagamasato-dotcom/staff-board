@@ -550,24 +550,34 @@ async function saveEmployee() {
   const id = editId || 'E-' + Date.now();
   const payload = { action:'saveEmployee', id, empNo, name, category, dept, defaultPlace, slide, place, birthday, showLocation, showLunch, showBirthday, active: editId ? (employees.find(e=>String(e.id)===String(editId))?.active||'在籍') : '在籍' };
 
-  // オプティミスティック更新
-  if (editId) {
-    const idx = employees.findIndex(e => String(e.id) === String(editId));
-    if (idx >= 0) employees[idx] = { ...employees[idx], ...payload };
-  } else {
-    employees.push(payload);
-  }
-  localStorage.setItem(LS_KEY, JSON.stringify(employees));
-  closeModal();
-  renderTable();
-  renderStats();
-  showToast(editId ? '✅ 更新しました' : '✅ 追加しました', 'success');
+  // 保存ボタンを無効化して二重送信防止
+  const saveBtn = document.querySelector('.modal-save');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中...'; }
 
   isSaving = true;
   try {
-    await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
-  } catch(e) { showToast('通信エラー。ローカルに保存済みです', 'error'); }
-  finally { isSaving = false; }
+    const res = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
+    const json = await res.json();
+    if (!json.ok) throw new Error('GAS error');
+
+    // GAS保存成功後にローカルを更新
+    if (editId) {
+      const idx = employees.findIndex(e => String(e.id) === String(editId));
+      if (idx >= 0) employees[idx] = { ...employees[idx], ...payload };
+    } else {
+      employees.push(payload);
+    }
+    localStorage.setItem(LS_KEY, JSON.stringify(employees));
+    closeModal();
+    renderTable();
+    renderStats();
+    showToast(editId ? '✅ 更新しました' : '✅ 追加しました', 'success');
+  } catch(e) {
+    showToast('❌ 保存に失敗しました。もう一度お試しください', 'error');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存する'; }
+  } finally {
+    isSaving = false;
+  }
 }
 
 async function toggleRetire(id) {
@@ -575,16 +585,23 @@ async function toggleRetire(id) {
   if (!e) return;
   const newActive = e.active === '退職' ? '在籍' : '退職';
   if (newActive === '退職' && !confirm(`「${e.name}」を退職にしますか？`)) return;
-  e.active = newActive;
-  localStorage.setItem(LS_KEY, JSON.stringify(employees));
-  renderTable();
-  renderStats();
-  showToast(newActive === '退職' ? '退職にしました' : '復職しました');
+
   isSaving = true;
   try {
-    await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({ action:'saveEmployee', ...e }) });
-  } catch(err) {}
-  finally { isSaving = false; }
+    const payload = { action:'saveEmployee', ...e, active: newActive };
+    const res = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    e.active = newActive;
+    localStorage.setItem(LS_KEY, JSON.stringify(employees));
+    renderTable();
+    renderStats();
+    showToast(newActive === '退職' ? '退職にしました' : '復職しました');
+  } catch(err) {
+    showToast('❌ 保存に失敗しました', 'error');
+  } finally {
+    isSaving = false;
+  }
 }
 
 // CSV出力
