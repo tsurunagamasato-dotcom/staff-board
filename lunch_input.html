@@ -201,7 +201,7 @@
       <option value="">-- 氏名を選択 --</option>
     </select>
 
-    <div id="deadlinePassed" class="deadline-passed hidden">⚠ 本日の締切（<span id="deadlineTime"></span>）を過ぎています<br>総務部へ直接ご連絡ください</div>
+    <div id="deadlinePassed" class="deadline-passed hidden">⚠ 本日の締切（<span id="deadlineTime">08:45</span>）を過ぎています<br>総務部へ直接ご連絡ください</div>
 
     <!-- 日付 -->
     <div class="section-label">日付</div>
@@ -439,7 +439,8 @@ async function init() {
           if (k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k];
         });
         document.getElementById('deadlineBadge').textContent = '締切 ' + deadline;
-        document.getElementById('deadlineTime').textContent = deadline;
+        document.getElementById('deadlineTime').textContent = deadline || '08:45';
+        document.getElementById('deadlineTime').textContent = deadline || '08:45';
         document.getElementById('deadlinePassed').classList.toggle('hidden', !isDeadlinePassed());
       }
     }).catch(()=>{}),
@@ -565,7 +566,7 @@ async function submitSingle() {
   // 締切チェック（今日の注文のみ）
   const todayStr = fmtDate(new Date());
   if (selDate === todayStr && isDeadlinePassed()) {
-    showToast(`本日の締切（${deadline}）を過ぎています`);
+    showToast(`本日の締切（${deadline||'08:45'}）を過ぎています`);
     document.getElementById('deadlinePassed').classList.remove('hidden');
     return;
   }
