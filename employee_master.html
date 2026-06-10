@@ -301,6 +301,8 @@ function sortBy(col) {
 }
 
 // データ取得
+let isSaving = false; // 保存中フラグ
+
 async function loadEmployees() {
   try {
     const cached = localStorage.getItem(LS_KEY);
@@ -313,7 +315,8 @@ async function loadEmployees() {
   try {
     const res = await fetch(GAS_URL + '?action=getEmployees&t=' + Date.now());
     const json = await res.json();
-    if (json.ok) {
+    if (json.ok && !isSaving) {
+      // 保存中でない場合のみGASデータで上書き
       employees = json.employees;
       localStorage.setItem(LS_KEY, JSON.stringify(employees));
       renderTable();
@@ -479,9 +482,11 @@ async function saveEmployee() {
   renderStats();
   showToast(editId ? '✅ 更新しました' : '✅ 追加しました', 'success');
 
+  isSaving = true;
   try {
     await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
   } catch(e) { showToast('通信エラー。ローカルに保存済みです', 'error'); }
+  finally { isSaving = false; }
 }
 
 async function toggleRetire(id) {
@@ -494,9 +499,11 @@ async function toggleRetire(id) {
   renderTable();
   renderStats();
   showToast(newActive === '退職' ? '退職にしました' : '復職しました');
+  isSaving = true;
   try {
     await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({ action:'saveEmployee', ...e }) });
   } catch(err) {}
+  finally { isSaving = false; }
 }
 
 // CSV出力
