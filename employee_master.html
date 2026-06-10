@@ -103,6 +103,10 @@ tr.retired td{opacity:.45}
     <div class="header-sub">ナカシマ — 統合管理</div>
   </div>
   <div class="header-links">
+    <button class="app-link" onclick="publishToApps()" id="publishBtn"
+      style="background:var(--green);border-color:var(--green);font-weight:800;cursor:pointer;">
+      📡 各アプリに反映
+    </button>
     <a class="app-link" href="staff_monitor.html">📍 所在地</a>
     <a class="app-link" href="lunch_admin.html">🍱 昼食注文</a>
     <a class="app-link" href="https://tsurunagamasato-dotcom.github.io/nakashima-birthday/birthday-app-gas.html" target="_blank">🎂 誕生日</a>
@@ -264,7 +268,8 @@ tr.retired td{opacity:.45}
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwFE4wAC6cdFT8H2JmwW2XONgJz0j1rCI4xE2C9x1tKdMaib5aRgUKXE2N3hkQ034hu/exec';
-const LS_KEY = 'employee_master_cache';
+const LS_KEY = 'employee_master_data';       // マスタ専用キャッシュ
+const PUBLISH_KEY = 'employee_master_cache'; // 各アプリが参照するキャッシュ（手動反映）
 
 const DEPT_COLORS = {
   '会長':'#7B2D8B','社長':'#1a1a2e','役員':'#534AB7',
@@ -285,6 +290,35 @@ let employees = [];
 let editId = null;
 let sortCol = 'empNo';  // デフォルトは社員番号順
 let sortDir = 1;        // 1=昇順 -1=降順
+
+// 各アプリに反映
+async function publishToApps() {
+  const btn = document.getElementById('publishBtn');
+  btn.textContent = '⏳ 反映中...';
+  btn.disabled = true;
+
+  try {
+    // 最新データをGASから取得
+    const res = await fetch(GAS_URL + '?action=getEmployees&t=' + Date.now());
+    const json = await res.json();
+    if (json.ok) {
+      // 各アプリが参照するキャッシュを更新
+      const active = json.employees.filter(e => e.active !== '退職');
+      localStorage.setItem(PUBLISH_KEY, JSON.stringify(active));
+      btn.textContent = '✅ 反映しました！';
+      btn.style.background = '#1D9E75';
+      setTimeout(() => {
+        btn.textContent = '📡 各アプリに反映';
+        btn.disabled = false;
+      }, 3000);
+      showToast(`✅ ${active.length}名のデータを各アプリに反映しました`, 'success');
+    }
+  } catch(e) {
+    btn.textContent = '❌ 失敗しました';
+    btn.disabled = false;
+    showToast('反映に失敗しました', 'error');
+  }
+}
 
 // ソート
 function sortBy(col) {
@@ -322,7 +356,8 @@ async function loadEmployees() {
     if (json.ok && !isSaving) {
       // 保存中でない場合のみGASデータで上書き
       employees = json.employees;
-      localStorage.setItem(LS_KEY, JSON.stringify(employees));
+      localStorage.setItem(LS_KEY, JSON.stringify(employees)); // マスタ専用キャッシュを更新
+      // ※ PUBLISH_KEY（各アプリ共有）は「各アプリに反映」ボタンで手動更新
       renderTable();
       renderStats();
     }
