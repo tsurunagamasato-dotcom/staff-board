@@ -195,7 +195,6 @@
     <button class="tab-btn" onclick="switchTab('settings')">設定</button>
     <button class="tab-btn" onclick="switchTab('menu')">メニュー管理</button>
     <button class="tab-btn" onclick="switchTab('topics')">お知らせ</button>
-    <button class="tab-btn" onclick="switchTab('staff')">社員マスタ</button>
   </div>
 
   <!-- 注文集計 -->
@@ -281,38 +280,6 @@
     </div>
   </div>
 
-  <!-- 社員マスタ -->
-  <div id="staffTab" class="hidden">
-    <div class="settings-card">
-      <div class="settings-title">➕ 社員を追加</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-        <input type="text" id="newStaffName" class="settings-input" placeholder="氏名（例：山田 太郎）" style="flex:2;min-width:150px;">
-        <select id="newStaffDept" class="settings-input" style="flex:1;min-width:110px;"></select>
-        <select id="newStaffLoc" class="settings-input" style="flex:1;min-width:100px;">
-          <option value="">拠点：自動</option>
-          <option value="本社">本社</option>
-          <option value="根崎">根崎</option>
-        </select>
-        <button class="icon-btn primary" onclick="addStaff()">追加</button>
-      </div>
-      <p style="font-size:12px;color:var(--text-hint);margin-top:8px;">拠点「自動」は部署から判定します（加工課・組付課・購買課＝根崎、それ以外＝本社）。例外の人だけ本社／根崎を指定してください。</p>
-    </div>
-
-    <div class="settings-card">
-      <div class="settings-title">👥 社員一覧</div>
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-        <input type="text" id="staffSearch" class="settings-input" placeholder="氏名・部署で絞り込み" oninput="renderStaffMaster()" style="flex:1;min-width:140px;">
-        <label style="font-size:13px;color:var(--text-sub);display:flex;align-items:center;gap:5px;white-space:nowrap;">
-          <input type="checkbox" id="showRetired" onchange="renderStaffMaster()"> 退職者も表示
-        </label>
-      </div>
-      <div id="staffCount" style="font-size:12px;color:var(--text-hint);margin-bottom:8px;"></div>
-      <table class="ng-table">
-        <thead><tr><th>氏名</th><th>部署</th><th>拠点</th><th>状況</th><th style="text-align:right;">操作</th></tr></thead>
-        <tbody id="staffTableBody"></tbody>
-      </table>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -776,14 +743,29 @@ function populateStaffDeptSelect(sel, selected) {
   sel.innerHTML = DEPT_ORDER.map(d => `<option value="${d}" ${d===selected?'selected':''}>${d}</option>`).join('');
 }
 
+const EMP_GAS_URL = 'https://script.google.com/macros/s/AKfycbwFE4wAC6cdFT8H2JmwW2XONgJz0j1rCI4xE2C9x1tKdMaib5aRgUKXE2N3hkQ034hu/exec';
+const EMP_LS_KEY = 'employee_master_cache';
+
 async function loadStaffAdmin() {
   populateStaffDeptSelect(document.getElementById('newStaffDept'), '');
   if (!ALL_STAFF.length) {
     try {
-      const res = await fetch(GAS_URL+'?action=getStaff&t='+Date.now());
+      // キャッシュ確認
+      const cached = localStorage.getItem(EMP_LS_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.length > 0) {
+          ALL_STAFF = parsed.map(e => ({ id:e.id, empNo:e.empNo||'', name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍' }));
+          refreshActiveStaff();
+          renderStaffMaster();
+        }
+      }
+      // 統合マスタから最新取得
+      const res = await fetch(EMP_GAS_URL+'?action=getEmployees&t='+Date.now());
       const json = await res.json();
-      if (json.ok && Array.isArray(json.staff)) {
-        ALL_STAFF = json.staff.map(s => ({ id:Number(s.id), name:s.name, dept:s.dept, location:s.location||'', active:s.active||'在籍' }));
+      if (json.ok && Array.isArray(json.employees)) {
+        ALL_STAFF = json.employees.map(e => ({ id:e.id, empNo:e.empNo||'', name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍' }));
+        localStorage.setItem(EMP_LS_KEY, JSON.stringify(json.employees));
         refreshActiveStaff();
       }
     } catch(e) { showToast('社員データの読み込みに失敗しました'); }
@@ -948,10 +930,9 @@ async function loadMenuAdmin() {
 }
 
 function switchTab(tab) {
-  ['orders','settings','menu','topics','staff'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu','topics','staff'][i]===tab));
+  ['orders','settings','menu','topics'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu','topics'][i]===tab));
   if (tab==='topics') loadTopicAdmin();
-  if (tab==='staff') loadStaffAdmin();
 }
 
 async function loadTopicAdmin() {
