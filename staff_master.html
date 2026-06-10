@@ -131,15 +131,17 @@ tr:hover td{background:#f9f9f9}
     <table>
       <thead>
         <tr>
+          <th>社員番号</th>
           <th>氏名</th>
           <th>部署</th>
+          <th>区分</th>
           <th>デフォルト居場所</th>
           <th>スライド</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody id="tableBody">
-        <tr><td colspan="5"><div class="loading">読み込み中...</div></td></tr>
+        <tr><td colspan="7"><div class="loading">読み込み中...</div></td></tr>
       </tbody>
     </table>
   </div>
@@ -150,8 +152,20 @@ tr:hover td{background:#f9f9f9}
   <div class="modal-box">
     <div class="modal-title" id="modalTitle">社員を追加</div>
     <div class="field">
+      <label>社員番号</label>
+      <input type="text" id="fEmpNo" placeholder="例：178">
+    </div>
+    <div class="field">
       <label>氏名</label>
       <input type="text" id="fName" placeholder="例：鶴永 将人">
+    </div>
+    <div class="field">
+      <label>区分</label>
+      <select id="fCategory">
+        <option value="社員">社員</option>
+        <option value="役員">役員</option>
+        <option value="パート">パート</option>
+      </select>
     </div>
     <div class="field">
       <label>部署</label>
@@ -272,7 +286,7 @@ function renderTable() {
   document.getElementById('countBadge').textContent = `${filtered.length}名 / 全${staff.length}名`;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">👤</div><p>社員が登録されていません</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon">👤</div><p>社員が登録されていません</p></div></td></tr>`;
     return;
   }
 
@@ -282,8 +296,10 @@ function renderTable() {
     const slideLabel = SLIDE_LABELS[s.slide] || s.slide || '-';
     return `
       <tr>
+        <td style="color:var(--text-sub);font-size:13px;">${s.empNo||'-'}</td>
         <td><strong>${s.name}</strong></td>
         <td><span class="dept-badge" style="background:${color}20;color:${color}">${s.dept||'-'}</span></td>
+        <td><span class="slide-badge">${s.category||'社員'}</span></td>
         <td><span class="place-badge">${placeLabel}</span></td>
         <td><span class="slide-badge">${slideLabel}</span></td>
         <td>
@@ -303,13 +319,17 @@ function openModal(id) {
   if (id) {
     const s = staff.find(x => String(x.id) === String(id));
     if (s) {
+      document.getElementById('fEmpNo').value = s.empNo || '';
       document.getElementById('fName').value = s.name || '';
+      document.getElementById('fCategory').value = s.category || '社員';
       document.getElementById('fDept').value = s.dept || '';
       document.getElementById('fPlace').value = s.defaultPlace || 'honsha_office';
       document.getElementById('fSlide').value = s.slide || 'honsha1';
     }
   } else {
+    document.getElementById('fEmpNo').value = '';
     document.getElementById('fName').value = '';
+    document.getElementById('fCategory').value = '社員';
     document.getElementById('fDept').value = '';
     document.getElementById('fPlace').value = 'honsha_office';
     document.getElementById('fSlide').value = 'honsha1';
@@ -324,7 +344,9 @@ function closeModal() {
 }
 
 async function saveStaff() {
+  const empNo = document.getElementById('fEmpNo').value.trim();
   const name = document.getElementById('fName').value.trim();
+  const category = document.getElementById('fCategory').value;
   const dept = document.getElementById('fDept').value;
   const defaultPlace = document.getElementById('fPlace').value;
   const slide = document.getElementById('fSlide').value;
@@ -332,14 +354,14 @@ async function saveStaff() {
   if (!name || !dept) { showToast('氏名と部署を入力してください', 'error'); return; }
 
   const id = editId || Date.now();
-  const payload = { action: 'saveStaff', id, name, dept, defaultPlace, slide };
+  const payload = { action: 'saveStaff', id, empNo, name, category, dept, defaultPlace, slide };
 
   // 先に画面を更新（オプティミスティック更新）
   if (editId) {
     const idx = staff.findIndex(s => String(s.id) === String(editId));
-    if (idx >= 0) staff[idx] = { id, name, dept, defaultPlace, slide };
+    if (idx >= 0) staff[idx] = { id, empNo, name, category, dept, defaultPlace, slide };
   } else {
-    staff.push({ id, name, dept, defaultPlace, slide });
+    staff.push({ id, empNo, name, category, dept, defaultPlace, slide });
   }
   localStorage.setItem(STAFF_LSKEY, JSON.stringify(staff));
   closeModal();
@@ -381,8 +403,8 @@ async function deleteStaff(id, name) {
 
 function exportCSV() {
   const BOM = '\uFEFF';
-  const rows = [['id','name','dept','defaultPlace','slide']];
-  staff.forEach(s => rows.push([s.id, s.name, s.dept, s.defaultPlace, s.slide]));
+  const rows = [['id','empNo','name','category','dept','defaultPlace','slide']];
+  staff.forEach(s => rows.push([s.id, s.empNo||'', s.name, s.category||'社員', s.dept, s.defaultPlace, s.slide]));
   const csv = BOM + rows.map(r => r.map(c => `"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const a = document.createElement('a');
