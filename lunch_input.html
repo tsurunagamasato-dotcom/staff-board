@@ -270,6 +270,8 @@
   <!-- 来訪者タブ -->
   <div id="visitorTab" class="hidden">
     <div class="section-label" style="margin-bottom:10px;">来訪者の注文を入力してください</div>
+    <div class="section-label">日付</div>
+    <div id="visitorDateGrid" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;"></div>
     <div id="visitorList"></div>
     <button class="add-visitor-btn" onclick="addVisitor()">＋ 来訪者を追加</button>
     <div style="height:12px;"></div>
@@ -391,6 +393,7 @@ let isProxy = false;
 let bulkStaff = null, bulkOrders = {};
 let visitorList = [];
 let visitorPlace = 'honsha';
+let visitorDate = fmtDate(new Date()); // 来訪者の日付（デフォルト今日）
 let monthOrders = {}; // date -> {id -> order}
 let toastTimer;
 
@@ -412,8 +415,14 @@ function isDeadlinePassed() {
 
 // ===== INIT =====
 async function init() {
-  // 統合マスタから社員データを取得（先に実行）
-  await loadStaffMaster();
+  // キャッシュで即座に表示
+  try {
+    const cached = localStorage.getItem(EMP_LS_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.length > 0) { _applyEmployees(parsed); }
+    }
+  } catch(e) {}
 
   // 画面を即座に表示してからGASデータを非同期取得
   renderDeptSelects();
@@ -421,6 +430,9 @@ async function init() {
   document.getElementById('deadlineBadge').textContent = '締切 ' + deadline;
 
   // バックグラウンドでデータ取得（画面表示をブロックしない）
+  // バックグラウンドで統合マスタ更新
+  loadStaffMaster().then(() => renderDeptSelects());
+
   Promise.all([
     fetch(GAS_URL+'?action=getSettings&t='+Date.now()).then(r=>r.json()).then(json => {
       if (json.ok) {
@@ -749,9 +761,8 @@ function removeVisitor(id) {
 
 async function submitVisitor() {
   if (visitorList.length===0) { showToast('来訪者を追加してください'); return; }
-  const today = fmtDate(new Date());
   const orders = visitorList.map(v=>({
-    action:'saveOrder', date:today, id:'visitor_'+v.id,
+    action:'saveOrder', date:visitorDate, id:'visitor_'+v.id,
     name: v.name||'来訪者', dept:'来訪者', order:v.order,
     place:visitorPlace, count:v.count, proxy:false
   }));
@@ -759,7 +770,7 @@ async function submitVisitor() {
     const res = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveOrders',orders})});
     const json = await res.json();
     if (json.ok) {
-      showToast(`来訪者${visitorList.length}件を登録しました`);
+      showToast(`来訪者${visitorList.length}件を登録しました（${visitorDate}）`);
       visitorList=[]; renderVisitorList();
     }
   } catch(e) { showToast('登録に失敗しました'); }
@@ -841,6 +852,33 @@ function switchTab(tab) {
     b.classList.toggle('active',['order','bulk','visitor','history','today','menu'][i]===tab);
   });
   if (tab === 'today') loadToday();
+  if (tab === 'visitor') renderVisitorDateGrid();
+}
+
+function renderVisitorDateGrid() {
+  const grid = document.getElementById('visitorDateGrid');
+  if (!grid) return;
+  const dates = getWorkDates(10);
+  const days = ['日','月','火','水','木','金','土'];
+  grid.innerHTML = dates.map(d => {
+    const dt = new Date(d.ds);
+    const dow = days[dt.getDay()];
+    const isActive = d.ds === visitorDate;
+    return `<button onclick="selectVisitorDate('${d.ds}')"
+      style="flex-shrink:0;min-width:48px;padding:6px 4px;border-radius:10px;
+      border:1.5px solid ${isActive?'var(--navy)':'var(--border)'};
+      background:${isActive?'var(--navy)':'var(--surface)'};
+      color:${isActive?'#fff':'var(--text)'};
+      font-family:inherit;cursor:pointer;text-align:center;">
+      <div style="font-size:10px;opacity:.7;">${dow}</div>
+      <div style="font-size:16px;font-weight:800;">${dt.getDate()}</div>
+    </button>`;
+  }).join('');
+}
+
+function selectVisitorDate(ds) {
+  visitorDate = ds;
+  renderVisitorDateGrid();
 }
 
 async function loadToday() {
