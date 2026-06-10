@@ -129,6 +129,7 @@ tr.retired td{opacity:.45}
       <option>総務部</option><option>営業部</option><option>設計課</option>
       <option>電気課</option><option>購買課</option><option>加工課</option>
       <option>組付課</option><option>第一製造部</option>
+      <option>NIM</option><option>NVM</option>
     </select>
     <select class="filter-select" id="filterCategory" onchange="renderTable()">
       <option value="">全区分</option>
@@ -195,12 +196,13 @@ tr.retired td{opacity:.45}
       </div>
       <div class="field full">
         <label>部署</label>
-        <select id="fDept">
+        <select id="fDept" onchange="onDeptChange()">
           <option value="">選択してください</option>
           <option>会長</option><option>社長</option><option>役員</option>
           <option>総務部</option><option>営業部</option><option>設計課</option>
           <option>電気課</option><option>購買課</option><option>加工課</option>
           <option>組付課</option><option>第一製造部</option>
+          <option>NIM</option><option>NVM</option>
         </select>
       </div>
       <div class="field">
@@ -358,7 +360,7 @@ function renderTable() {
       bv = parseInt(b.empNo) || 9999;
       return (av - bv) * sortDir;
     } else if (sortCol === 'dept') {
-      const DEPT_ORDER = ['会長','社長','役員','総務部','営業部','設計課','電気課','購買課','加工課','組付課','第一製造部'];
+      const DEPT_ORDER = ['会長','社長','役員','総務部','営業部','設計課','電気課','購買課','加工課','組付課','第一製造部','NIM','NVM'];
       av = DEPT_ORDER.indexOf(a.dept); if(av<0) av=99;
       bv = DEPT_ORDER.indexOf(b.dept); if(bv<0) bv=99;
       return (av - bv) * sortDir;
@@ -408,6 +410,19 @@ function renderTable() {
       </td>
     </tr>`;
   }).join('');
+}
+
+// 部署変更時の処理
+function onDeptChange() {
+  const dept = document.getElementById('fDept').value;
+  if (dept === 'NIM' || dept === 'NVM') {
+    document.getElementById('fPlace').value = 'honsha_office';
+    document.getElementById('fSlide').value = 'honsha1';
+    document.getElementById('fPlaceLunch').value = '';
+    // NIM/NVMは所在地・昼食非表示にする
+    document.getElementById('fShowLocation').checked = false;
+    document.getElementById('fShowLunch').checked = false;
+  }
 }
 
 // モーダル
