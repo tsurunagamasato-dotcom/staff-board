@@ -255,7 +255,7 @@ const STATUSES = [
 ];
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.key, s]));
 
-const DEPT_ORDER = ['会長','社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
+const DEPT_ORDER = ['会長/社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
 
 let STAFF_MASTER = [];
 
@@ -298,12 +298,27 @@ function _applyEmployees(emps) {
 
 
 async function init() {
-  await loadStaffMaster();
-  renderDepts();
+  // まずキャッシュで即座に表示
+  try {
+    const cached = localStorage.getItem(EMP_LS_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.length > 0) {
+        _applyEmployees(parsed);
+        renderDepts();
+      }
+    }
+  } catch(e) {}
+
+  // バックグラウンドで最新データを取得
+  loadStaffMaster().then(() => renderDepts());
 }
 
 function renderDepts() {
-  const depts = DEPT_ORDER.filter(d => STAFF_MASTER.some(s => s.dept === d));
+  // 会長・社長が両方いる場合は「会長/社長」としてまとめる
+  const hasChaiman = STAFF_MASTER.some(s => s.dept === '会長' || s.dept === '社長');
+  const otherDepts = DEPT_ORDER.filter(d => d !== '会長/社長' && STAFF_MASTER.some(s => s.dept === d));
+  const depts = [...(hasChaiman ? ['会長/社長'] : []), ...otherDepts];
   document.getElementById('deptGrid').innerHTML = depts.map(d =>
     `<button class="sel-btn ${selDept===d?'selected':''}" onclick="selectDept('${d}')">${d}</button>`
   ).join('');
@@ -312,7 +327,10 @@ function renderDepts() {
 function selectDept(dept) { selDept = dept; selStaff = null; selStatus = null; goStep(2); }
 
 function renderNames() {
-  const members = STAFF_MASTER.filter(s => s.dept === selDept);
+  // 「会長/社長」の場合は会長・社長両方の社員を表示
+  const members = selDept === '会長/社長'
+    ? STAFF_MASTER.filter(s => s.dept === '会長' || s.dept === '社長')
+    : STAFF_MASTER.filter(s => s.dept === selDept);
   document.getElementById('step2Label').textContent = `${selDept}の方を選んでください`;
   document.getElementById('nameList').innerHTML = members.map(s =>
     `<button class="name-btn ${selStaff&&selStaff.id===s.id?'selected':''}" onclick="selectName(${s.id})">
