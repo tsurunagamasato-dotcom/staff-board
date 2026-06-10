@@ -371,6 +371,7 @@ function sortBy(col) {
 let isSaving = false; // 保存中フラグ
 
 async function loadEmployees() {
+  // まずlocalStorageで即表示
   try {
     const cached = localStorage.getItem(LS_KEY);
     if (cached) {
@@ -379,18 +380,21 @@ async function loadEmployees() {
       renderStats();
     }
   } catch(e) {}
-  try {
-    const res = await fetch(GAS_URL + '?action=getEmployees&t=' + Date.now());
-    const json = await res.json();
-    if (json.ok && !isSaving) {
-      // 保存中でない場合のみGASデータで上書き
-      employees = json.employees;
-      localStorage.setItem(LS_KEY, JSON.stringify(employees)); // マスタ専用キャッシュを更新
-      // ※ PUBLISH_KEY（各アプリ共有）は「各アプリに反映」ボタンで手動更新
-      renderTable();
-      renderStats();
-    }
-  } catch(e) { showToast('通信エラーが発生しました', 'error'); }
+
+  // localStorageが空の場合のみGASから初期取得
+  if (employees.length === 0) {
+    try {
+      const res = await fetch(GAS_URL + '?action=getEmployees&t=' + Date.now());
+      const json = await res.json();
+      if (json.ok && json.employees.length > 0) {
+        employees = json.employees;
+        localStorage.setItem(LS_KEY, JSON.stringify(employees));
+        renderTable();
+        renderStats();
+        showToast('✅ ' + employees.length + '名のデータを取得しました', 'success');
+      }
+    } catch(e) { showToast('通信エラーが発生しました', 'error'); }
+  }
 }
 
 // 統計
