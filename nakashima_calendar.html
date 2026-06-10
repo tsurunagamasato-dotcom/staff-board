@@ -77,18 +77,40 @@
   /* カレンダー */
   .month-block{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:visible;}
   .dow-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:2px solid var(--border);background:var(--surface2);}
-  .dow-cell{text-align:left;padding:6px 8px;font-size:11px;font-weight:700;color:var(--text-dim);letter-spacing:.05em;}
+  .dow-cell{text-align:left;padding:10px 12px;font-size:18px;font-weight:700;color:var(--text-dim);letter-spacing:.05em;}
   .dow-cell:first-child{color:#ff6b6b;}
   .dow-cell:last-child{color:var(--accent);}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
   .cal-cell{
     border-right:1px solid var(--border);border-bottom:1px solid var(--border);
-    padding:4px 4px 6px;position:relative;min-height:130px;
+    padding:6px 6px 8px;position:relative;min-height:160px;
     overflow-y:auto;cursor:pointer;transition:background .1s;
   }
   /* 2週間ビュー：14セルしかないのでセルを2倍の高さにする */
   .cal-cell-2week{
-    min-height:260px;
+    min-height:300px;
+  }
+  /* 2週間ビュー：イベントピルの文字をさらに大きく */
+  .cal-cell-2week .event-proj{ font-size:20px; }
+  .cal-cell-2week .event-type-label{ font-size:15px; }
+  .cal-cell-2week .event-pill{ padding:7px 10px; margin-bottom:4px; border-left-width:5px; }
+  /* 時期指定バー：1本の横長バー */
+  .period-band-wrap{
+    grid-column: 1 / -1;
+    display:block;
+    width:100%;
+  }
+  .period-band{
+    display:flex;align-items:center;gap:6px;
+    border-radius:4px;border-left:4px solid;
+    padding:5px 10px;margin-bottom:4px;
+    font-size:15px;font-weight:600;line-height:1.4;cursor:pointer;
+    background:var(--surface2);transition:filter .1s;
+    width:100%;box-sizing:border-box;
+  }
+  .period-band:hover{filter:brightness(1.15);}
+  .period-band-2week{
+    font-size:20px;padding:8px 14px;
   }
   .cal-cell:hover{background:rgba(79,127,255,.04);}
   .cal-cell:nth-child(7n){border-right:none;}
@@ -96,22 +118,22 @@
   .cal-cell.empty:hover{background:rgba(0,0,0,.08);}
   .cal-cell.today{background:rgba(79,127,255,.05);}
   .cal-cell.weekend{background:rgba(0,0,0,.04);}
-  .date-num{font-size:14px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--text-dim);display:block;margin-bottom:3px;line-height:1;}
-  .cal-cell.today .date-num{color:#fff;background:var(--accent);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;}
+  .date-num{font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--text-dim);display:block;margin-bottom:4px;line-height:1;}
+  .cal-cell.today .date-num{color:#fff;background:var(--accent);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;}
   .cal-cell:nth-child(7n+1) .date-num{color:#ff6b6b;}
   .cal-cell:nth-child(7n) .date-num{color:var(--accent);}
   .cal-cell.today:nth-child(7n+1) .date-num,.cal-cell.today:nth-child(7n) .date-num{color:#fff;}
 
   .event-pill{
-    display:flex;align-items:center;gap:4px;border-radius:3px;border-left:3px solid;
-    padding:2px 5px;margin-bottom:2px;font-size:12px;line-height:1.3;cursor:pointer;
+    display:flex;align-items:center;gap:6px;border-radius:4px;border-left:4px solid;
+    padding:5px 8px;margin-bottom:3px;font-size:16px;line-height:1.4;cursor:pointer;
     background:var(--surface2);transition:filter .1s;
   }
   .event-pill:hover{filter:brightness(1.15);}
-  .event-type-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .event-type-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
   .event-text{display:flex;flex-direction:column;flex:1;overflow:hidden;}
-  .event-proj{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;}
-  .event-type-label{font-size:10px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .event-proj{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px;}
+  .event-type-label{font-size:13px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
   /* フィルター */
   .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
@@ -492,7 +514,7 @@ function renderCalendar(){
       && isPeriodMatch(ev, y, m, d)
       && (sel.length===0 || sel.includes(ev.typeId))
       && (selP.length===0 || selP.includes(ev.projId)));
-    periodEvents.forEach(ev=>cell.appendChild(buildPeriodBand(ev)));
+    periodEvents.forEach(ev=>{ const b=buildPeriodBand(ev,false,true); if(b) cell.appendChild(b); });
     grid.appendChild(cell);
   }
   saveState();
@@ -690,12 +712,18 @@ function renderCalendar2Week(){
       (selP.length === 0 || selP.includes(ev.projId)));
     dayEvents.forEach(ev => cell.appendChild(buildEventPill(ev)));
 
-    // 時期指定イベント
+    // 時期指定イベント（2週間ビュー：各旬の最初の日にだけ横長バーを描く）
     const periodEvents = state.events.filter(ev =>
       ev.dateType === 'period' && isPeriodMatch(ev, y, m, d) &&
       (sel.length === 0 || sel.includes(ev.typeId)) &&
       (selP.length === 0 || selP.includes(ev.projId)));
-    periodEvents.forEach(ev => cell.appendChild(buildPeriodBand(ev)));
+    periodEvents.forEach(ev => {
+      // 上旬=1日、中旬=11日、下旬=21日 がこのセルかどうか
+      const firstDayMap = {joujun:1, chuujun:11, gejun:21};
+      const isFirstDay = d === firstDayMap[ev.periodType||'joujun'];
+      const band = buildPeriodBand(ev, true, isFirstDay);
+      if(band) cell.appendChild(band);
+    });
 
     grid.appendChild(cell);
   }
@@ -720,30 +748,51 @@ function isPeriodMatch(ev, y, m, d){
 }
 
 // =====================================================
-//  期間バンド表示（時期指定イベント用ピル）
+//  期間バンド表示（時期指定イベント用・横長バー）
+//  月ビュー：各日のセルに通常ピルとして表示
+//  2週間ビュー：最初の日（上旬=1日、中旬=11日、下旬=21日）のセルだけに
+//              セル幅いっぱいの横長バーを1本描く
 // =====================================================
-function buildPeriodBand(ev){
+function buildPeriodBand(ev, is2week, isFirstDay){
   const proj = getProject(ev.projId);
   const type = getType(ev.typeId);
   const color = type ? type.color : '#a0a0a0';
+  const [py, pm] = (ev.period||'').split('-');
+  const periodLabel = {'joujun':'上旬','chuujun':'中旬','gejun':'下旬'}[ev.periodType] || '';
+
+  // 2週間ビューは最初の日だけバーを描く（他の日はスキップ→nullを返す）
+  if(is2week && !isFirstDay) return null;
+
   const wrap = document.createElement('div');
-  wrap.className = 'tooltip-wrap';
+  wrap.className = 'tooltip-wrap' + (is2week ? ' period-band-wrap' : '');
+
   const el = document.createElement('div');
-  el.className = 'event-pill';
-  el.style.borderLeftColor = color;
-  el.innerHTML = `
-    <span class="event-type-dot" style="background:${color}"></span>
-    <span class="event-text">
-      <span class="event-proj">${proj ? proj.name : '(案件なし)'}</span>
-      <span class="event-type-label">${type ? type.name : ''}</span>
-    </span>`;
+  if(is2week){
+    el.className = 'period-band period-band-2week';
+    el.style.borderLeftColor = color;
+    el.style.background = color + '22';
+    el.style.color = color;
+    el.innerHTML = `
+      <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
+      <span style="font-weight:700;">${proj ? proj.name : '(案件なし)'}</span>
+      <span style="font-size:17px;opacity:.8;">${type ? type.name : ''}</span>
+      <span style="font-size:14px;opacity:.6;margin-left:auto;">${py}年${pm}月 ${periodLabel}</span>`;
+  } else {
+    el.className = 'event-pill';
+    el.style.borderLeftColor = color;
+    el.innerHTML = `
+      <span class="event-type-dot" style="background:${color}"></span>
+      <span class="event-text">
+        <span class="event-proj">${proj ? proj.name : '(案件なし)'}</span>
+        <span class="event-type-label">${type ? type.name : ''}</span>
+      </span>`;
+  }
   el.addEventListener('click', e => { e.stopPropagation(); openEventModal('', ev.id); });
+
   // ツールチップ
   let timer;
   el.addEventListener('mouseenter', e => {
     const tipEl = document.getElementById('cal-tooltip');
-    const [py, pm] = (ev.period||'').split('-');
-    const periodLabel = {'joujun':'上旬','chuujun':'中旬','gejun':'下旬'}[ev.periodType] || '';
     tipEl.innerHTML = `
       <div class="tooltip-proj">${proj ? proj.name : '(案件なし)'}</div>
       <div class="tooltip-type">${type ? '🏷 '+type.name : ''}</div>
@@ -762,8 +811,7 @@ function buildPeriodBand(ev){
   });
   el.addEventListener('mouseleave', () => {
     clearTimeout(timer);
-    const tipEl = document.getElementById('cal-tooltip');
-    tipEl.classList.remove('show');
+    document.getElementById('cal-tooltip').classList.remove('show');
   });
   wrap.appendChild(el);
   return wrap;
@@ -1056,8 +1104,14 @@ async function autoLoadFromGAS(){
         for(const t of state.types){ await sendAction('addType', t); }
       }
       if(Array.isArray(d.events)) state.events=d.events.map(e=>({
-        id:String(e.id), date:normalizeDate(e.date), projId:String(e.projId),
-        typeId:String(e.typeId), note:e.note==null?'':String(e.note)
+        id:       String(e.id),
+        dateType: e.dateType ? String(e.dateType) : 'date',
+        date:     normalizeDate(e.date),
+        period:   e.period   ? String(e.period)   : '',
+        periodType: e.periodType ? String(e.periodType) : '',
+        projId:   String(e.projId),
+        typeId:   String(e.typeId),
+        note:     e.note==null?'':String(e.note)
       }));
       saveState();
       renderCalendar();renderMaster();
