@@ -157,11 +157,37 @@
   .dd-clear{width:100%;margin-top:4px;padding:4px;border-radius:5px;border:1px dashed var(--border);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer;text-align:center;}
   .dd-clear:hover{border-color:var(--accent);color:var(--accent);}
 
+  /* ツールチップ（fixed表示・セルのoverflow外に出る） */
+  .tooltip-wrap{position:relative;}
+  #cal-tooltip{
+    display:none;position:fixed;z-index:9999;
+    background:var(--surface);border:1px solid var(--accent);
+    border-radius:8px;padding:10px 14px;
+    font-size:12px;line-height:1.7;color:var(--text);
+    min-width:200px;max-width:300px;white-space:normal;
+    box-shadow:0 6px 24px rgba(0,0,0,.5);
+    pointer-events:none;
+    opacity:0;transform:translateY(4px);
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  #cal-tooltip.show{display:block;opacity:1;transform:translateY(0);}
+  .tooltip-proj{font-weight:700;margin-bottom:3px;font-size:13px;}
+  .tooltip-type{font-size:11px;opacity:.8;margin-bottom:5px;}
+  .tooltip-note{font-size:12px;color:var(--text);}
+
+  /* 時期指定モーダルタブ */
+  .modal-tabs{display:flex;gap:4px;margin-bottom:14px;}
+  .modal-tab{flex:1;padding:7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:13px;cursor:pointer;transition:all .15s;text-align:center;}
+  .modal-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500;}
+  /* 時期色帯 */
+  .period-band{border-radius:3px;padding:3px 6px;margin-bottom:2px;font-size:11px;font-weight:600;opacity:.9;}
+
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 </style>
 </head>
 <body>
+<div id="cal-tooltip"></div>
 <header>
   <div class="logo">◈ 全社予定カレンダー</div>
   <div class="theme-radio-wrap" id="theme-radios"></div>
@@ -177,10 +203,14 @@
     <span class="gas-status" id="gas-status"></span>
   </div>
   <div class="cal-toolbar">
-    <button class="btn" onclick="prevMonth()">◀ 前へ</button>
+    <button class="btn" id="btn-prev" onclick="prevPeriod()">◀ 前へ</button>
     <h2 id="cal-label"></h2>
-    <button class="btn" onclick="nextMonth()">次へ ▶</button>
+    <button class="btn" id="btn-next" onclick="nextPeriod()">次へ ▶</button>
     <button class="btn" onclick="goToday()">今日</button>
+    <div style="display:flex;gap:4px;margin-left:4px;">
+      <button class="btn" id="btn-view-month" onclick="setCalView('month')" style="font-size:12px;padding:5px 12px;">1ヶ月</button>
+      <button class="btn" id="btn-view-2week" onclick="setCalView('2week')" style="font-size:12px;padding:5px 12px;">2週間</button>
+    </div>
     <button class="btn btn-primary" onclick="openEventModal()">＋ 予定を追加</button>
   </div>
   <div class="filter-row" id="filter-row" style="display:none;"></div>
@@ -250,9 +280,35 @@
 <div class="modal-overlay" id="event-modal">
   <div class="modal">
     <div class="modal-title" id="event-modal-title">予定を追加</div>
-    <div class="modal-field">
-      <label>日付</label>
-      <input class="modal-input" id="ev-date" type="date">
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-date" onclick="switchModalTab('date')">📅 日付指定</button>
+      <button class="modal-tab" id="tab-period" onclick="switchModalTab('period')">📆 時期指定</button>
+    </div>
+    <!-- 日付指定 -->
+    <div id="modal-date-fields">
+      <div class="modal-field">
+        <label>日付</label>
+        <input class="modal-input" id="ev-date" type="date">
+      </div>
+    </div>
+    <!-- 時期指定 -->
+    <div id="modal-period-fields" style="display:none;">
+      <div class="modal-field">
+        <label>年・月</label>
+        <div style="display:flex;gap:8px;">
+          <select class="modal-select" id="ev-period-year" style="flex:1;"></select>
+          <select class="modal-select" id="ev-period-month" style="flex:1;"></select>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>時期</label>
+        <select class="modal-select" id="ev-period">
+          <option value="joujun">上旬（1〜10日）</option>
+          <option value="chuujun">中旬（11〜20日）</option>
+          <option value="gejun">下旬（21日〜月末）</option>
+          <option value="matsubi">月末（最終週）</option>
+        </select>
+      </div>
     </div>
     <div class="modal-field">
       <label>案件</label>
@@ -264,7 +320,7 @@
     </div>
     <div class="modal-field">
       <label>メモ（任意）</label>
-      <input class="modal-input" id="ev-note" placeholder="例：10:00〜 客先立会い" maxlength="60">
+      <input class="modal-input" id="ev-note" placeholder="例：月末予定・要確認" maxlength="60">
     </div>
     <div class="modal-actions">
       <button class="del-btn" id="ev-delete" style="display:none;padding:8px 14px;" onclick="deleteEvent()">削除</button>
@@ -282,6 +338,14 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbz3ilXJ2O1JHv5IbrRPBsZIGrlBk2J_JcdrOXDFAR-T0zepXh46ZdnD9RI7adJGYwI6oA/exec';
 
 const COLORS = ['#4f7fff','#ff6b6b','#3ecf8e','#f7b731','#c678dd','#41c9e2','#fd79a8','#a0a0a0'];
+
+// 時期定義
+const PERIODS = {
+  joujun:  {label:'上旬',  days:[1,10],  bg:'rgba(62,207,142,.2)',  border:'#3ecf8e'},
+  chuujun: {label:'中旬',  days:[11,20], bg:'rgba(247,183,49,.2)',  border:'#f7b731'},
+  gejun:   {label:'下旬',  days:[21,31], bg:'rgba(198,120,221,.2)', border:'#c678dd'},
+  matsubi: {label:'月末',  days:[25,31], bg:'rgba(255,107,107,.2)', border:'#ff6b6b'},
+};
 
 // 初期イベント種類
 const DEFAULT_TYPES = [
@@ -303,6 +367,8 @@ let state = {
   selectedProjs:  [], // 表示する案件ID（空なら全表示）
 };
 let baseMonth = null;  // {y, m}
+let calView = 'month';  // 'month' or '2week'
+let weekOffset = 0;     // 2週間表示時のオフセット（週単位）
 let editingEventId = null;
 let selectedTypeColor = COLORS[0];
 
@@ -345,10 +411,45 @@ function switchView(i){
 // =====================================================
 function prevMonth(){baseMonth.m--;if(baseMonth.m<1){baseMonth.m=12;baseMonth.y--;}saveState();renderCalendar();}
 function nextMonth(){baseMonth.m++;if(baseMonth.m>12){baseMonth.m=1;baseMonth.y++;}saveState();renderCalendar();}
-function goToday(){const n=new Date();baseMonth={y:n.getFullYear(),m:n.getMonth()+1};saveState();renderCalendar();}
+function goToday(){
+  const n=new Date();
+  baseMonth={y:n.getFullYear(),m:n.getMonth()+1};
+  weekOffset=0;
+  saveState();renderCalendar();
+}
+
+function setCalView(v){
+  calView=v;
+  weekOffset=0;
+  localStorage.setItem('nakashima_calview', v);
+  renderCalendar();
+}
+
+function prevPeriod(){
+  if(calView==='month') prevMonth();
+  else { weekOffset-=2; renderCalendar(); }
+}
+function nextPeriod(){
+  if(calView==='month') nextMonth();
+  else { weekOffset+=2; renderCalendar(); }
+}
 
 function renderCalendar(){
   if(!baseMonth){const n=new Date();baseMonth={y:n.getFullYear(),m:n.getMonth()+1};}
+
+  // ビュー切替ボタンの状態更新
+  const btnM=document.getElementById('btn-view-month');
+  const btnW=document.getElementById('btn-view-2week');
+  if(btnM) btnM.style.background = calView==='month' ? 'var(--accent)' : '';
+  if(btnM) btnM.style.color = calView==='month' ? '#fff' : '';
+  if(btnW) btnW.style.background = calView==='2week' ? 'var(--accent)' : '';
+  if(btnW) btnW.style.color = calView==='2week' ? '#fff' : '';
+
+  if(calView==='2week'){
+    renderCalendar2Week();
+    return;
+  }
+
   const {y,m}=baseMonth;
   document.getElementById('cal-label').textContent=`${y}年 ${m}月`;
   renderFilter();
@@ -377,10 +478,17 @@ function renderCalendar(){
     // その日のイベント（選択ゼロなら全表示、選択ありなら選んだ種類だけ）
     const sel=state.selectedTypes||[];
     const selP=state.selectedProjs||[];
-    const dayEvents=state.events.filter(ev=>ev.date===key
+    // 日付指定イベント
+    const dayEvents=state.events.filter(ev=>ev.date===key && (!ev.dateType||ev.dateType==='date')
       && (sel.length===0 || sel.includes(ev.typeId))
       && (selP.length===0 || selP.includes(ev.projId)));
     dayEvents.forEach(ev=>cell.appendChild(buildEventPill(ev)));
+    // 時期指定イベント（その日が対象期間に含まれる場合）
+    const periodEvents=state.events.filter(ev=>ev.dateType==='period'
+      && isPeriodMatch(ev, y, m, d)
+      && (sel.length===0 || sel.includes(ev.typeId))
+      && (selP.length===0 || selP.includes(ev.projId)));
+    periodEvents.forEach(ev=>cell.appendChild(buildPeriodBand(ev)));
     grid.appendChild(cell);
   }
   saveState();
@@ -390,10 +498,13 @@ function buildEventPill(ev){
   const proj=getProject(ev.projId);
   const type=getType(ev.typeId);
   const color=type?type.color:'#a0a0a0';
+
+  const wrap=document.createElement('div');
+  wrap.className='tooltip-wrap';
+
   const el=document.createElement('div');
   el.className='event-pill';
   el.style.borderLeftColor=color;
-  el.title=`${proj?proj.name:''}／${type?type.name:''}${ev.note?'／'+ev.note:''}`;
   el.innerHTML=`
     <span class="event-type-dot" style="background:${color}"></span>
     <span class="event-text">
@@ -401,7 +512,38 @@ function buildEventPill(ev){
       <span class="event-type-label">${type?type.name:''}</span>
     </span>`;
   el.addEventListener('click',e=>{e.stopPropagation();openEventModal(ev.date,ev.id);});
-  return el;
+
+  // ツールチップ（fixed・マウス位置に追従）
+  let timer;
+  el.addEventListener('mouseenter', e=>{
+    const tipEl=document.getElementById('cal-tooltip');
+    tipEl.innerHTML=`
+      <div class="tooltip-proj">${proj?proj.name:'(案件なし)'}</div>
+      <div class="tooltip-type">${type?'🏷 '+type.name:''}</div>
+      ${ev.note?`<div class="tooltip-note">📝 ${ev.note}</div>`:'<div class="tooltip-note" style="color:var(--text-dim);font-size:11px;">メモなし</div>'}`;
+    // 位置をマウスの少し上に設定
+    const x = Math.min(e.clientX + 12, window.innerWidth - 320);
+    const y = Math.max(e.clientY - 80, 10);
+    tipEl.style.left = x + 'px';
+    tipEl.style.top  = y + 'px';
+    timer = setTimeout(()=>tipEl.classList.add('show'), 120);
+  });
+  el.addEventListener('mousemove', e=>{
+    const tipEl=document.getElementById('cal-tooltip');
+    const x = Math.min(e.clientX + 12, window.innerWidth - 320);
+    const y = Math.max(e.clientY - 80, 10);
+    tipEl.style.left = x + 'px';
+    tipEl.style.top  = y + 'px';
+  });
+  el.addEventListener('mouseleave',()=>{
+    clearTimeout(timer);
+    const tipEl=document.getElementById('cal-tooltip');
+    tipEl.classList.remove('show');
+    setTimeout(()=>tipEl.style.display='', 20);
+  });
+
+  wrap.appendChild(el);
+  return wrap;
 }
 
 // =====================================================
@@ -491,9 +633,32 @@ function renderFilter(){
 // =====================================================
 //  予定モーダル
 // =====================================================
+// 現在のモーダルタブ
+let modalTab = 'date';
+
+function switchModalTab(tab){
+  modalTab = tab;
+  document.getElementById('tab-date').classList.toggle('active', tab==='date');
+  document.getElementById('tab-period').classList.toggle('active', tab==='period');
+  document.getElementById('modal-date-fields').style.display = tab==='date' ? '' : 'none';
+  document.getElementById('modal-period-fields').style.display = tab==='period' ? '' : 'none';
+}
+
 function openEventModal(date, eventId){
   editingEventId = eventId || null;
-  // 案件・種類のセレクトを埋める
+  // 年月セレクトを埋める
+  const now = new Date();
+  const yearSel = document.getElementById('ev-period-year');
+  const monthSel = document.getElementById('ev-period-month');
+  yearSel.innerHTML = [-1,0,1,2].map(i=>{
+    const y=now.getFullYear()+i;
+    return `<option value="${y}">${y}年</option>`;
+  }).join('');
+  yearSel.value = now.getFullYear();
+  monthSel.innerHTML = Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}月</option>`).join('');
+  monthSel.value = now.getMonth()+1;
+
+  // 案件・種類のセレクト
   const projSel=document.getElementById('ev-proj');
   projSel.innerHTML=state.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')
     || '<option value="">案件を登録してください</option>';
@@ -503,37 +668,56 @@ function openEventModal(date, eventId){
   if(eventId){
     const ev=state.events.find(e=>e.id===eventId);
     document.getElementById('event-modal-title').textContent='予定を編集';
-    document.getElementById('ev-date').value=ev.date;
+    document.getElementById('ev-note').value=ev.note||'';
     document.getElementById('ev-proj').value=ev.projId;
     document.getElementById('ev-type').value=ev.typeId;
-    document.getElementById('ev-note').value=ev.note||'';
     document.getElementById('ev-delete').style.display='';
+    if(ev.dateType==='period'){
+      switchModalTab('period');
+      const[y,m]=ev.period.split('-');
+      yearSel.value=y; monthSel.value=parseInt(m);
+      document.getElementById('ev-period').value=ev.periodType||'joujun';
+    } else {
+      switchModalTab('date');
+      document.getElementById('ev-date').value=ev.date;
+    }
   } else {
     document.getElementById('event-modal-title').textContent='予定を追加';
     document.getElementById('ev-date').value=date||'';
     document.getElementById('ev-note').value='';
     document.getElementById('ev-delete').style.display='none';
+    switchModalTab('date');
   }
   document.getElementById('event-modal').classList.add('show');
 }
 function closeEventModal(){document.getElementById('event-modal').classList.remove('show');editingEventId=null;}
 
 async function saveEvent(){
-  const date=document.getElementById('ev-date').value;
   const projId=document.getElementById('ev-proj').value;
   const typeId=document.getElementById('ev-type').value;
   const note=document.getElementById('ev-note').value.trim();
-  if(!date){alert('日付を選択してください');return;}
   if(!projId){alert('案件を選択してください（マスタ管理で登録できます）');return;}
   if(!typeId){alert('イベント種類を選択してください');return;}
 
+  let evData;
+  if(modalTab==='period'){
+    const y=document.getElementById('ev-period-year').value;
+    const m=document.getElementById('ev-period-month').value;
+    const periodType=document.getElementById('ev-period').value;
+    evData={dateType:'period', period:`${y}-${String(m).padStart(2,'0')}`, periodType, date:'', projId, typeId, note};
+  } else {
+    const date=document.getElementById('ev-date').value;
+    if(!date){alert('日付を選択してください');return;}
+    evData={dateType:'date', date, period:'', periodType:'', projId, typeId, note};
+  }
+
   if(editingEventId){
     const ev=state.events.find(e=>e.id===editingEventId);
-    Object.assign(ev,{date,projId,typeId,note});
+    Object.assign(ev, evData);
     saveState();closeEventModal();renderCalendar();
     await sendAction('updateEvent', ev);
   } else {
-    const ev={id:uid(),date,projId,typeId,note};
+    const ev={id:uid(), ...evData};
     state.events.push(ev);
     saveState();closeEventModal();renderCalendar();
     await sendAction('addEvent', ev);
@@ -796,6 +980,7 @@ function renderThemeRadios(current){
 // =====================================================
 // ① localStorageのキャッシュで即座に表示（待ち時間ゼロ）
 loadTheme();
+calView = localStorage.getItem('nakashima_calview') || 'month';
 loadState();
 if(!state.types || !state.types.length){
   state.types = DEFAULT_TYPES.map(t=>({...t}));
