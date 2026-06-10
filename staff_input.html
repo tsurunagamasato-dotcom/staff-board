@@ -295,7 +295,10 @@ function _applyEmployees(emps) {
 }
 
 
-function init() { renderDepts(); }
+async function init() {
+  await loadStaffMaster();
+  renderDepts();
+}
 
 function renderDepts() {
   const depts = DEPT_ORDER.filter(d => STAFF_MASTER.some(s => s.dept === d));

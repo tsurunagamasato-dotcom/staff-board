@@ -410,6 +410,9 @@ function isDeadlinePassed() {
 
 // ===== INIT =====
 async function init() {
+  // 統合マスタから社員データを取得（先に実行）
+  await loadStaffMaster();
+
   // 画面を即座に表示してからGASデータを非同期取得
   renderDeptSelects();
   renderDateGrid();
