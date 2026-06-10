@@ -80,7 +80,25 @@
   .dow-cell{text-align:left;padding:10px 12px;font-size:18px;font-weight:700;color:var(--text-dim);letter-spacing:.05em;}
   .dow-cell:first-child{color:#ff6b6b;}
   .dow-cell:last-child{color:var(--accent);}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);position:relative;}
+  /* 時期指定バー：グリッド上に絶対配置で1本線として跨がせる */
+  .period-bar-row{
+    position:absolute;
+    height:28px;
+    border-radius:6px;
+    border-left:5px solid;
+    display:flex;align-items:center;
+    padding:0 10px;
+    font-size:15px;font-weight:700;
+    pointer-events:auto;cursor:pointer;
+    z-index:10;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    box-shadow:0 2px 6px rgba(0,0,0,.2);
+    transition:filter .1s;
+  }
+  .period-bar-row:hover{filter:brightness(1.15);}
+  .period-bar-row .pbar-proj{font-weight:700;margin-right:8px;}
+  .period-bar-row .pbar-type{opacity:.8;font-size:13px;}
   .cal-cell{
     border-right:1px solid var(--border);border-bottom:1px solid var(--border);
     padding:6px 6px 8px;position:relative;min-height:160px;
@@ -514,10 +532,128 @@ function renderCalendar(){
       && isPeriodMatch(ev, y, m, d)
       && (sel.length===0 || sel.includes(ev.typeId))
       && (selP.length===0 || selP.includes(ev.projId)));
-    periodEvents.forEach(ev=>{ const b=buildPeriodBand(ev,false,true); if(b) cell.appendChild(b); });
+    // 時期指定は後でグリッド全体にオーバーレイ描画するのでここでは何もしない
     grid.appendChild(cell);
   }
+  // 時期指定バーをグリッド全体にオーバーレイで描画
+  renderPeriodBars(grid, y, m, days, firstDow);
   saveState();
+}
+
+// =====================================================
+//  時期指定バー：グリッドに1本線でオーバーレイ描画
+// =====================================================
+function renderPeriodBars(grid, y, m, days, firstDow){
+  // すでにある period-bar-row を削除
+  grid.querySelectorAll('.period-bar-row').forEach(el=>el.remove());
+
+  const sel  = state.selectedTypes || [];
+  const selP = state.selectedProjs || [];
+
+  // 表示対象の時期指定イベントを抽出
+  const periodEvs = state.events.filter(ev =>
+    ev.dateType === 'period' &&
+    (() => { const [py,pm] = (ev.period||'').split('-').map(Number); return py===y && pm===m; })() &&
+    (sel.length===0 || sel.includes(ev.typeId)) &&
+    (selP.length===0 || selP.includes(ev.projId))
+  );
+  if(!periodEvs.length) return;
+
+  // セルの位置を計算するためにグリッドのサイズを取得
+  // grid は position:relative なので、各セルの offsetLeft/offsetTop が使える
+  // ただしDOMが確定した後に呼ぶ必要があるため requestAnimationFrame で遅延
+  requestAnimationFrame(() => {
+    const cells = grid.querySelectorAll('.cal-cell:not(.empty)');
+    // d=1〜days に対応するセルを配列化
+    const cellMap = {};
+    cells.forEach(cell => {
+      const num = cell.querySelector('.date-num');
+      if(num){
+        // date-num のテキストから日を取得
+        const d = parseInt(num.textContent);
+        if(!isNaN(d)) cellMap[d] = cell;
+      }
+    });
+
+    // 旬ごとにバーを1本描く
+    const ranges = [
+      {type:'joujun',  start:1,  end:10},
+      {type:'chuujun', start:11, end:20},
+      {type:'gejun',   start:21, end:days},
+    ];
+
+    // バーの縦位置をずらすためのオフセット管理（同じ旬に複数イベントがある場合）
+    const rowOffset = {};
+
+    periodEvs.forEach(ev => {
+      const proj  = getProject(ev.projId);
+      const type  = getType(ev.typeId);
+      const color = type ? type.color : '#a0a0a0';
+      const range = ranges.find(r => r.type === (ev.periodType||'joujun'));
+      if(!range) return;
+
+      // 開始・終了セルを取得（月内に存在する範囲でクリップ）
+      const startD = range.start;
+      const endD   = Math.min(range.end, days);
+      const startCell = cellMap[startD];
+      const endCell   = cellMap[endD];
+      if(!startCell || !endCell) return;
+
+      const gridRect  = grid.getBoundingClientRect();
+      const startRect = startCell.getBoundingClientRect();
+      const endRect   = endCell.getBoundingClientRect();
+
+      const left   = startRect.left - gridRect.left;
+      const width  = endRect.right  - startRect.left;
+
+      // 同じ旬に複数バーがあれば上にずらす（セル下から積み上げ）
+      const key = range.type;
+      if(rowOffset[key] === undefined) rowOffset[key] = 0;
+      // セルの bottom 基準で上に積み上げ（1本=32px、余白4px）
+      const cellBottom = startRect.bottom - gridRect.top;
+      const top = cellBottom - 32 - rowOffset[key] * 34 - 4;
+      rowOffset[key]++;
+
+      const bar = document.createElement('div');
+      bar.className = 'period-bar-row';
+      bar.style.left   = left + 'px';
+      bar.style.width  = width + 'px';
+      bar.style.top    = top + 'px';
+      bar.style.borderLeftColor = color;
+      bar.style.background = color + '28';
+      bar.style.color  = color;
+      bar.innerHTML = `<span class="pbar-proj">${proj ? proj.name : '(案件なし)'}</span><span class="pbar-type">${type ? type.name : ''}</span>`;
+      bar.addEventListener('click', e => { e.stopPropagation(); openEventModal('', ev.id); });
+
+      // ツールチップ
+      let timer;
+      bar.addEventListener('mouseenter', e => {
+        const tipEl = document.getElementById('cal-tooltip');
+        const [py,pm] = (ev.period||'').split('-');
+        const label = {joujun:'上旬',chuujun:'中旬',gejun:'下旬'}[ev.periodType]||'';
+        tipEl.innerHTML = `
+          <div class="tooltip-proj">${proj ? proj.name : '(案件なし)'}</div>
+          <div class="tooltip-type">${type ? '🏷 '+type.name : ''}</div>
+          <div class="tooltip-note">📅 ${py}年${pm}月 ${label}</div>
+          ${ev.note ? `<div class="tooltip-note">📝 ${ev.note}</div>` : '<div class="tooltip-note" style="color:var(--text-dim);">メモなし</div>'}`;
+        const x = Math.min(e.clientX+12, window.innerWidth-320);
+        const y2 = Math.max(e.clientY-80, 10);
+        tipEl.style.left = x+'px'; tipEl.style.top = y2+'px';
+        timer = setTimeout(()=>tipEl.classList.add('show'), 120);
+      });
+      bar.addEventListener('mousemove', e => {
+        const tipEl = document.getElementById('cal-tooltip');
+        tipEl.style.left = Math.min(e.clientX+12,window.innerWidth-320)+'px';
+        tipEl.style.top  = Math.max(e.clientY-80,10)+'px';
+      });
+      bar.addEventListener('mouseleave', () => {
+        clearTimeout(timer);
+        document.getElementById('cal-tooltip').classList.remove('show');
+      });
+
+      grid.appendChild(bar);
+    });
+  });
 }
 
 function buildEventPill(ev){
