@@ -208,6 +208,7 @@ tr.retired td{opacity:.45}
       <div class="field">
         <label>デフォルト居場所</label>
         <select id="fPlace">
+          <option value="">なし</option>
           <option value="honsha_office">本社事務所</option>
           <option value="honsha_factory">本社工場</option>
           <option value="nezaki">根崎</option>
@@ -217,6 +218,7 @@ tr.retired td{opacity:.45}
       <div class="field">
         <label>スライド</label>
         <select id="fSlide">
+          <option value="">なし</option>
           <option value="honsha1">本社①</option>
           <option value="honsha2">本社②</option>
           <option value="honsha3">本社③</option>
@@ -227,7 +229,7 @@ tr.retired td{opacity:.45}
       <div class="field">
         <label>拠点（昼食用）</label>
         <select id="fPlaceLunch">
-          <option value="">自動判定</option>
+          <option value="">なし</option>
           <option value="本社">本社</option>
           <option value="根崎">根崎</option>
         </select>
@@ -416,10 +418,9 @@ function renderTable() {
 function onDeptChange() {
   const dept = document.getElementById('fDept').value;
   if (dept === 'NIM' || dept === 'NVM') {
-    document.getElementById('fPlace').value = 'honsha_office';
-    document.getElementById('fSlide').value = 'honsha1';
+    document.getElementById('fPlace').value = '';
+    document.getElementById('fSlide').value = '';
     document.getElementById('fPlaceLunch').value = '';
-    // NIM/NVMは所在地・昼食非表示にする
     document.getElementById('fShowLocation').checked = false;
     document.getElementById('fShowLunch').checked = false;
   }
@@ -449,8 +450,8 @@ function openModal(id) {
     document.getElementById('fName').value = '';
     document.getElementById('fCategory').value = '社員';
     document.getElementById('fDept').value = '';
-    document.getElementById('fPlace').value = 'honsha_office';
-    document.getElementById('fSlide').value = 'honsha1';
+    document.getElementById('fPlace').value = '';
+    document.getElementById('fSlide').value = '';
     document.getElementById('fPlaceLunch').value = '';
     document.getElementById('fBirthday').value = '';
     document.getElementById('fShowLocation').checked = true;
