@@ -422,6 +422,14 @@ function isDeadlinePassed() {
   return now > dl;
 }
 
+// 当日注文がロックされているか（締切後は終日）
+function isTodayLocked() {
+  const now = new Date();
+  const [h,m] = deadline.split(':').map(Number);
+  const dl = new Date(); dl.setHours(h,m,0,0);
+  return now > dl;
+}
+
 // ===== INIT =====
 async function init() {
   // キャッシュで即座に表示
@@ -497,7 +505,7 @@ function onNameChange() {
   updateNGNote(); updateOrderButtons(); updatePlaceButtons();
   updateDateGrid();
   const todayStr = fmtDate(new Date());
-  const deadlineLock = isDeadlinePassed() && selDate === todayStr;
+  const deadlineLock = isTodayLocked() && selDate === todayStr;
   document.getElementById('submitSingle').disabled = !selStaff || !selDate || !selOrder || deadlineLock;
 }
 
@@ -574,10 +582,10 @@ function updateOrderButtons() {
 // ===== SUBMIT SINGLE =====
 async function submitSingle() {
   if (!selStaff||!selDate||!selOrder) return;
-  // 締切チェック（今日の注文のみ）
+  // 締切チェック（当日のみ。9:30以降は再び注文可能）
   const todayStr = fmtDate(new Date());
-  if (selDate === todayStr && isDeadlinePassed()) {
-    showToast(`本日の締切（${deadline||'08:45'}）を過ぎています`);
+  if (selDate === todayStr && isTodayLocked()) {
+    showToast(`本日の締切（${deadline||'08:45'}）を過ぎています。当日の注文は受け付けられません`);
     document.getElementById('deadlinePassed').classList.remove('hidden');
     return;
   }
@@ -684,6 +692,12 @@ function setAllBulk(order) {
 
 async function submitBulk() {
   if (!bulkSelStaff||Object.keys(bulkOrders).length===0) return;
+  // 当日分を含む場合の締切チェック
+  const todayStr = fmtDate(new Date());
+  if (isTodayLocked() && Object.keys(bulkOrders).some(d => d === todayStr)) {
+    showToast('当日分を含むため、締切後〜9:30の間は登録できません');
+    return;
+  }
   const btn = document.getElementById('submitBulk');
   btn.disabled = true;
   btn.textContent = '登録中...';
