@@ -1121,13 +1121,20 @@ function setupDropZone(el,toDate,toSlot){
       if(s){s.date=toDate;s.slot=toSlot;}
     } else if(dragData.projId&&dragData.memberId){
       // 新規配置（案件＋担当者が確定済み）
-      state.slots.push({
+      const newSlot={
         id:uid(),projId:dragData.projId,memberId:dragData.memberId,
-        date:toDate,slot:toSlot,actualH:0,comment:''
-      });
+        date:toDate,slot:toSlot,actualH:0,process:'',
+        shortfallType:'',shortfallProcess:'',comment:''
+      };
+      state.slots.push(newSlot);
+      dragData=null;
+      saveState();renderCalendar();
+      sendAction('addSlot', newSlot);
+      return;
     }
     dragData=null;
-    saveState();renderCalendar(); sendAction("updateSlot",s);
+    saveState();renderCalendar();
+    if(s) sendAction('updateSlot', s);
   });
 }
 
