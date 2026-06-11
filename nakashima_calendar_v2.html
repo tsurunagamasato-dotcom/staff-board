@@ -1085,13 +1085,14 @@ async function deleteEvent(){
 //  マスタ管理
 // =====================================================
 function renderMaster(){
-  renderProjTable();
+  // v2は案件マスタ非表示のためrenderProjTableは呼ばない
   renderTypeTable();
   renderTypeColorPicker();
 }
 
 function renderProjTable(){
   const tbody=document.querySelector('#proj-table tbody');
+  if(!tbody) return; // v2では案件マスタ非表示のためスキップ
   tbody.innerHTML='';
   if(!state.projects.length){
     tbody.innerHTML='<tr><td colspan="3" style="color:var(--text-dim);font-size:12px;">案件が未登録です</td></tr>';
