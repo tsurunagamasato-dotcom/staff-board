@@ -178,15 +178,23 @@
     display:flex;align-items:center;padding:1px 4px;
     white-space:nowrap;min-width:0;
   }
-  /* 大型モニター用 */
-  body.large-monitor .slot-entry{font-size:14px;padding:5px 6px;border-left-width:4px;}
-  body.large-monitor .slot-bar-text{font-size:14px;}
+  /* 大型モニター用（AM上・PM下の横割り・2列グリッド） */
+
+  body.large-monitor .slot-bar-plan{gap:2px;}
+  body.large-monitor .slot-bar-text{font-size:13px;}
   body.large-monitor .slot-bar-sub{font-size:12px;}
-  body.large-monitor .slot-group-label{font-size:11px;padding:3px 6px;}
-  body.large-monitor .slot-empty{height:30px;font-size:12px;}
-  body.large-monitor .date-num{font-size:20px;}
+  body.large-monitor .slot-group-label{display:none;}
+  body.large-monitor .slot-entry{font-size:13px;padding:6px 6px;border-left-width:3px;}
+  /* 2列グリッドに戻す */
+  body.large-monitor .slot-entries{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:2px;padding:2px;
+  }
+  body.large-monitor .slot-empty{height:26px;font-size:11px;}
+  body.large-monitor .date-num{font-size:18px;margin-bottom:2px;}
   body.large-monitor .cal-cell{height:calc((100vh - 210px) / 6);}
-  body.large-monitor .half-slots{gap:2px;}
+  body.large-monitor .half-slots{flex-direction:column;gap:1px;}
+  body.large-monitor .slot-group{flex:1;}
   body.large-monitor .dow-cell{font-size:14px;padding:10px 8px;}
   body.large-monitor .member-chip{font-size:14px;padding:5px 14px;}
   body.large-monitor .summary-kpi-val{font-size:22px;}
@@ -1071,12 +1079,15 @@ function buildSlotEntry(s,date,slot){
   el.style.background=bgColor;
   el.style.color=borderColor;
   el.draggable=true;
+  const isLarge = document.body.classList.contains('large-monitor');
+  const projLabel = proj ? (isLarge ? proj.name.slice(0,5) : proj.name) : '?';
+  const memLabel  = mem  ? (isLarge ? mem.name : mem.name) : '';
   el.innerHTML=`
     <div class="slot-bar-plan">
-      <span class="slot-bar-text" title="${proj?proj.name:''}">${proj?proj.name:'?'}</span>
-      ${mem?`<span class="slot-bar-sub">${mem.name}</span>`:''}
+      <span class="slot-bar-text" title="${proj?proj.name:''}">${projLabel}</span>
+      ${memLabel?`<span class="slot-bar-sub">${memLabel}</span>`:''}
       ${statusBadge}
-      ${hasActual?`<span class="slot-bar-result">✓${pct}%</span>`:''}
+      ${!isLarge&&hasActual?`<span class="slot-bar-result">✓${pct}%</span>`:''}
     </div>`;
   el.addEventListener('click',e=>{e.stopPropagation();openActualModal(s.id);});
   // 右クリックで削除
