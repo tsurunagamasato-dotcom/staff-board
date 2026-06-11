@@ -1274,7 +1274,7 @@ async function autoLoadFromGAS(){
     const json=JSON.parse(await res.text());
     if(json.status==='ok' && json.data){
       const d=json.data;
-      if(Array.isArray(d.projects)) state.projects=d.projects.map(p=>({id:String(p.id),name:String(p.name)}));
+      // ※v2はprojectsをNIMから取得するためここでは上書きしない
       // typesはGASに存在するものを使う。ただし初期8種類に存在しないものはGASに追加登録する
       if(Array.isArray(d.types) && d.types.length){
         const gasTypes = d.types.map(t=>({id:String(t.id),name:String(t.name),color:String(t.color)}));
@@ -1297,6 +1297,8 @@ async function autoLoadFromGAS(){
         note:     e.note==null?'':String(e.note)
       }));
       saveState();
+      // v2はNIMから案件を取得（GAS読込後に再取得して確実に反映）
+      await loadProjectsFromNIM();
       renderCalendar();renderMaster();
       setGasStatus('✓ 同期済み '+new Date().toLocaleTimeString('ja-JP'),'ok');
     } else {
