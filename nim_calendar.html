@@ -1987,18 +1987,29 @@ async function autoLoadFromGAS() {
       }
       // slots：空でも上書きOK（配置なしは正常な状態）
       if(Array.isArray(d.slots)){
-        state.slots = d.slots.map(s=>({
-          id: String(s.id||''),
-          projId: String(s.projId||'').replace('proj_proj_','proj_'),
-          memberId: String(s.memberId||'').replace('mem_mem_','mem_'),
-          date: String(s.date||'').slice(0,10),
-          slot: String(s.slot||'AM'),
-          actualH: Number(s.actualH)||0,
-          process: s.process||'',
-          shortfallProcess: s.shortfallProcess||'',
-          shortfallType: s.shortfallType||'',
-          shortfallOtherProjId: s.shortfallOtherProjId||'',
-        }));
+        state.slots = d.slots.map(s=>{
+          // 日付をYYYY-MM-DDに正規化（スプレッドシートがDate型に変換してしまうため）
+          let dateStr = String(s.date||'');
+          if(dateStr.length > 10 || dateStr.includes('GMT') || dateStr.includes('T')){
+            const dt = new Date(dateStr);
+            if(!isNaN(dt)){
+              const jst = new Date(dt.getTime() + 9*60*60*1000);
+              dateStr = jst.toISOString().slice(0,10);
+            }
+          }
+          return {
+            id: String(s.id||''),
+            projId: String(s.projId||'').replace('proj_proj_','proj_'),
+            memberId: String(s.memberId||'').replace('mem_mem_','mem_'),
+            date: dateStr,
+            slot: String(s.slot||'AM'),
+            actualH: Number(s.actualH)||0,
+            process: s.process||'',
+            shortfallProcess: s.shortfallProcess||'',
+            shortfallType: s.shortfallType||'',
+            shortfallOtherProjId: s.shortfallOtherProjId||'',
+          };
+        });
       }
       saveState();
       renderCalendar(); renderMaster();
