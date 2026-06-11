@@ -1955,8 +1955,8 @@ async function autoLoadFromGAS() {
     const json = await res.json();
     if (json.status === 'ok' && json.data) {
       const d = json.data;
-      // members：名前ベースでDEFAULT_MEMBERSとマージ
-      if(Array.isArray(d.members) && d.members.length){
+      // members：GASにデータがある場合のみ上書き（空なら現在のstateを保持）
+      if(Array.isArray(d.members) && d.members.length > 0){
         state.members = DEFAULT_MEMBERS.map(def=>{
           const found = d.members.find(m=>m.name===def.name);
           if(found) return {
@@ -1968,16 +1968,17 @@ async function autoLoadFromGAS() {
           return { id:memberNameToId(def.name), name:def.name, color:def.color, depts:[], processes:[...COMMON_PROCS] };
         });
       }
-      // projects
-      if(Array.isArray(d.projects)){
+      // projects：GASにデータがある場合のみ上書き
+      if(Array.isArray(d.projects) && d.projects.length > 0){
         state.projects = d.projects.map(p=>({
           id: String(p.id||'').replace('proj_proj_','proj_'),
           name: String(p.name||''),
           totalPlanH: Number(p.totalPlanH)||0,
           deptHours: (p.deptHours && typeof p.deptHours==='object') ? p.deptHours : {},
+          ended: !!p.ended,
         }));
       }
-      // slots
+      // slots：空でも上書きOK（配置なしは正常な状態）
       if(Array.isArray(d.slots)){
         state.slots = d.slots.map(s=>({
           id: String(s.id||''),
@@ -1998,6 +1999,8 @@ async function autoLoadFromGAS() {
     } else {
       // データなし → 初期担当者をGASに保存
       await sendAction('saveAllMembers', {members: state.members});
+      // 案件・工程もGASに保存
+      for(const p of state.projects){ await sendAction('addProject', p); }
       renderCalendar(); renderMaster();
       setGasStatus('✓ 初期データで開始', 'ok');
     }
