@@ -338,6 +338,17 @@ const EMP_LS_KEY = 'employee_master_cache';
 
 
 
+async function loadStaffMaster() {
+  try {
+    const res = await fetch(EMP_GAS_URL + '?action=getEmployees&t=' + Date.now());
+    const json = await res.json();
+    if (json.ok && json.employees && json.employees.length > 0) {
+      _applyEmployees(json.employees);
+      localStorage.setItem(EMP_LS_KEY, JSON.stringify(json.employees));
+    }
+  } catch(e) { console.log('loadStaffMaster error:', e); }
+}
+
 function _applyEmployees(emps) {
   STAFF_MASTER = emps
     .filter(e => e.showLunch !== '0')
