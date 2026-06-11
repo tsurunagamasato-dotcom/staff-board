@@ -668,13 +668,17 @@ function getBulkDates() {
 function renderBulkTable() {
   const dates = getBulkDates();
   const days=['日','月','火','水','木','金','土'];
+  const todayStr = fmtDate(new Date());
   document.getElementById('bulkTableBody').innerHTML = dates.map(dt=>{
     const ds=fmtDate(dt); const order=bulkOrders[ds]||'';
-    return `<tr>
-      <td><div>${(dt.getMonth()+1)+'/'+dt.getDate()}</div><div style="font-size:9px;color:var(--text-hint);">${days[dt.getDay()]}</div></td>
-      <td><button class="bulk-btn ${order==='futsuu'?'sel-futsuu':''}" onclick="setBulkOrder('${ds}','futsuu')">○普通</button></td>
-      <td><button class="bulk-btn ${order==='oomori'?'sel-oomori':''}" onclick="setBulkOrder('${ds}','oomori')">○大盛</button></td>
-      <td><button class="bulk-btn ${order==='nashi'?'sel-nashi':''}" onclick="setBulkOrder('${ds}','nashi')">×</button></td>
+    const isLockedDay = ds < todayStr || (isTodayLocked() && ds === todayStr);
+    const rowStyle = isLockedDay ? 'opacity:0.4;pointer-events:none;background:#f5f5f5;' : '';
+    const label = isLockedDay ? '<div style="font-size:9px;color:#e05;margin-top:2px;">締切済</div>' : '';
+    return `<tr style="${rowStyle}">
+      <td><div>${(dt.getMonth()+1)+'/'+dt.getDate()}</div><div style="font-size:9px;color:var(--text-hint);">${days[dt.getDay()]}</div>${label}</td>
+      <td><button class="bulk-btn ${order==='futsuu'?'sel-futsuu':''}" onclick="setBulkOrder('${ds}','futsuu')" ${isLockedDay?'disabled':''}>○普通</button></td>
+      <td><button class="bulk-btn ${order==='oomori'?'sel-oomori':''}" onclick="setBulkOrder('${ds}','oomori')" ${isLockedDay?'disabled':''}>○大盛</button></td>
+      <td><button class="bulk-btn ${order==='nashi'?'sel-nashi':''}" onclick="setBulkOrder('${ds}','nashi')" ${isLockedDay?'disabled':''}>×</button></td>
     </tr>`;
   }).join('');
 }
@@ -692,12 +696,11 @@ function setAllBulk(order) {
 
 async function submitBulk() {
   if (!bulkSelStaff||Object.keys(bulkOrders).length===0) return;
-  // 当日分を含む場合の締切チェック
+  // 過去日・当日締切済は除外して送信
   const todayStr = fmtDate(new Date());
-  if (isTodayLocked() && Object.keys(bulkOrders).some(d => d === todayStr)) {
-    showToast('当日分を含むため、締切後〜9:30の間は登録できません');
-    return;
-  }
+  Object.keys(bulkOrders).forEach(d => {
+    if (d < todayStr || (isTodayLocked() && d === todayStr)) delete bulkOrders[d];
+  });
   const btn = document.getElementById('submitBulk');
   btn.disabled = true;
   btn.textContent = '登録中...';
