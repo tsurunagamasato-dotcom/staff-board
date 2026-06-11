@@ -813,16 +813,13 @@ async function loadHistory() {
       const d = new Date(year,month,i);
       if (!isWeekend(d)) workdays.push({date:fmtDate(d), day:d});
     }
-    // 全営業日を並列取得
-    const fetches = workdays.map(w =>
-      fetch(GAS_URL+`?action=getOrders&date=${w.date}&t=${Date.now()}`)
-        .then(r=>r.json())
-        .catch(()=>({ok:false,orders:[]}))
-    );
-    const responses = await Promise.all(fetches);
-    const results = workdays.map((w,i) => {
-      const json = responses[i];
-      const found = json.ok ? json.orders.find(o=>String(o.id)===String(staff.id)) : null;
+    // 月全体を1回のリクエストで取得（高速化）
+    const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
+    const res = await fetch(GAS_URL+`?action=getOrdersByMonth&month=${monthStr}&t=${Date.now()}`);
+    const json = await res.json();
+    const allOrders = json.ok ? json.orders : [];
+    const results = workdays.map(w => {
+      const found = allOrders.find(o => o.date === w.date && String(o.id) === String(staff.id));
       return {date:w.date, day:w.day, order:found?found.order:null};
     });
     const days=['日','月','火','水','木','金','土'];
@@ -963,12 +960,14 @@ async function loadTopics() {
   try {
     const res = await fetch(GAS_URL + '?action=getTopics&t=' + Date.now());
     const json = await res.json();
-    if (json.ok && json.text) {
+    if (json.ok && json.topics && json.topics.length > 0) {
       document.getElementById('topicsBanner').style.display = 'block';
-      document.getElementById('topicsText').textContent = json.text;
-      const exp = json.expiry ? new Date(json.expiry) : null;
-      document.getElementById('topicsExpiry').textContent = exp
-        ? `掲載期限：${(exp.getMonth()+1)}/${exp.getDate()}まで` : '';
+      document.getElementById('topicsText').innerHTML = json.topics.map(t => {
+        const exp = t.expiry ? new Date(t.expiry) : null;
+        const expStr = exp ? `<span style="font-size:11px;color:#a09d99;margin-left:8px;">期限：${exp.getMonth()+1}/${exp.getDate()}まで</span>` : '';
+        return `<div>・${t.text}${expStr}</div>`;
+      }).join('');
+      document.getElementById('topicsExpiry').textContent = '';
     } else {
       document.getElementById('topicsBanner').style.display = 'none';
     }
