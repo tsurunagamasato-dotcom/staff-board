@@ -418,10 +418,10 @@ function daysInMonth(y,m){return new Date(y,m,0).getDate();}
 function getProject(id){return state.projects.find(p=>p.id===id);}
 function getType(id){return state.types.find(t=>t.id===id);}
 
-function saveState(){localStorage.setItem('nim_sched_v1', JSON.stringify({state,baseMonth}));}
+function saveState(){localStorage.setItem('nakashima_cal_v2', JSON.stringify({state,baseMonth}));}
 function loadState(){
   try{
-    const d=JSON.parse(localStorage.getItem('nim_sched_v1'));
+    const d=JSON.parse(localStorage.getItem('nakashima_cal_v2'));
     if(d&&d.state){state=d.state; baseMonth=d.baseMonth;}
   }catch{}
 }
@@ -457,7 +457,7 @@ function goToday(){
 function setCalView(v){
   calView=v;
   weekOffset=0;
-  localStorage.setItem('nakashima_calview', v);
+  localStorage.setItem('nakashima_calview_v2', v);
   renderCalendar();
 }
 
@@ -1328,11 +1328,11 @@ const THEMES = [
 
 function applyTheme(id){
   document.documentElement.setAttribute('data-theme', id);
-  localStorage.setItem('nakashima_theme', id);
+  localStorage.setItem('nakashima_theme_v2', id);
 }
 
 function loadTheme(){
-  const saved = localStorage.getItem('nakashima_theme') || 'dark';
+  const saved = localStorage.getItem('nakashima_theme_v2') || 'dark';
   applyTheme(saved);
   renderThemeRadios(saved);
 }
@@ -1344,7 +1344,7 @@ function renderThemeRadios(current){
   THEMES.forEach(t=>{
     const label = document.createElement('label');
     label.innerHTML = `
-      <input type="radio" name="nakashima_theme" value="${t.id}" ${t.id===current?'checked':''} onchange="applyTheme('${t.id}');renderThemeRadios('${t.id}')">
+      <input type="radio" name="nakashima_theme_v2" value="${t.id}" ${t.id===current?'checked':''} onchange="applyTheme('${t.id}');renderThemeRadios('${t.id}')">
       <span class="theme-dot" style="background:${t.dot};"></span>
       ${t.label}`;
     wrap.appendChild(label);
@@ -1356,7 +1356,7 @@ function renderThemeRadios(current){
 // =====================================================
 // ① localStorageのキャッシュで即座に表示（待ち時間ゼロ）
 loadTheme();
-calView = localStorage.getItem('nakashima_calview') || 'month';
+calView = localStorage.getItem('nakashima_calview_v2') || 'month';
 loadState();
 if(!state.types || !state.types.length){
   state.types = DEFAULT_TYPES.map(t=>({...t}));
