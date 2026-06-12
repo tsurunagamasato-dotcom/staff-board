@@ -465,8 +465,8 @@ async function fetchAll(silent=false) {
     const json = await res.json();
     if (!json.ok) throw new Error();
     json.data.forEach(row => {
-      const id = parseInt(row.id);
-      if (!isNaN(id) && state[id]!==undefined && row.status) {
+      const id = row.id;  // E-58などの文字列IDをそのまま使用
+      if (id && state[id] !== undefined && row.status) {
         state[id] = { status: row.status, updated: row.updated||'', memo: row.memo||'', leaveStart: row.leaveStart||'', leaveEnd: row.leaveEnd||'' };
       }
     });

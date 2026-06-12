@@ -309,8 +309,8 @@ async function fetchAll(silent=false) {
     const json = await res.json();
     if (!json.ok) throw new Error();
     json.data.forEach(row => {
-      const id = parseInt(row.id);
-      if (!isNaN(id) && state[id] !== undefined && row.status) {
+      const id = row.id;  // E-58などの文字列IDをそのまま使用
+      if (id && state[id] !== undefined && row.status) {
         state[id] = {
           status: row.status,
           updated: row.updated||'',
@@ -419,12 +419,11 @@ async function init() {
   document.getElementById('backBtn').href = backUrl;
   // localStorageキャッシュで即座に表示
   try {
-    const cached = localStorage.getItem(STAFF_LSKEY);
+    const cached = localStorage.getItem(EMP_LS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed.length > 0) {
-        STAFF_MASTER = parsed;
-        // stateを生成
+        _applyEmployees(parsed);
         STAFF_MASTER.forEach(s => {
           if (state[s.id] === undefined) state[s.id] = { status: s.base, updated: '' };
         });
