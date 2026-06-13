@@ -380,9 +380,15 @@ function renderResult() {
   // 期間表示
   const periodEl = document.getElementById('resultPeriod');
   if (st.leaveStart) {
+    const fmtDate = s => {
+      const d = new Date(s);
+      return isNaN(d) ? s : `${d.getMonth()+1}/${d.getDate()}`;
+    };
+    const startStr = fmtDate(st.leaveStart);
+    const endStr = fmtDate(st.leaveEnd);
     const periodText = (st.leaveEnd && st.leaveEnd !== st.leaveStart)
-      ? `📅 ${st.leaveStart} 〜 ${st.leaveEnd}`
-      : `📅 ${st.leaveStart}`;
+      ? `📅 ${startStr} 〜 ${endStr}`
+      : `📅 ${startStr}`;
     periodEl.textContent = periodText;
     periodEl.style.display = 'block';
   } else {
