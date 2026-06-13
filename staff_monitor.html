@@ -519,7 +519,7 @@ function rebuildSlides() {
       ? `<div class="staff-grid">${members.map(m => {
           const st = state[m.id];
           const isNonDefault = st.status !== m.base;
-          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal(${m.id})">
+          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <div class="card-dept">${m.dept}</div>
             ${(st.status !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${st.memo}</div>`:''}
@@ -675,7 +675,7 @@ function rebuildDeptSlides(filterDept) {
           if (st.status === 'honsha_office' && m.slide) {
             displayLabel = slideLabel[m.slide] || badge.label;
           }
-          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal(${m.id})">
+          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <span class="status-badge-sm" style="background:${badge.bg};color:${badge.fg};">
               <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
