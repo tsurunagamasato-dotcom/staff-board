@@ -572,8 +572,11 @@ function renderLeft(){
     if(fd && it.dept!==fd) return false;
     const at = tasks.filter(t=>t.item_id===it.item_id);
     if(at.length===0) return !onlyKeiz;
-    const hk = at.some(t=>t.status==='完了(継続)');
-    const ad = at.every(t=>t.status==='完了'||t.status==='完了(継続)');
+    // ステータスが設定されているタスクのみで完了判定
+    const withStatus = at.filter(t=>t.status&&t.status.trim()!=='');
+    if(withStatus.length===0) return !onlyKeiz; // 全員未設定は非表示対象外
+    const hk = withStatus.some(t=>t.status==='完了(継続)');
+    const ad = withStatus.every(t=>t.status==='完了'||t.status==='完了(継続)');
     if(hideDone && ad && !hk) return false;
     if(onlyKeiz && !hk) return false;
     return true;
