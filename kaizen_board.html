@@ -215,8 +215,16 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
 /* 登録ボタン */
 .regrow{display:flex;gap:7px;justify-content:flex-end;padding:8px 0 2px}
 
-/* 既存タスク */
-.extrow{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--surface2);cursor:pointer}
+/* タスクバナー（タスク議事録モード） */
+#taskBanner{background:#f0fdf4;border-bottom:2px solid var(--s2);padding:9px 16px;display:flex;align-items:center;gap:9px;flex-shrink:0}
+.extrow.task-selected{background:#f0fdf4;border-left:3px solid var(--s2);padding-left:9px}
+
+/* 保存ボタン */
+#saveMemoBtn{background:var(--primary);color:#fff}
+#saveMemoBtn:hover{background:var(--pl)}
+
+/* タスク議事録モード時のテキストエリア */
+.mta.task-mode{border-color:var(--s2)}
 .extrow:last-child{border-bottom:none}
 .extrow:hover{background:var(--surface2);margin:0 -4px;padding:6px 4px;border-radius:4px}
 
@@ -279,11 +287,10 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
 </div>
 
 <!-- GASバナー -->
-<div id="gasBanner">
+<div id="gasBanner" style="display:none">
   ⚙️ GAS URL：<input id="gasIn" placeholder="https://script.google.com/macros/s/.../exec">
   <button class="btn btn-sm btn-p" onclick="saveGas()">設定</button>
   <button class="btn btn-sm btn-g" onclick="hideGas()">閉じる</button>
-  <button class="btn btn-sm btn-r" onclick="resetData()">🔄 データリセット</button>
   <span style="opacity:.7">未設定でもブラウザ内で動作します</span>
 </div>
 
@@ -332,80 +339,68 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
     <div id="rightPane">
       <div id="noSel">
         <div class="icon">👈</div>
-        <p>左の改善項目を選択すると<br>議事録入力・AI解析ができます</p>
+        <p>左の改善項目を選択すると<br>議事録の入力・タスク管理ができます</p>
       </div>
       <div id="rightContent">
-        <!-- 選択中バナー -->
+        <!-- 選択中バナー（改善項目モード） -->
         <div id="selBanner">
           <div class="snum" id="selNum">—</div>
-          <div>
+          <div style="flex:1;min-width:0">
             <div id="selTitle">—</div>
             <div id="selDept">—</div>
           </div>
-          <button class="btn btn-sm" style="margin-left:auto;background:linear-gradient(135deg,var(--primary),var(--pl));color:#fff" onclick="focusMt()">✨ AI解析</button>
+        </div>
+        <!-- タスク選択中バナー -->
+        <div id="taskBanner" style="display:none">
+          <div class="tdot d1" style="width:10px;height:10px;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div id="taskBannerTitle" style="font-weight:700;font-size:13px;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+            <div id="taskBannerSub" style="font-size:11px;color:var(--sub)"></div>
+          </div>
+          <button class="btn btn-sm btn-g" onclick="switchToItemMode()" style="flex-shrink:0">← 項目に戻る</button>
         </div>
         <!-- スクロール領域 -->
         <div id="rightScroll">
           <!-- 議事録入力 -->
           <div class="card" id="mtCard">
-            <div class="clbl">📝 議事録入力</div>
+            <div class="clbl" id="mtCardLabel">📝 議事録入力</div>
             <div class="mtop">
               <span style="font-size:12px;color:var(--sub)">会議日</span>
               <input type="date" id="mtDate" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none">
-              <button class="btn btn-sm btn-g" onclick="document.getElementById('mtText').value=''">クリア</button>
+              <button class="btn btn-sm btn-g" onclick="clearMt()">クリア</button>
+              <button class="btn btn-sm btn-p" onclick="saveMemo()" id="saveMemoBtn">💾 保存</button>
             </div>
-            <textarea class="mta" id="mtText" placeholder="議事録テキストをここに貼り付けてください。ExcelからのコピーでもOKです。
-
-例）
-・外注管理担当者を亀谷・當眞で対応（宇野から引継ぎ）完了
-・ソフト設計外注への仕様書フォーマットを7/31までに作成
-→ 担当：電気課"></textarea>
-            <div class="airow">
-              <button class="aibtn" onclick="runAi()">✨ AIで解析してタスク化</button>
-              <span style="font-size:11px;color:var(--sub)">担当・期限・進捗変化を自動抽出</span>
-            </div>
+            <textarea class="mta" id="mtText" placeholder="議事録・メモをここに入力してください。&#10;&#10;例）&#10;・担当者を亀谷・當眞に変更&#10;・仕様書フォーマットを7/31までに作成&#10;→ 現状：宇野にて調整中"></textarea>
           </div>
-          <!-- AI解析中 -->
-          <div class="card" id="aiLoading" style="display:none">
-            <div class="analyzing">
-              <div class="spini">🤖</div>
-              <p style="color:var(--sub);font-size:13px;margin-top:6px">議事録を解析中...</p>
-              <div class="pbar"><div class="pbarf"></div></div>
-              <p style="font-size:12px;color:var(--sub);margin-top:4px">タスク・担当・進捗変化を抽出しています</p>
+          <!-- タスク編集（インライン） -->
+          <div class="card" id="taskEditCard" style="display:none">
+            <div class="clbl" style="color:var(--pl)">✏️ タスク編集</div>
+            <div class="fg"><label class="fl">タスク内容</label><textarea class="fi fta" id="ieContent" rows="2"></textarea></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="fg"><label class="fl">担当</label><input class="fi" id="ieTantou"></div>
+              <div class="fg"><label class="fl">ゴール</label><input class="fi" id="ieGoal"></div>
             </div>
-          </div>
-          <!-- AI結果 -->
-          <div class="card ai-card" id="aiResult" style="display:none">
-            <div class="clbl" style="color:var(--pl)">✨ AI解析結果</div>
-            <div class="aisum" id="aiSum"></div>
-            <!-- 進捗更新ブロック -->
-            <div class="ablk" id="updBlk">
-              <div class="abhdr abhdr-g">
-                <span class="abicon">🔄</span>
-                <span class="abtitle">進捗更新の提案</span>
-                <span class="abcount" id="uCnt"></span>
-                <label class="abchkall"><input type="checkbox" id="chkAllU" checked onchange="toggleAllU(this.checked)">すべて</label>
+            <div class="fg"><label class="fl">状態</label>
+              <div class="ssel">
+                <button class="sbtn" data-s="未着手" onclick="ieSelS(this)">未着手</button>
+                <button class="sbtn" data-s="実行中" onclick="ieSelS(this)">実行中</button>
+                <button class="sbtn" data-s="完了" onclick="ieSelS(this)">完了</button>
+                <button class="sbtn" data-s="完了(継続)" onclick="ieSelS(this)">完了(継続)</button>
               </div>
-              <div class="ablist" id="updList"></div>
             </div>
-            <!-- 新規タスクブロック -->
-            <div class="ablk" id="newBlk">
-              <div class="abhdr abhdr-b">
-                <span class="abicon">➕</span>
-                <span class="abtitle">新規タスク候補</span>
-                <span class="abcount" id="nCnt"></span>
-                <label class="abchkall"><input type="checkbox" id="chkAllN" checked onchange="toggleAllN(this.checked)">すべて</label>
-              </div>
-              <div class="ablist" id="newList"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="fg"><label class="fl">発案日</label><input class="fi" type="date" id="ieHanan"></div>
+              <div class="fg"><label class="fl">予定日</label><input class="fi" type="date" id="ieYotei"></div>
             </div>
-            <div class="regrow">
-              <button class="btn btn-g btn-sm" onclick="discardAi()">破棄</button>
-              <button class="btn btn-a" onclick="applyAi()">✓ まとめて反映</button>
+            <div class="fg"><label class="fl">完了日</label><input class="fi" type="date" id="ieKanryo" style="width:160px"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+              <button class="btn btn-g btn-sm" onclick="switchToItemMode()">キャンセル</button>
+              <button class="btn btn-p" onclick="saveInlineTask()">✓ タスクを保存</button>
             </div>
           </div>
           <!-- 登録済みタスク -->
           <div class="card" id="extCard">
-            <div class="clbl">📌 登録済みタスク</div>
+            <div class="clbl">📌 登録済みタスク <span style="font-weight:400;font-size:10px;color:var(--sub)">クリックでそのタスクの議事録入力</span></div>
             <div id="extList"></div>
           </div>
         </div>
@@ -476,15 +471,13 @@ const DEPTS = ['営業','設計','加工','組付','電気','購買','共同','�
 function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
 
 // ===== 状態 =====
-let GAS = localStorage.getItem('kg') || '';
+let GAS = localStorage.getItem('kg') || 'https://script.google.com/macros/s/AKfycbwoXAo_hWf7djODlP-3jZ-0n_lWkoy4sZ3AA4XeqzQMYUvSZafTdQaVA6yeGut2ZfUanQ/exec';
 let items = JSON.parse(localStorage.getItem('ki') || 'null') || deepCopy(INIT_ITEMS);
 let tasks = JSON.parse(localStorage.getItem('kt') || 'null') || deepCopy(INIT_TASKS);
 let agenda = new Set(JSON.parse(localStorage.getItem('ka') || '[]'));
 let selId = null;
 let hideDone = true;
 let onlyKeiz = false;
-let aiUpds = [];
-let aiNews = [];
 
 const td = () => new Date().toISOString().slice(0,10);
 const esc = s => {
@@ -514,6 +507,8 @@ window.addEventListener('DOMContentLoaded', () => {
   renderLeft();
   renderAgenda();
   renderDash();
+  // GAS URLが設定済みなら自動同期
+  if (GAS) syncData();
 });
 
 // ===== GAS =====
@@ -524,17 +519,6 @@ function saveGas(){
   toast('GAS URLを設定しました','ok');
 }
 function hideGas(){ document.getElementById('gasBanner').style.display='none'; }
-function resetData(){
-  if(!confirm('ローカルデータをリセットして初期データを復元しますか？')) return;
-  localStorage.removeItem('ki'); localStorage.removeItem('kt'); localStorage.removeItem('ka');
-  items = deepCopy(INIT_ITEMS); tasks = deepCopy(INIT_TASKS); agenda = new Set();
-  selId = null;
-  saveAll();
-  document.getElementById('noSel').style.display = 'flex';
-  document.getElementById('rightContent').style.display = 'none';
-  renderLeft(); renderAgenda(); renderDash();
-  toast('初期データを復元しました','ok');
-}
 async function syncData(){
   if(!GAS){ toast('GAS URLが未設定です'); return; }
   setSt('load');
@@ -656,12 +640,9 @@ function clickItem(id){
   document.getElementById('selNum').textContent=item.item_num;
   document.getElementById('selTitle').textContent=item.item_name;
   document.getElementById('selDept').textContent=`部署：${item.dept}　ゴール：${item.goal||'—'}`;
+  switchToItemMode();
   renderExt(id);
-  document.getElementById('aiResult').style.display='none';
-  document.getElementById('aiLoading').style.display='none';
-  document.getElementById('mtCard').style.display='block';
 }
-function focusMt(){ document.getElementById('mtText').focus(); document.getElementById('rightScroll').scrollTo({top:0,behavior:'smooth'}); }
 
 // ===== 既存タスク表示 =====
 function renderExt(id){
@@ -674,10 +655,11 @@ function renderExt(id){
     const dn=t.status==='完了'||t.status==='完了(継続)';
     const ov=t.yotei_date&&t.yotei_date<today&&!dn;
     const hm=t.memo&&t.memo.trim();
-    return `<div class="extrow" onclick="openEdit('${t.task_id}')">
+    const isSel=selTaskId===t.task_id;
+    return `<div class="extrow ${isSel?'task-selected':''}" onclick="clickTask('${t.task_id}')">
       <div class="tdot ${cls}"><\/div>
       <div class="ttxt ${dn?'done':''}" style="font-size:13px">${esc(t.task_content)}<\/div>
-      ${hm?'<span style="font-size:12px;color:var(--accent)" title="メモあり">📌<\/span>':''}
+      ${hm?'<span style="font-size:12px;color:var(--accent)" title="議事録あり">📝<\/span>':''}
       ${t.tantou?`<span class="ttantou">${esc(t.tantou)}<\/span>`:''}
       ${t.yotei_date?`<span class="tdate ${ov?'ov':''}">${t.yotei_date}<\/span>`:''}
     <\/div>`;
@@ -721,124 +703,99 @@ function resetAgenda(){
   renderLeft(); renderAgenda(); toast('アジェンダをリセットしました','ok');
 }
 
-// ===== AI解析 =====
-async function runAi(){
-  const text=document.getElementById('mtText').value.trim();
-  if(!text){toast('議事録テキストを入力してください','err');return;}
-  if(!selId){toast('改善項目を選択してください','err');return;}
-  const item=items.find(it=>it.item_id===selId);
-  const extTasks=tasks.filter(t=>t.item_id===selId);
-  const etJson=extTasks.map(t=>`{"task_id":"${t.task_id}","content":"${t.task_content.replace(/"/g,"'")}","status":"${t.status||'未着手'}"}`).join(',');
-  document.getElementById('mtCard').style.display='none';
-  document.getElementById('aiLoading').style.display='block';
-  document.getElementById('aiResult').style.display='none';
-  const prompt=`あなたは製造業の業務改善MTの議事録を解析するアシスタントです。
+// ===== 議事録モード =====
+let mtMode = 'item';
+let selTaskId = null;
 
-【改善項目】
-- 項目名: ${item.item_name}
-- 部署: ${item.dept}
-- ゴール: ${item.goal||'未設定'}
-
-【登録済みタスク】
-[${etJson}]
-
-【議事録テキスト】
-${text}
-
-以下2種類を抽出してください。
-① 進捗更新：登録済みタスクの状態が変化したと読み取れるもの
-② 新規タスク：新しいアクションアイテム（登録済みと重複しないもの）
-
-JSONのみで回答（前置き・マークダウン不要）:
-{"summary":"要点2〜3文","updates":[{"task_id":"既存のtask_id","new_status":"未着手/実行中/完了/完了(継続)","reason":"根拠15文字以内"}],"new_tasks":[{"content":"タスク内容","tantou":"担当（不明は空）","yotei_date":"YYYY-MM-DD（不明は空）","priority":"high/mid/low","reason":"理由15文字以内"}]}`;
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:prompt}]})});
-    const d=await res.json();
-    const raw=d.content?.[0]?.text||'';
-    const p=JSON.parse(raw.replace(/```json|```/g,'').trim());
-    aiUpds=(p.updates||[]).map((u,i)=>{
-      const t=extTasks.find(t=>t.task_id===u.task_id);
-      if(!t) return null;
-      return{...u,id:'u'+i,sel:true,content:t.task_content,old:t.status||'未着手'};
-    }).filter(Boolean);
-    aiNews=(p.new_tasks||[]).map((t,i)=>({...t,id:'n'+i,sel:true}));
-    document.getElementById('aiSum').innerHTML=`<strong>📝 要点<\/strong>${esc(p.summary||'')}`;
-    renderUpds(); renderNews();
-    document.getElementById('updBlk').style.display=aiUpds.length?'block':'none';
-    document.getElementById('newBlk').style.display=aiNews.length?'block':'none';
-    document.getElementById('aiLoading').style.display='none';
-    document.getElementById('aiResult').style.display='block';
-  } catch(e){
-    document.getElementById('aiLoading').style.display='none';
-    document.getElementById('mtCard').style.display='block';
-    toast('AI解析エラー。再試行してください。','err');
-    console.error(e);
-  }
-}
-function renderUpds(){
-  const sc={'未着手':'s0','実行中':'s1','完了':'s2','完了(継続)':'s3'};
-  document.getElementById('updList').innerHTML=aiUpds.length
-    ?aiUpds.map((u,i)=>`<div class="urow ${u.sel?'on':''}" id="uv${i}" onclick="toggleU(${i})">
-      <div class="uchk">${u.sel?'✓':''}<\/div>
-      <div class="utask" title="${esc(u.content)}">${esc(u.content)}<\/div>
-      <div class="uarrow"><span class="sfrom">${esc(u.old)}<\/span><span>→<\/span><span class="sto ${sc[u.new_status]||''}">${esc(u.new_status)}<\/span><span style="font-size:10px;color:var(--sub)" title="${esc(u.reason)}">💬<\/span><\/div>
-    <\/div>`).join('')
-    :'<div style="padding:9px 11px;font-size:12px;color:var(--sub)">進捗変化は検出されませんでした<\/div>';
-  updUCnt();
-}
-function renderNews(){
-  const pc={'high':'ph','mid':'pm','low':'pl_'},pl={'high':'優先','mid':'通常','low':'低'};
-  document.getElementById('newList').innerHTML=aiNews.length
-    ?aiNews.map((c,i)=>`<div class="crow ${c.sel?'on':''}" id="cv${i}" onclick="toggleC(${i})">
-      <div class="cchk">${c.sel?'✓':''}<\/div>
-      <div class="cbody" onclick="event.stopPropagation()">
-        <input class="cinput" value="${esc(c.content)}" oninput="aiNews[${i}].content=this.value">
-        <div class="cmeta">
-          <span class="pp ${pc[c.priority]||'pm'}">${pl[c.priority]||'通常'}<\/span>
-          <input class="cmi" placeholder="担当" value="${esc(c.tantou||'')}" style="width:80px" oninput="aiNews[${i}].tantou=this.value">
-          <input class="cmi" type="date" value="${c.yotei_date||''}" oninput="aiNews[${i}].yotei_date=this.value">
-          <span class="creason" title="${esc(c.reason||'')}">💬 ${esc(c.reason||'')}<\/span>
-        <\/div>
-      <\/div>
-    <\/div>`).join('')
-    :'<div style="padding:9px 11px;font-size:12px;color:var(--sub)">新規タスク候補はありませんでした<\/div>';
-  updNCnt();
-}
-function toggleU(i){aiUpds[i].sel=!aiUpds[i].sel;const e=document.getElementById('uv'+i);e.classList.toggle('on',aiUpds[i].sel);e.querySelector('.uchk').textContent=aiUpds[i].sel?'✓':'';updUCnt();}
-function toggleC(i){aiNews[i].sel=!aiNews[i].sel;const e=document.getElementById('cv'+i);e.classList.toggle('on',aiNews[i].sel);e.querySelector('.cchk').textContent=aiNews[i].sel?'✓':'';updNCnt();}
-function toggleAllU(v){aiUpds.forEach((u,i)=>{u.sel=v;const e=document.getElementById('uv'+i);if(e){e.classList.toggle('on',v);e.querySelector('.uchk').textContent=v?'✓':'';} });updUCnt();}
-function toggleAllN(v){aiNews.forEach((c,i)=>{c.sel=v;const e=document.getElementById('cv'+i);if(e){e.classList.toggle('on',v);e.querySelector('.cchk').textContent=v?'✓':'';} });updNCnt();}
-function updUCnt(){const n=aiUpds.filter(u=>u.sel).length;document.getElementById('uCnt').textContent=`${n}/${aiUpds.length}件`;const ck=document.getElementById('chkAllU');if(ck)ck.checked=n===aiUpds.length&&n>0;}
-function updNCnt(){const n=aiNews.filter(c=>c.sel).length;document.getElementById('nCnt').textContent=`${n}/${aiNews.length}件`;const ck=document.getElementById('chkAllN');if(ck)ck.checked=n===aiNews.length&&n>0;}
-function discardAi(){document.getElementById('aiResult').style.display='none';document.getElementById('mtCard').style.display='block';}
-async function applyAi(){
-  const su=aiUpds.filter(u=>u.sel), sn=aiNews.filter(c=>c.sel);
-  if(!su.length&&!sn.length){toast('1件以上選択してください','err');return;}
-  const mt=document.getElementById('mtDate').value||td();
-  let uc=0,ac=0;
-  for(const u of su){
-    const idx=tasks.findIndex(t=>t.task_id===u.task_id);
-    if(idx<0) continue;
-    const old=tasks[idx].status;
-    tasks[idx].status=u.new_status;
-    if((u.new_status==='完了'||u.new_status==='完了(継続)')&&!tasks[idx].kanryo_date) tasks[idx].kanryo_date=mt;
-    tasks[idx].memo=(tasks[idx].memo?tasks[idx].memo+'\n':'')+`[${mt}] ${old}→${u.new_status}（AI: ${u.reason||''}）`;
-    gp('updateTask',{task_id:u.task_id,status:u.new_status,kanryo_date:tasks[idx].kanryo_date,memo:tasks[idx].memo});
-    uc++;
-  }
-  for(const c of sn){
-    const mx=tasks.reduce((m,t)=>{const n=parseInt((t.task_id||'').replace('TASK-',''));return isNaN(n)?m:Math.max(m,n);},0);
-    const nid='TASK-'+String(mx+1).padStart(4,'0');
-    const nt={task_id:nid,item_id:selId,task_content:c.content,goal:'',tantou:c.tantou||'',status:'未着手',hanan_date:mt,yotei_date:c.yotei_date||'',kanryo_date:'',memo:`[AI ${mt}] ${c.reason||''}`};
-    tasks.push(nt);
-    gp('addTask',{item_id:selId,task_content:c.content,tantou:c.tantou||'',status:'未着手',hanan_date:mt,yotei_date:c.yotei_date||'',memo:nt.memo});
-    ac++;
-  }
-  saveAll(); renderLeft(); renderExt(selId); discardAi();
+function switchToItemMode(){
+  mtMode='item'; selTaskId=null;
+  document.getElementById('selBanner').style.display='flex';
+  document.getElementById('taskBanner').style.display='none';
+  document.getElementById('taskEditCard').style.display='none';
+  document.getElementById('mtCardLabel').textContent='📝 改善項目の議事録';
   document.getElementById('mtText').value='';
-  const msg=[uc&&`🔄 ${uc}件更新`,ac&&`➕ ${ac}件追加`].filter(Boolean).join('　');
-  toast(msg,'ok');
+  document.getElementById('mtText').className='mta';
+  document.getElementById('mtText').placeholder='改善項目全体への議事録・メモを入力してください。';
+  if(selId) renderExt(selId);
 }
+
+function clickTask(taskId){
+  if(selTaskId===taskId){ switchToItemMode(); return; }
+  const t=tasks.find(t=>t.task_id===taskId);
+  if(!t) return;
+  selTaskId=taskId; mtMode='task';
+  document.getElementById('selBanner').style.display='none';
+  document.getElementById('taskBanner').style.display='flex';
+  document.getElementById('taskBannerTitle').textContent=t.task_content;
+  const dc=['未着手','実行中','完了','完了(継続)'].indexOf(t.status);
+  const sl=['未着手','実行中','完了','完了(継続)','未定'][dc<0?4:dc];
+  document.getElementById('taskBannerSub').textContent=(t.tantou||'担当未設定')+'　'+sl+'　'+(t.yotei_date||'期限未設定');
+  document.getElementById('mtCardLabel').textContent='📝 タスクの議事録・メモ';
+  document.getElementById('mtText').value=t.memo||'';
+  document.getElementById('mtText').className='mta task-mode';
+  document.getElementById('mtText').placeholder='このタスクの議事録・進捗メモを入力してください。';
+  // インライン編集フォームにセット
+  document.getElementById('ieContent').value=t.task_content||'';
+  document.getElementById('ieTantou').value=t.tantou||'';
+  document.getElementById('ieGoal').value=t.goal||'';
+  document.getElementById('ieHanan').value=t.hanan_date||'';
+  document.getElementById('ieYotei').value=t.yotei_date||'';
+  document.getElementById('ieKanryo').value=t.kanryo_date||'';
+  document.querySelectorAll('#taskEditCard .sbtn').forEach(b=>b.classList.toggle('on',b.dataset.s===(t.status||'未着手')));
+  document.getElementById('taskEditCard').style.display='block';
+  renderExt(selId);
+  setTimeout(()=>{ document.getElementById('mtText').focus(); },50);
+}
+
+function ieSelS(btn){
+  document.querySelectorAll('#taskEditCard .sbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function saveInlineTask(){
+  if(!selTaskId) return;
+  const idx=tasks.findIndex(t=>t.task_id===selTaskId);
+  if(idx<0) return;
+  const status=document.querySelector('#taskEditCard .sbtn.on')?.dataset.s||'未着手';
+  const wasNotDone=tasks[idx].status!=='完了'&&tasks[idx].status!=='完了(継続)';
+  tasks[idx].task_content=document.getElementById('ieContent').value;
+  tasks[idx].tantou=document.getElementById('ieTantou').value;
+  tasks[idx].goal=document.getElementById('ieGoal').value;
+  tasks[idx].status=status;
+  tasks[idx].hanan_date=document.getElementById('ieHanan').value;
+  tasks[idx].yotei_date=document.getElementById('ieYotei').value;
+  tasks[idx].kanryo_date=document.getElementById('ieKanryo').value;
+  if((status==='完了'||status==='完了(継続)')&&wasNotDone&&!tasks[idx].kanryo_date){
+    tasks[idx].kanryo_date=td();
+    document.getElementById('ieKanryo').value=td();
+  }
+  saveAll();
+  gp('updateTask',{task_id:selTaskId,task_content:tasks[idx].task_content,tantou:tasks[idx].tantou,goal:tasks[idx].goal,status,hanan_date:tasks[idx].hanan_date,yotei_date:tasks[idx].yotei_date,kanryo_date:tasks[idx].kanryo_date});
+  const dc2=['未着手','実行中','完了','完了(継続)'].indexOf(status);
+  const sl2=['未着手','実行中','完了','完了(継続)','未定'][dc2<0?4:dc2];
+  document.getElementById('taskBannerSub').textContent=(tasks[idx].tantou||'担当未設定')+'　'+sl2+'　'+(tasks[idx].yotei_date||'期限未設定');
+  renderLeft(); renderExt(selId);
+  toast('タスクを保存しました','ok');
+}
+
+
+function clearMt(){
+  document.getElementById('mtText').value='';
+}
+
+function saveMemo(){
+  const text=document.getElementById('mtText').value;
+  if(mtMode==='task' && selTaskId){
+    const idx=tasks.findIndex(t=>t.task_id===selTaskId);
+    if(idx<0) return;
+    tasks[idx].memo=text;
+    saveAll();
+    gp('updateTask',{task_id:selTaskId,memo:text});
+    renderExt(selId);
+    toast('議事録を保存しました','ok');
+  }
+}
+
 
 // ===== タスク編集 =====
 function openEdit(tid){
