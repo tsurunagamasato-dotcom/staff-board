@@ -531,7 +531,10 @@ async function syncData(){
 }
 async function gp(action,payload){
   if(!GAS) return {success:true};
-  try{ return await (await fetch(GAS+'?action='+action,{method:'POST',body:JSON.stringify(payload)})).json(); }
+  try{
+    const params = new URLSearchParams({action, data: JSON.stringify(payload)});
+    return await (await fetch(GAS+'?'+params.toString())).json();
+  }
   catch{ return {success:false}; }
 }
 function setSt(s){
