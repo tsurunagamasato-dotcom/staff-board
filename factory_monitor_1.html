@@ -236,7 +236,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 const GAS = 'https://script.google.com/macros/s/AKfycbzlGZJ7WSEh0MRfG1vPNSHOQPQE-FPosTLw8LGq5li1YaJbxGLFpWWE2oyQ5vBa8AwF/exec';
 const CFGK = 'nim_fac3';
 
-let cfg = {interval:10, site:'honsha'};
+let cfg = {interval:10, site:'nezaki'};
 let allFiles = [], curFiles = [], curIdx = 0;
 let playing = false, slideTimer = null;
 const cache = {};
@@ -247,7 +247,7 @@ let curMainTab = 'viewer';
 document.addEventListener('DOMContentLoaded', () => {
   try { cfg = Object.assign(cfg, JSON.parse(localStorage.getItem(CFGK)||'{}')); } catch(e){}
   document.getElementById('interval').value = cfg.interval || 10;
-  setSite(cfg.site || 'honsha', false);
+  setSite(cfg.site || 'nezaki', false);
   updateClock();
   setInterval(updateClock, 1000);
   loadFiles();
