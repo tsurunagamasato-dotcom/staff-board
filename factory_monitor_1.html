@@ -93,8 +93,8 @@
 
   /* 凡例サイドバー */
   .legend {
-    width: 200px;
-    min-width: 200px;
+    width: 240px;
+    min-width: 240px;
     background: rgba(15,17,23,0.95);
     border-left: 1px solid rgba(255,255,255,0.12);
     padding: 24px 20px;
@@ -106,8 +106,11 @@
   }
   .legend-col { display: flex; flex-direction: column; gap: 10px; }
   .legend-row { display: flex; flex-direction: column; gap: 10px; }
-  .legend-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.45); margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
-  .legend-item { display: flex; align-items: center; gap: 12px; font-size: 17px; color: rgba(255,255,255,0.92); white-space: nowrap; }
+  .legend-title { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.45); margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; display:flex; align-items:center; justify-content:space-between; }
+  .leg-toggle { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); cursor: pointer; transition: all .15s; white-space:nowrap; }
+  .leg-toggle:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .leg-toggle.off { background: rgba(232,85,85,0.2); border-color: rgba(232,85,85,0.4); color: #e85555; }
+  .legend-item { display: flex; align-items: center; gap: 12px; font-size: 20px; color: rgba(255,255,255,0.92); white-space: nowrap; }
   .lbox { width: 30px; height: 30px; border-radius: 5px; flex-shrink: 0; }
   .lbox-border { width: 30px; height: 30px; border-radius: 5px; flex-shrink: 0; border: 5px solid; background: transparent; }
   .legend-divider { height: 1px; background: rgba(255,255,255,0.12); margin: 0; }
@@ -264,14 +267,14 @@
           </div>
         </div>
         <div class="legend-divider"></div>
-        <!-- 下段：塗り（納期） -->
+        <!-- 下段：内側（納期） -->
         <div class="legend-col">
-          <div class="legend-title">塗り（納期）</div>
+          <div class="legend-title">内側（納期）</div>
           <div class="legend-row">
             <div class="legend-item"><div class="lbox" style="background:#a5d6a7;"></div>3ヶ月以上</div>
             <div class="legend-item"><div class="lbox" style="background:#fff176;"></div>2ヶ月以内</div>
             <div class="legend-item"><div class="lbox" style="background:#ffb74d;"></div>1ヶ月以内</div>
-            <div class="legend-item"><div class="lbox" style="background:#ef5350;"></div>2週間以内</div>
+            <div class="legend-item"><div class="lbox" style="background:#ff0000;"></div>2週間以内</div>
           </div>
         </div>
       </div>
@@ -569,6 +572,16 @@ document.addEventListener('keydown', function(e){
 // LOADING
 function showLd(msg){ document.getElementById('ldtxt').textContent=msg||''; document.getElementById('ldov').classList.add('show'); }
 function hideLd(){ document.getElementById('ldov').classList.remove('show'); }
+
+// LEGEND TOGGLE
+function toggleLegend(type) {
+  const row = document.getElementById('leg-' + type);
+  const btn = document.getElementById('tog-' + type);
+  const isHidden = row.style.display === 'none';
+  row.style.display = isHidden ? 'flex' : 'none';
+  btn.textContent  = isHidden ? '表示中' : '非表示';
+  btn.classList.toggle('off', !isHidden);
+}
 
 // TOAST
 let tt;
