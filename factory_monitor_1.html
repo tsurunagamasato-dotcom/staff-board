@@ -6,230 +6,225 @@
 <title>ナカシマ 工場現況モニター</title>
 <style>
   :root {
-    --bg: #0f1117; --bg2: #1a1d27; --bg3: #222535;
-    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
-    --text: #e8eaf0; --text2: #8b90a8;
-    --accent: #4f8ef7; --accent2: #3a6fd8;
-    --green: #2ec97d; --amber: #f5a623; --red: #e85555;
-    --radius: 10px;
+    --bg:#0f1117; --bg2:#1a1d27; --bg3:#222535;
+    --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.15);
+    --text:#e8eaf0; --text2:#8b90a8;
+    --accent:#4f8ef7; --accent2:#3a6fd8;
+    --green:#2ec97d; --amber:#f5a623; --red:#e85555;
+    --r:10px;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
-  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
-  .header-left { display: flex; align-items: center; gap: 12px; }
-  .header-title { font-size: 16px; font-weight: 600; }
-  .header-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
-  .header-right { display: flex; align-items: center; gap: 10px; }
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+  .hd-left{display:flex;align-items:center;gap:12px;}
+  .hd-title{font-size:16px;font-weight:600;}
+  .hd-sub{font-size:12px;color:var(--text2);margin-top:1px;}
+  .hd-right{display:flex;align-items:center;gap:10px;}
 
-  .tab-bar { display: flex; gap: 4px; padding: 12px 24px 0; background: var(--bg2); border-bottom: 1px solid var(--border); }
-  .tab { padding: 9px 20px; border-radius: var(--radius) var(--radius) 0 0; font-size: 14px; font-weight: 500; cursor: pointer; background: transparent; color: var(--text2); border: 1px solid transparent; border-bottom: none; transition: all 0.18s; position: relative; bottom: -1px; display: flex; align-items: center; gap: 8px; }
-  .tab:hover { color: var(--text); background: var(--bg3); }
-  .tab.active { color: var(--text); background: var(--bg); border-color: var(--border); border-bottom-color: var(--bg); }
-  .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; }
+  .tabbar{display:flex;gap:4px;padding:12px 24px 0;background:var(--bg2);border-bottom:1px solid var(--border);}
+  .maintab{padding:9px 20px;border-radius:var(--r) var(--r) 0 0;font-size:14px;font-weight:500;cursor:pointer;background:transparent;color:var(--text2);border:1px solid transparent;border-bottom:none;transition:all .18s;position:relative;bottom:-1px;display:flex;align-items:center;gap:8px;}
+  .maintab:hover{color:var(--text);background:var(--bg3);}
+  .maintab.active{color:var(--text);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg);}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;}
 
-  main { display: flex; height: calc(100vh - 101px); }
+  main{display:flex;height:calc(100vh - 101px);}
 
-  .sidebar { width: 240px; min-width: 240px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
-  .sidebar-section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-  .sidebar-label { font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text2); margin-bottom: 10px; }
+  .sidebar{width:240px;min-width:240px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+  .sb-sec{padding:14px 16px;border-bottom:1px solid var(--border);}
+  .sb-lbl{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);margin-bottom:10px;}
 
-  .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-  .status-badge.playing { background: rgba(46,201,125,0.15); color: var(--green); }
-  .status-badge.paused { background: rgba(245,166,35,0.15); color: var(--amber); }
-  .status-badge .blink { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: blink 1.2s ease-in-out infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;}
+  .badge.playing{background:rgba(46,201,125,.15);color:var(--green);}
+  .badge.paused{background:rgba(245,166,35,.15);color:var(--amber);}
+  .badge .blink{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 1.2s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-  .conn-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 4px 10px; border-radius: 20px; }
-  .conn-badge.ok { background: rgba(46,201,125,0.15); color: var(--green); }
-  .conn-badge.ng { background: rgba(232,85,85,0.15); color: var(--red); }
-  .conn-badge.checking { background: rgba(139,144,168,0.15); color: var(--text2); }
+  .conn{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 10px;border-radius:20px;}
+  .conn.ok{background:rgba(46,201,125,.15);color:var(--green);}
+  .conn.ng{background:rgba(232,85,85,.15);color:var(--red);}
+  .conn.chk{background:rgba(139,144,168,.15);color:var(--text2);}
 
-  .site-select-group { display: flex; flex-direction: column; gap: 6px; }
-  .site-option { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; border: 1px solid var(--border); transition: all 0.15s; font-size: 13px; }
-  .site-option:hover { border-color: var(--border2); background: var(--bg3); }
-  .site-option.selected { border-color: var(--accent); background: rgba(79,142,247,0.1); }
-  .site-option input[type=radio] { display: none; }
-  .site-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .site-dot.honsha { background: var(--accent); }
-  .site-dot.nezaki { background: var(--green); }
+  .site-grp{display:flex;flex-direction:column;gap:6px;}
+  .site-opt{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);cursor:pointer;border:1px solid var(--border);transition:all .15s;font-size:13px;}
+  .site-opt:hover{border-color:var(--border2);background:var(--bg3);}
+  .site-opt.sel{border-color:var(--accent);background:rgba(79,142,247,.1);}
+  .site-opt input{display:none;}
+  .sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .sdot.h{background:var(--accent);}
+  .sdot.n{background:var(--green);}
 
-  .field-input { background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 13px; outline: none; width: 100%; }
-  .field-input:focus { border-color: var(--accent); }
+  .inp{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;width:100%;}
+  .inp:focus{border-color:var(--accent);}
 
-  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border2); background: var(--bg3); color: var(--text); transition: all 0.15s; white-space: nowrap; }
-  .btn:hover { background: var(--bg2); border-color: var(--text2); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn.primary:hover { background: var(--accent2); }
-  .btn-row { display: flex; gap: 8px; }
+  .btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text);transition:all .15s;white-space:nowrap;}
+  .btn:hover{background:var(--bg2);border-color:var(--text2);}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.pri:hover{background:var(--accent2);}
+  .btn-row{display:flex;gap:8px;}
 
-  .history-list { flex: 1; overflow-y: auto; padding: 8px; }
-  .hist-tab { background: var(--bg3) !important; border-color: var(--border2) !important; color: var(--text2) !important; }
-  .hist-tab.active { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
-  .history-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; transition: all 0.15s; margin-bottom: 4px; }
-  .history-item:hover { background: var(--bg3); border-color: var(--border); }
-  .history-info { flex: 1; min-width: 0; }
-  .history-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .history-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
-  .history-site { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-top: 3px; }
-  .history-site.honsha { background: rgba(79,142,247,0.2); color: #7aacf9; }
-  .history-site.nezaki { background: rgba(46,201,125,0.2); color: #6ed8a8; }
+  .htabs{display:flex;gap:4px;margin-bottom:8px;}
+  .htab{flex:1;padding:6px 4px;font-size:12px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);cursor:pointer;text-align:center;transition:all .15s;}
+  .htab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 
-  .viewer { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  .viewer-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--bg2); border-bottom: 1px solid var(--border); min-height: 52px; }
-  .viewer-info { display: flex; align-items: center; gap: 12px; }
-  .viewer-title { font-size: 14px; font-weight: 600; }
-  .viewer-date { font-size: 12px; color: var(--text2); }
-  .viewer-nav { display: flex; align-items: center; gap: 8px; }
-  .nav-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
-  .nav-btn:hover { border-color: var(--text2); }
-  .nav-btn:disabled { opacity: 0.3; cursor: default; }
-  .slide-counter { font-size: 13px; color: var(--text2); min-width: 60px; text-align: center; }
+  .hlist{flex:1;overflow-y:auto;padding:8px;}
+  .hitem{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:var(--r);cursor:pointer;border:1px solid transparent;transition:all .15s;margin-bottom:4px;}
+  .hitem:hover{background:var(--bg3);border-color:var(--border);}
+  .hinfo{flex:1;min-width:0;}
+  .hname{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .hmeta{font-size:11px;color:var(--text2);margin-top:2px;}
+  .newbadge{font-size:10px;background:rgba(46,201,125,.2);color:#6ed8a8;padding:1px 5px;border-radius:4px;margin-left:4px;}
 
-  .progress-bar { height: 2px; background: var(--border); }
-  .progress-fill { height: 100%; background: var(--accent); width: 0%; }
+  .viewer{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .vtoolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border);min-height:52px;}
+  .vinfo{display:flex;align-items:center;gap:12px;}
+  .vtitle{font-size:14px;font-weight:600;}
+  .vdate{font-size:12px;color:var(--text2);}
+  .vnav{display:flex;align-items:center;gap:8px;}
+  .nbtn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;}
+  .nbtn:hover{border-color:var(--text2);}
+  .nbtn:disabled{opacity:.3;cursor:default;}
+  .scnt{font-size:13px;color:var(--text2);min-width:60px;text-align:center;}
 
-  .pdf-container { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #1e2130; position: relative; padding: 0; }
+  .pbar{height:2px;background:var(--border);}
+  .pfill{height:100%;background:var(--accent);width:0%;}
 
-  /* フェード用ラッパー */
-  #pdf-wrapper { opacity: 0; display: none; }
-  @keyframes kenburns {
-    0%   { transform: scale(1.0) translate(0, 0); }
-    50%  { transform: scale(1.06) translate(-1%, -1%); }
-    100% { transform: scale(1.0) translate(0, 0); }
+  .pdfcont{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#1e2130;position:relative;padding:0;}
+
+  #pdfwrap{opacity:0;display:none;}
+  @keyframes kenburns{
+    0%  {transform:scale(1.0) translate(0,0);}
+    50% {transform:scale(1.06) translate(-1%,-1%);}
+    100%{transform:scale(1.0) translate(0,0);}
   }
-  #pdf-wrapper.playing { animation: kenburns 12s ease-in-out infinite; }
+  #pdfwrap.kb{animation:kenburns 12s ease-in-out infinite;}
 
-  #pdf-canvas { display: block; }
+  #pdfcanvas{display:block;}
 
-  .empty-state { display: flex; flex-direction: column; align-items: center; gap: 16px; color: var(--text2); text-align: center; }
-  .empty-icon { font-size: 56px; opacity: 0.3; }
-  .empty-title { font-size: 18px; font-weight: 500; color: var(--text); opacity: 0.5; }
-  .empty-sub { font-size: 14px; opacity: 0.7; }
+  .empty{display:flex;flex-direction:column;align-items:center;gap:16px;color:var(--text2);text-align:center;}
+  .empty-icon{font-size:56px;opacity:.3;}
+  .empty-title{font-size:18px;font-weight:500;color:var(--text);opacity:.5;}
+  .empty-sub{font-size:14px;opacity:.7;}
 
-  .loading-overlay { display: none; position: absolute; inset: 0; background: rgba(15,17,23,0.8); align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 10; }
-  .loading-overlay.show { display: flex; }
-  .spinner { width: 40px; height: 40px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 14px; color: var(--text2); }
+  .ldov{display:none;position:absolute;inset:0;background:rgba(15,17,23,.8);align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:10;}
+  .ldov.show{display:flex;}
+  .spin{width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .ldtxt{font-size:14px;color:var(--text2);}
 
-  body.monitor-mode header, body.monitor-mode .tab-bar, body.monitor-mode .sidebar { display: none; }
-  body.monitor-mode main { height: 100vh; }
-  .monitor-exit { display: none; position: fixed; top: 12px; right: 12px; z-index: 999; }
-  body.monitor-mode .monitor-exit { display: flex; }
+  body.mon header,body.mon .tabbar,body.mon .sidebar{display:none;}
+  body.mon main{height:100vh;}
+  .monexit{display:none;position:fixed;top:12px;right:12px;z-index:999;}
+  body.mon .monexit{display:flex;}
 
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px 18px; font-size: 14px; z-index: 300; display: flex; align-items: center; gap: 10px; transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 400px; }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.success { border-left: 3px solid var(--green); }
-  .toast.error { border-left: 3px solid var(--red); }
-  .toast.info { border-left: 3px solid var(--accent); }
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:12px 18px;font-size:14px;z-index:300;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:all .3s;max-width:400px;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast.success{border-left:3px solid var(--green);}
+  .toast.error{border-left:3px solid var(--red);}
+  .toast.info{border-left:3px solid var(--accent);}
 
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 </style>
 </head>
 <body>
-
-<button class="btn monitor-exit" onclick="exitMonitorMode()">✕ 通常表示</button>
+<button class="btn monexit" onclick="exitMon()">✕ 通常表示</button>
 <div class="toast" id="toast"></div>
 
 <header>
-  <div class="header-left">
+  <div class="hd-left">
     <div>
-      <div class="header-title">工場現況モニター</div>
-      <div class="header-sub" id="clock">--</div>
+      <div class="hd-title">工場現況モニター</div>
+      <div class="hd-sub" id="clock">--</div>
     </div>
   </div>
-  <div class="header-right">
-    <div id="slide-status" class="status-badge paused"><span class="blink"></span>停止中</div>
-    <button class="btn" onclick="enterMonitorMode()">🖥 モニター表示</button>
+  <div class="hd-right">
+    <div id="slidebadge" class="badge paused"><span class="blink"></span>停止中</div>
+    <button class="btn" onclick="enterMon()">🖥 モニター表示</button>
   </div>
 </header>
 
-<div class="tab-bar">
-  <button class="tab active" id="tab-viewer" onclick="switchTab('viewer')"><span class="dot"></span>現在の状況</button>
-  <button class="tab" id="tab-history" onclick="switchTab('history')"><span class="dot" style="background:var(--text2)"></span>履歴</button>
+<div class="tabbar">
+  <button class="maintab active" id="mtab-viewer" onclick="showTab('viewer')"><span class="dot"></span>現在の状況</button>
+  <button class="maintab" id="mtab-history" onclick="showTab('history')"><span class="dot" style="background:var(--text2)"></span>履歴</button>
 </div>
 
 <main>
-  <div class="sidebar" id="sidebar">
+  <div class="sidebar">
 
-    <div class="sidebar-section">
-      <div class="sidebar-label">Box 接続状態</div>
-      <div id="conn-badge" class="conn-badge checking">● 確認中...</div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Box 接続状態</div>
+      <div id="connbadge" class="conn chk">● 確認中...</div>
     </div>
 
-    <div class="sidebar-section" id="section-site">
-      <div class="sidebar-label">表示拠点</div>
-      <div class="site-select-group">
-        <label class="site-option selected" id="site-honsha">
-          <input type="radio" name="site" value="honsha" checked onchange="siteChanged('honsha')">
-          <span class="site-dot honsha"></span>本社工場
+    <div class="sb-sec" id="sec-site">
+      <div class="sb-lbl">表示拠点</div>
+      <div class="site-grp">
+        <label class="site-opt sel" id="sopt-honsha">
+          <input type="radio" name="site" value="honsha" checked onchange="setSite('honsha')">
+          <span class="sdot h"></span>本社工場
         </label>
-        <label class="site-option" id="site-nezaki">
-          <input type="radio" name="site" value="nezaki" onchange="siteChanged('nezaki')">
-          <span class="site-dot nezaki"></span>根崎第2工場
+        <label class="site-opt" id="sopt-nezaki">
+          <input type="radio" name="site" value="nezaki" onchange="setSite('nezaki')">
+          <span class="sdot n"></span>根崎第2工場
         </label>
-        <label class="site-option" id="site-all">
-          <input type="radio" name="site" value="all" onchange="siteChanged('all')">
+        <label class="site-opt" id="sopt-all">
+          <input type="radio" name="site" value="all" onchange="setSite('all')">
           <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;"></span>両拠点（交互）
         </label>
       </div>
     </div>
 
-    <div class="sidebar-section" id="section-slide">
-      <div class="sidebar-label">スライドショー</div>
+    <div class="sb-sec" id="sec-slide">
+      <div class="sb-lbl">スライドショー</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap;">切換え間隔</span>
-          <input class="field-input" type="number" id="interval-input" value="10" min="3" max="300" style="width:70px;">
+          <input class="inp" type="number" id="interval" value="10" min="3" max="300" style="width:70px;">
           <span style="font-size:12px;color:var(--text2);">秒</span>
         </div>
         <div class="btn-row">
-          <button class="btn primary" id="play-btn" onclick="toggleSlideshow()">▶ 開始</button>
+          <button class="btn pri" id="playbtn" onclick="toggleSlide()">▶ 開始</button>
           <button class="btn" onclick="loadFiles()">↻ 更新</button>
         </div>
       </div>
     </div>
 
-    <div id="history-panel" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
-      <div class="sidebar-section" style="border:none;padding-bottom:8px;">
-        <div class="sidebar-label" style="margin-bottom:8px;">過去の記録</div>
-        <div style="display:flex;gap:4px;">
-          <button class="btn hist-tab active" id="htab-honsha" onclick="switchHistTab('honsha')" style="flex:1;padding:6px 4px;font-size:12px;">本社</button>
-          <button class="btn hist-tab" id="htab-nezaki" onclick="switchHistTab('nezaki')" style="flex:1;padding:6px 4px;font-size:12px;">根崎第2</button>
+    <div id="sec-history" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+      <div class="sb-sec" style="border:none;padding-bottom:8px;">
+        <div class="sb-lbl" style="margin-bottom:8px;">過去の記録</div>
+        <div class="htabs">
+          <button class="htab active" id="htab-h" onclick="setHistTab('honsha')">本社</button>
+          <button class="htab" id="htab-n" onclick="setHistTab('nezaki')">根崎第2</button>
         </div>
       </div>
-      <div class="history-list" id="history-list"></div>
+      <div class="hlist" id="hlist"></div>
     </div>
 
   </div>
 
   <div class="viewer">
-    <div class="viewer-toolbar">
-      <div class="viewer-info">
-        <div class="viewer-title" id="viewer-title">読み込み中...</div>
-        <div class="viewer-date" id="viewer-date"></div>
+    <div class="vtoolbar">
+      <div class="vinfo">
+        <div class="vtitle" id="vtitle">読み込み中...</div>
+        <div class="vdate" id="vdate"></div>
       </div>
-      <div class="viewer-nav">
-        <button class="nav-btn" id="prev-btn" onclick="navigate(-1)" disabled>‹</button>
-        <span class="slide-counter" id="slide-counter">—</span>
-        <button class="nav-btn" id="next-btn" onclick="navigate(1)" disabled>›</button>
+      <div class="vnav">
+        <button class="nbtn" id="prevbtn" onclick="nav(-1)" disabled>‹</button>
+        <span class="scnt" id="scnt">—</span>
+        <button class="nbtn" id="nextbtn" onclick="nav(1)" disabled>›</button>
       </div>
     </div>
-    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-    <div class="pdf-container" id="pdf-container">
-      <div class="loading-overlay" id="loading-overlay">
-        <div class="spinner"></div>
-        <div class="loading-text" id="loading-text">PDFを読み込み中...</div>
-      </div>
-      <div class="empty-state" id="empty-state">
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    <div class="pdfcont" id="pdfcont">
+      <div class="ldov" id="ldov"><div class="spin"></div><div class="ldtxt" id="ldtxt">読み込み中...</div></div>
+      <div class="empty" id="empty">
         <div class="empty-icon">📋</div>
         <div class="empty-title">PDFが見つかりません</div>
         <div class="empty-sub">↻ 更新ボタンを押してください</div>
       </div>
-      <div id="pdf-wrapper"><canvas id="pdf-canvas"></canvas></div>
+      <div id="pdfwrap"><canvas id="pdfcanvas"></canvas></div>
     </div>
   </div>
 </main>
@@ -238,332 +233,301 @@
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzlGZJ7WSEh0MRfG1vPNSHOQPQE-FPosTLw8LGq5li1YaJbxGLFpWWE2oyQ5vBa8AwF/exec';
-const CFG_KEY = 'nim_factory_v2';
+const GAS = 'https://script.google.com/macros/s/AKfycbzlGZJ7WSEh0MRfG1vPNSHOQPQE-FPosTLw8LGq5li1YaJbxGLFpWWE2oyQ5vBa8AwF/exec';
+const CFGK = 'nim_fac3';
 
-let cfg = { interval: 10, site: 'honsha' };
-let allFiles = [];
-let currentFiles = [];
-let currentIndex = 0;
-let isPlaying = false;
-let slideshowTimer = null;
-const pdfCache = {};
+let cfg = {interval:10, site:'honsha'};
+let allFiles = [], curFiles = [], curIdx = 0;
+let playing = false, slideTimer = null;
+const cache = {};
+let histTab = 'honsha';
+let curMainTab = 'viewer';
 
-// ===== BOOT =====
+// BOOT
 document.addEventListener('DOMContentLoaded', () => {
-  try { cfg = { ...cfg, ...JSON.parse(localStorage.getItem(CFG_KEY) || '{}') }; } catch(e) {}
-  document.getElementById('interval-input').value = cfg.interval || 10;
-  siteChanged(cfg.site || 'honsha', false);
+  try { cfg = Object.assign(cfg, JSON.parse(localStorage.getItem(CFGK)||'{}')); } catch(e){}
+  document.getElementById('interval').value = cfg.interval || 10;
+  setSite(cfg.site || 'honsha', false);
   updateClock();
   setInterval(updateClock, 1000);
   loadFiles();
 });
+function saveCfg(){ try{localStorage.setItem(CFGK,JSON.stringify(cfg));}catch(e){} }
 
-function saveCfg() {
-  try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch(e) {}
-}
-
-// ===== CLOCK =====
-function updateClock() {
+// CLOCK
+function updateClock(){
   const n = new Date();
   document.getElementById('clock').textContent =
     n.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'})
     + ' ' + n.toLocaleTimeString('ja-JP');
 }
 
-// ===== TAB =====
-function switchTab(tab) {
-  document.getElementById('tab-viewer').classList.toggle('active', tab === 'viewer');
-  document.getElementById('tab-history').classList.toggle('active', tab === 'history');
-  document.getElementById('history-panel').style.display = tab === 'history' ? 'flex' : 'none';
-  ['section-site','section-slide'].forEach(id => {
-    document.getElementById(id).style.display = tab === 'history' ? 'none' : '';
-  });
-  if (tab === 'history') renderHistory();
+// MAIN TAB
+function showTab(tab){
+  curMainTab = tab;
+  document.getElementById('mtab-viewer').classList.toggle('active', tab==='viewer');
+  document.getElementById('mtab-history').classList.toggle('active', tab==='history');
+  document.getElementById('sec-history').style.display = tab==='history' ? 'flex' : 'none';
+  document.getElementById('sec-site').style.display   = tab==='history' ? 'none' : '';
+  document.getElementById('sec-slide').style.display  = tab==='history' ? 'none' : '';
+  if(tab==='history') renderHist();
 }
 
-// ===== SITE =====
-function siteChanged(val, doLoad) {
+// SITE
+function setSite(val, doLoad){
   cfg.site = val; saveCfg();
-  ['honsha','nezaki','all'].forEach(s =>
-    document.getElementById('site-' + s).classList.toggle('selected', s === val));
-  if (doLoad !== false) filterAndDisplay();
+  ['honsha','nezaki','all'].forEach(function(s){
+    document.getElementById('sopt-'+s).classList.toggle('sel', s===val);
+  });
+  if(doLoad !== false) filterAndShow();
 }
 
-// ===== LOAD FILES =====
-async function loadFiles() {
-  setConn('checking');
-  showLoading('Boxからファイル一覧を取得中...');
+// LOAD FILES
+async function loadFiles(){
+  setConn('chk');
+  showLd('Boxからファイル一覧を取得中...');
   try {
-    const res = await fetch(GAS_URL + '?action=listFiles');
+    const res  = await fetch(GAS + '?action=listFiles');
     const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    allFiles = (data.files || []).map(f => ({
-      id: f.id, name: f.name,
-      site: detectSite(f.name),
-      modified: f.modified
-    }));
-    hideLoading();
+    if(data.error) throw new Error(data.error);
+    allFiles = (data.files||[]).map(function(f){
+      return {id:f.id, name:f.name, site:detectSite(f.name), modified:f.modified};
+    });
+    hideLd();
     setConn('ok');
-    filterAndDisplay();
-    showToast(allFiles.length + '件のPDFを取得しました', 'success');
-  } catch(e) {
-    hideLoading();
+    filterAndShow();
+    toast(allFiles.length + '件のPDFを取得しました', 'success');
+  } catch(e){
+    hideLd();
     setConn('ng');
-    showToast('取得エラー：' + e.message, 'error');
+    toast('取得エラー：' + e.message, 'error');
     showEmpty();
   }
 }
 
-function detectSite(name) {
-  if (/本社/i.test(name)) return 'honsha';
-  if (/根崎/i.test(name)) return 'nezaki';
-  return 'other';
+function detectSite(n){ return /本社/i.test(n)?'honsha':/根崎/i.test(n)?'nezaki':'other'; }
+
+function setConn(s){
+  const el = document.getElementById('connbadge');
+  if(s==='ok'){el.className='conn ok';el.textContent='● 接続OK';}
+  else if(s==='ng'){el.className='conn ng';el.textContent='● 接続エラー';}
+  else{el.className='conn chk';el.textContent='● 確認中...';}
 }
 
-function setConn(state) {
-  const el = document.getElementById('conn-badge');
-  if (state === 'ok')       { el.className = 'conn-badge ok';       el.textContent = '● 接続OK'; }
-  else if (state === 'ng')  { el.className = 'conn-badge ng';       el.textContent = '● 接続エラー'; }
-  else                      { el.className = 'conn-badge checking'; el.textContent = '● 確認中...'; }
-}
-
-// ===== FILTER & DISPLAY =====
-function filterAndDisplay() {
-  if (cfg.site === 'all') {
-    // 両拠点：本社の最新1件 + 根崎第2の最新1件だけ交互に表示
-    const honsha = allFiles.filter(f => f.site === 'honsha')[0];
-    const nezaki  = allFiles.filter(f => f.site === 'nezaki')[0];
-    currentFiles = [honsha, nezaki].filter(Boolean);
+// FILTER
+function filterAndShow(){
+  if(cfg.site === 'all'){
+    const h = allFiles.filter(function(f){return f.site==='honsha';})[0];
+    const n = allFiles.filter(function(f){return f.site==='nezaki';})[0];
+    curFiles = [h,n].filter(Boolean);
   } else {
-    currentFiles = allFiles.filter(f => f.site === cfg.site);
+    curFiles = allFiles.filter(function(f){return f.site===cfg.site;});
   }
-
-  if (currentFiles.length === 0) { showEmpty(); return; }
-  currentIndex = 0;
-  showFile(currentFiles[0]);
+  if(!curFiles.length){ showEmpty(); return; }
+  curIdx = 0;
+  showPDF(curFiles[0]);
   updateNav();
-  setTimeout(prefetchNext, 3000);
+  setTimeout(prefetch, 3000);
 }
 
-// ===== SHOW FILE =====
-async function showFile(file) {
-  const wrapper = document.getElementById('pdf-wrapper');
-  const empty   = document.getElementById('empty-state');
-
-  // フェードアウト
-  wrapper.style.opacity = '0';
+// SHOW PDF
+async function showPDF(file){
+  const wrap  = document.getElementById('pdfwrap');
+  const empty = document.getElementById('empty');
+  wrap.style.transition = 'none';
+  wrap.style.opacity = '0';
+  wrap.classList.remove('kb');
   empty.style.display = 'none';
 
-  document.getElementById('viewer-title').textContent = file.name;
+  document.getElementById('vtitle').textContent = file.name;
   const d = new Date(file.modified);
-  const siteLabel = file.site === 'honsha' ? '本社工場' : file.site === 'nezaki' ? '根崎第2工場' : '';
-  document.getElementById('viewer-date').textContent =
-    d.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'})
-    + (siteLabel ? '  ' + siteLabel : '');
+  const sl = file.site==='honsha'?'本社工場':file.site==='nezaki'?'根崎第2工場':'';
+  document.getElementById('vdate').textContent =
+    d.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}) + (sl?' '+sl:'');
 
   try {
-    let url = pdfCache[file.id];
-    if (!url) {
-      showLoading('PDFを読み込み中...');
-      const res  = await fetch(GAS_URL + '?action=getFile&fileId=' + file.id);
+    let url = cache[file.id];
+    if(!url){
+      showLd('PDFを読み込み中...');
+      const res  = await fetch(GAS + '?action=getFile&fileId=' + file.id);
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      const bin   = atob(data.base64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-      pdfCache[file.id] = url;
+      if(data.error) throw new Error(data.error);
+      const bin = atob(data.base64);
+      const buf = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+      url = URL.createObjectURL(new Blob([buf],{type:'application/pdf'}));
+      cache[file.id] = url;
     }
-
     const pdf  = await pdfjsLib.getDocument(url).promise;
     const page = await pdf.getPage(1);
-    const cont = document.getElementById('pdf-container');
-    const vp1  = page.getViewport({ scale: 1 });
-    const scale = Math.min(
-      cont.clientWidth  / vp1.width,
-      cont.clientHeight / vp1.height
-    );
-    const vp     = page.getViewport({ scale });
-    const canvas = document.getElementById('pdf-canvas');
-    canvas.width  = vp.width;
-    canvas.height = vp.height;
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-
-    hideLoading();
-    wrapper.style.display = 'block';
-
-    // フェードイン
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        wrapper.style.transition = 'opacity 0.7s ease';
-        wrapper.style.opacity = '1';
-        // スライドショー中かつ単拠点の場合のみケン・バーンズ効果
-        if (isPlaying && cfg.site !== 'all') wrapper.classList.add('playing');
-        else wrapper.classList.remove('playing');
+    const cont = document.getElementById('pdfcont');
+    const vp1  = page.getViewport({scale:1});
+    const sc   = Math.min(cont.clientWidth/vp1.width, cont.clientHeight/vp1.height);
+    const vp   = page.getViewport({scale:sc});
+    const cv   = document.getElementById('pdfcanvas');
+    cv.width   = vp.width;
+    cv.height  = vp.height;
+    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    hideLd();
+    wrap.style.display = 'block';
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        wrap.style.transition = 'opacity 0.7s ease';
+        wrap.style.opacity = '1';
+        if(playing && cfg.site !== 'all') wrap.classList.add('kb');
       });
     });
-
-  } catch(e) {
-    hideLoading();
+  } catch(e){
+    hideLd();
     showEmpty();
-    showToast('PDF読み込みエラー：' + e.message, 'error');
+    toast('PDF読み込みエラー：' + e.message, 'error');
   }
 }
 
-// ===== PREFETCH =====
-async function prefetchNext() {
-  const ni = currentIndex + 1;
-  if (ni >= currentFiles.length) return;
-  const file = currentFiles[ni];
-  if (pdfCache[file.id]) return;
-  try {
-    const res  = await fetch(GAS_URL + '?action=getFile&fileId=' + file.id);
+// PREFETCH
+async function prefetch(){
+  const ni = curIdx + 1;
+  if(ni >= curFiles.length) return;
+  const f = curFiles[ni];
+  if(cache[f.id]) return;
+  try{
+    const res  = await fetch(GAS + '?action=getFile&fileId=' + f.id);
     const data = await res.json();
-    if (data.error) return;
-    const bin   = atob(data.base64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    pdfCache[file.id] = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-  } catch(e) {}
+    if(data.error) return;
+    const bin = atob(data.base64);
+    const buf = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+    cache[f.id] = URL.createObjectURL(new Blob([buf],{type:'application/pdf'}));
+  }catch(e){}
 }
 
-function showEmpty() {
-  document.getElementById('empty-state').style.display = 'flex';
-  document.getElementById('pdf-wrapper').style.display = 'none';
-  document.getElementById('viewer-title').textContent = 'PDFが見つかりません';
-  document.getElementById('viewer-date').textContent = '';
-  document.getElementById('slide-counter').textContent = '—';
+function showEmpty(){
+  document.getElementById('empty').style.display='flex';
+  document.getElementById('pdfwrap').style.display='none';
+  document.getElementById('vtitle').textContent='PDFが見つかりません';
+  document.getElementById('vdate').textContent='';
+  document.getElementById('scnt').textContent='—';
 }
 
-// ===== NAVIGATE =====
-function navigate(dir) {
-  currentIndex = Math.max(0, Math.min(currentFiles.length - 1, currentIndex + dir));
-  showFile(currentFiles[currentIndex]);
+// NAV
+function nav(dir){
+  curIdx = Math.max(0, Math.min(curFiles.length-1, curIdx+dir));
+  showPDF(curFiles[curIdx]);
   updateNav();
-  if (isPlaying) resetProgress();
+  if(playing) resetProg();
 }
-function updateNav() {
-  const n = currentFiles.length;
-  document.getElementById('prev-btn').disabled = currentIndex <= 0;
-  document.getElementById('next-btn').disabled = currentIndex >= n - 1;
-  document.getElementById('slide-counter').textContent = n > 0 ? (currentIndex + 1) + ' / ' + n : '—';
+function updateNav(){
+  const n = curFiles.length;
+  document.getElementById('prevbtn').disabled = curIdx<=0;
+  document.getElementById('nextbtn').disabled = curIdx>=n-1;
+  document.getElementById('scnt').textContent = n>0 ? (curIdx+1)+' / '+n : '—';
 }
 
-// ===== SLIDESHOW =====
-function toggleSlideshow() { isPlaying ? stopSlideshow() : startSlideshow(); }
-function startSlideshow() {
-  if (!currentFiles.length) { showToast('ファイルがありません', 'error'); return; }
-  isPlaying = true;
-  cfg.interval = parseInt(document.getElementById('interval-input').value) || 10;
+// SLIDESHOW
+function toggleSlide(){ playing ? stopSlide() : startSlide(); }
+function startSlide(){
+  if(!curFiles.length){ toast('ファイルがありません','error'); return; }
+  playing = true;
+  cfg.interval = parseInt(document.getElementById('interval').value)||10;
   saveCfg();
-  document.getElementById('play-btn').textContent = '⏸ 停止';
-  document.getElementById('slide-status').className = 'status-badge playing';
-  document.getElementById('slide-status').innerHTML = '<span class="blink"></span>スライド中';
-  if (cfg.site !== 'all') document.getElementById('pdf-wrapper').classList.add('playing');
-  resetProgress();
-  scheduleNext();
+  document.getElementById('playbtn').textContent = '⏸ 停止';
+  document.getElementById('slidebadge').className = 'badge playing';
+  document.getElementById('slidebadge').innerHTML = '<span class="blink"></span>スライド中';
+  if(cfg.site !== 'all') document.getElementById('pdfwrap').classList.add('kb');
+  resetProg();
+  schedNext();
 }
-function stopSlideshow() {
-  isPlaying = false;
-  clearTimeout(slideshowTimer);
-  document.getElementById('play-btn').textContent = '▶ 開始';
-  document.getElementById('slide-status').className = 'status-badge paused';
-  document.getElementById('slide-status').innerHTML = '<span class="blink"></span>停止中';
-  document.getElementById('pdf-wrapper').classList.remove('playing');
-  document.getElementById('progress-fill').style.transition = 'none';
-  document.getElementById('progress-fill').style.width = '0%';
+function stopSlide(){
+  playing = false;
+  clearTimeout(slideTimer);
+  document.getElementById('playbtn').textContent = '▶ 開始';
+  document.getElementById('slidebadge').className = 'badge paused';
+  document.getElementById('slidebadge').innerHTML = '<span class="blink"></span>停止中';
+  document.getElementById('pdfwrap').classList.remove('kb');
+  const pf = document.getElementById('pfill');
+  pf.style.transition='none'; pf.style.width='0%';
 }
-function scheduleNext() {
-  slideshowTimer = setTimeout(() => {
-    if (!isPlaying) return;
-    currentIndex = (currentIndex + 1) % currentFiles.length;
-    showFile(currentFiles[currentIndex]);
+function schedNext(){
+  slideTimer = setTimeout(function(){
+    if(!playing) return;
+    curIdx = (curIdx+1) % curFiles.length;
+    showPDF(curFiles[curIdx]);
     updateNav();
-    resetProgress();
-    scheduleNext();
-    setTimeout(prefetchNext, 2000);
+    resetProg();
+    schedNext();
+    setTimeout(prefetch, 2000);
   }, cfg.interval * 1000);
 }
-function resetProgress() {
-  const fill = document.getElementById('progress-fill');
-  fill.style.transition = 'none'; fill.style.width = '0%';
-  setTimeout(() => {
-    fill.style.transition = 'width ' + cfg.interval + 's linear';
-    fill.style.width = '100%';
+function resetProg(){
+  const pf = document.getElementById('pfill');
+  pf.style.transition='none'; pf.style.width='0%';
+  setTimeout(function(){
+    pf.style.transition = 'width '+cfg.interval+'s linear';
+    pf.style.width='100%';
   }, 50);
 }
 
-// ===== HISTORY =====
-let histTab = 'honsha';
-
-function switchHistTab(tab) {
+// HISTORY
+function setHistTab(tab){
   histTab = tab;
-  document.getElementById('htab-honsha').classList.toggle('active', tab === 'honsha');
-  document.getElementById('htab-nezaki').classList.toggle('active', tab === 'nezaki');
-  renderHistory();
+  document.getElementById('htab-h').classList.toggle('active', tab==='honsha');
+  document.getElementById('htab-n').classList.toggle('active', tab==='nezaki');
+  renderHist();
 }
-
-function renderHistory() {
-  const list = document.getElementById('history-list');
-  const filtered = allFiles.filter(f => f.site === histTab);
-  if (!filtered.length) {
+function renderHist(){
+  const list = document.getElementById('hlist');
+  const files = allFiles.filter(function(f){ return f.site===histTab; });
+  if(!files.length){
     list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px;">履歴はありません</div>';
     return;
   }
-  list.innerHTML = filtered.map((f, i) => {
+  list.innerHTML = files.map(function(f, i){
     const d  = new Date(f.modified);
     const ds = d.toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'});
-    const isLatest = i === 0;
-    return '<div class="history-item" onclick="openHistoryFile('' + f.id + '')">'
-      + '<div style="font-size:20px;flex-shrink:0;">📄</div>'
-      + '<div class="history-info">'
-      + '<div class="history-name">' + f.name + (isLatest ? ' <span style="font-size:10px;background:rgba(46,201,125,0.2);color:#6ed8a8;padding:1px 5px;border-radius:4px;">最新</span>' : '') + '</div>'
-      + '<div class="history-meta">' + ds + '</div>'
-      + '</div></div>';
+    const nb = i===0 ? '<span class="newbadge">最新</span>' : '';
+    return '<div class="hitem" onclick="openHistFile(\'' + f.id + '\')">'
+         + '<div style="font-size:20px;flex-shrink:0">📄</div>'
+         + '<div class="hinfo">'
+         + '<div class="hname">' + f.name + nb + '</div>'
+         + '<div class="hmeta">' + ds + '</div>'
+         + '</div></div>';
   }).join('');
 }
-
-function openHistoryFile(fileId) {
-  const file = allFiles.find(f => f.id === fileId);
-  if (!file) return;
-  switchTab('viewer');
-  setTimeout(() => {
-    currentFiles = [file];
-    currentIndex = 0;
-    showFile(file);
-    updateNav();
+function openHistFile(id){
+  const f = allFiles.find(function(x){ return x.id===id; });
+  if(!f) return;
+  showTab('viewer');
+  setTimeout(function(){
+    curFiles = [f]; curIdx = 0;
+    showPDF(f); updateNav();
   }, 50);
 }
 
-// ===== MONITOR MODE =====
-function enterMonitorMode() {
-  document.body.classList.add('monitor-mode');
-  if (!isPlaying && currentFiles.length) startSlideshow();
+// MONITOR
+function enterMon(){
+  document.body.classList.add('mon');
+  if(!playing && curFiles.length) startSlide();
 }
-function exitMonitorMode() { document.body.classList.remove('monitor-mode'); }
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') exitMonitorMode();
-  if (e.key === 'ArrowRight') navigate(1);
-  if (e.key === 'ArrowLeft')  navigate(-1);
-  if (e.key === ' ') { e.preventDefault(); toggleSlideshow(); }
+function exitMon(){ document.body.classList.remove('mon'); }
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape') exitMon();
+  if(e.key==='ArrowRight') nav(1);
+  if(e.key==='ArrowLeft')  nav(-1);
+  if(e.key===' '){ e.preventDefault(); toggleSlide(); }
 });
 
-// ===== LOADING =====
-function showLoading(msg) {
-  document.getElementById('loading-text').textContent = msg || 'Loading...';
-  document.getElementById('loading-overlay').classList.add('show');
-}
-function hideLoading() { document.getElementById('loading-overlay').classList.remove('show'); }
+// LOADING
+function showLd(msg){ document.getElementById('ldtxt').textContent=msg||''; document.getElementById('ldov').classList.add('show'); }
+function hideLd(){ document.getElementById('ldov').classList.remove('show'); }
 
-// ===== TOAST =====
-let toastTimer;
-function showToast(msg, type) {
-  const t = document.getElementById('toast');
-  t.innerHTML = '<span>' + msg + '</span>';
-  t.className = 'toast ' + (type || 'info') + ' show';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+// TOAST
+let tt;
+function toast(msg, type){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast '+(type||'info')+' show';
+  clearTimeout(tt);
+  tt = setTimeout(function(){ el.classList.remove('show'); }, 4000);
 }
 </script>
 </body>
