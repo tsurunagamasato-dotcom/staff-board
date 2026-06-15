@@ -87,7 +87,7 @@
   .progress-bar { height: 2px; background: var(--border); }
   .progress-fill { height: 100%; background: var(--accent); width: 0%; }
 
-  .pdf-container { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; background: #1e2130; position: relative; padding: 24px; }
+  .pdf-container { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #1e2130; position: relative; padding: 0; }
 
   /* フェード用ラッパー */
   #pdf-wrapper { opacity: 0; display: none; }
@@ -98,7 +98,7 @@
   }
   #pdf-wrapper.playing { animation: kenburns 12s ease-in-out infinite; }
 
-  #pdf-canvas { max-width: 100%; max-height: 100%; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; display: block; }
+  #pdf-canvas { display: block; }
 
   .empty-state { display: flex; flex-direction: column; align-items: center; gap: 16px; color: var(--text2); text-align: center; }
   .empty-icon { font-size: 56px; opacity: 0.3; }
@@ -375,9 +375,8 @@ async function showFile(file) {
     const cont = document.getElementById('pdf-container');
     const vp1  = page.getViewport({ scale: 1 });
     const scale = Math.min(
-      (cont.clientWidth  - 48) / vp1.width,
-      (cont.clientHeight - 48) / vp1.height,
-      2.5
+      cont.clientWidth  / vp1.width,
+      cont.clientHeight / vp1.height
     );
     const vp     = page.getViewport({ scale });
     const canvas = document.getElementById('pdf-canvas');
