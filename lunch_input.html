@@ -534,8 +534,8 @@ function renderDateGrid() {
     const ds = fmtDate(dt);
     const isToday = ds === fmtDate(today);
     const order = selStaff && monthOrders[ds] ? monthOrders[ds][selStaff.id] : null;
-    const orderClass = order==='futsuu'?' has-futsuu':order==='oomori'?' has-oomori':order?'has-nashi':'';
-    const orderLabel = order==='futsuu'?'○普':order==='oomori'?'○大':order==='nashi'?'×':'';
+    const orderClass = order==='futsuu'?' has-futsuu':order==='oomori'?' has-oomori':order==='nashi'?' has-nashi':'';
+    const orderLabel = order==='futsuu'?'○普':order==='oomori'?'○大':order==='nashi'?'× 無':'';
     return `<button class="date-btn${isToday?' today':''}${ds===selDate?' selected':''}${orderClass}" onclick="selectDate('${ds}')">
       <div class="d-day">${dt.getDate()}</div>
       <div class="d-week">${days[dt.getDay()]}</div>
