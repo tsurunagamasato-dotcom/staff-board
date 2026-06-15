@@ -89,8 +89,30 @@
   .pbar{height:2px;background:var(--border);}
   .pfill{height:100%;background:var(--accent);width:0%;}
 
-  .pdfcont{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#1e2130;position:relative;padding:0;}
+  .pdfcont{flex:1;display:flex;align-items:stretch;overflow:hidden;background:#1e2130;position:relative;padding:0;}
 
+  /* 凡例サイドバー */
+  .legend {
+    width: 200px;
+    min-width: 200px;
+    background: rgba(15,17,23,0.95);
+    border-left: 1px solid rgba(255,255,255,0.12);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    z-index: 20;
+  }
+  .legend-col { display: flex; flex-direction: column; gap: 10px; }
+  .legend-row { display: flex; flex-direction: column; gap: 10px; }
+  .legend-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.45); margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 12px; font-size: 17px; color: rgba(255,255,255,0.92); white-space: nowrap; }
+  .lbox { width: 30px; height: 30px; border-radius: 5px; flex-shrink: 0; }
+  .lbox-border { width: 30px; height: 30px; border-radius: 5px; flex-shrink: 0; border: 5px solid; background: transparent; }
+  .legend-divider { height: 1px; background: rgba(255,255,255,0.12); margin: 0; }
+
+  #pdf-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
   #pdfwrap{opacity:0;display:none;}
   @keyframes kenburns{
     0%  {transform:scale(1.0) translate(0,0);}
@@ -218,13 +240,41 @@
     </div>
     <div class="pbar"><div class="pfill" id="pfill"></div></div>
     <div class="pdfcont" id="pdfcont">
-      <div class="ldov" id="ldov"><div class="spin"></div><div class="ldtxt" id="ldtxt">読み込み中...</div></div>
-      <div class="empty" id="empty">
-        <div class="empty-icon">📋</div>
-        <div class="empty-title">PDFが見つかりません</div>
-        <div class="empty-sub">↻ 更新ボタンを押してください</div>
+      <div id="pdf-area">
+        <div class="ldov" id="ldov"><div class="spin"></div><div class="ldtxt" id="ldtxt">読み込み中...</div></div>
+        <div class="empty" id="empty">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">PDFが見つかりません</div>
+          <div class="empty-sub">↻ 更新ボタンを押してください</div>
+        </div>
+        <div id="pdfwrap"><canvas id="pdfcanvas"></canvas></div>
       </div>
-      <div id="pdfwrap"><canvas id="pdfcanvas"></canvas></div>
+
+      <!-- 凡例 -->
+      <div class="legend" id="legend">
+        <!-- 上段：外枠（仕入先） -->
+        <div class="legend-col">
+          <div class="legend-title">外枠（仕入先）</div>
+          <div class="legend-row">
+            <div class="legend-item"><div class="lbox-border" style="border-color:#4fc3f7;"></div>アイシン国内</div>
+            <div class="legend-item"><div class="lbox-border" style="border-color:#2e7d32;"></div>アイシン海外</div>
+            <div class="legend-item"><div class="lbox-border" style="border-color:#ce93d8;"></div>トヨタ紡織</div>
+            <div class="legend-item"><div class="lbox-border" style="border-color:#b0bec5;"></div>その他</div>
+            <div class="legend-item"><div class="lbox" style="background:#111;border:1px solid #555;"></div>トライワーク</div>
+          </div>
+        </div>
+        <div class="legend-divider"></div>
+        <!-- 下段：塗り（納期） -->
+        <div class="legend-col">
+          <div class="legend-title">塗り（納期）</div>
+          <div class="legend-row">
+            <div class="legend-item"><div class="lbox" style="background:#a5d6a7;"></div>3ヶ月以上</div>
+            <div class="legend-item"><div class="lbox" style="background:#fff176;"></div>2ヶ月以内</div>
+            <div class="legend-item"><div class="lbox" style="background:#ffb74d;"></div>1ヶ月以内</div>
+            <div class="legend-item"><div class="lbox" style="background:#ef5350;"></div>2週間以内</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </main>
@@ -360,7 +410,7 @@ async function showPDF(file){
     }
     const pdf  = await pdfjsLib.getDocument(url).promise;
     const page = await pdf.getPage(1);
-    const cont = document.getElementById('pdfcont');
+    const cont = document.getElementById('pdf-area');
     const vp1  = page.getViewport({scale:1});
     const sc   = Math.min(cont.clientWidth/vp1.width, cont.clientHeight/vp1.height);
     const vp   = page.getViewport({scale:sc});
