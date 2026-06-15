@@ -213,7 +213,10 @@
     max-width: 100%; max-height: 100%;
     box-shadow: 0 4px 40px rgba(0,0,0,0.5);
     border-radius: 4px; display: block;
+    transition: opacity 0.6s ease;
   }
+  #pdf-canvas.fade-out { opacity: 0; }
+  #pdf-canvas.fade-in  { opacity: 1; }
   .empty-state {
     display: flex; flex-direction: column; align-items: center;
     gap: 16px; color: var(--text2); text-align: center; pointer-events: none;
@@ -505,6 +508,8 @@ function filterAndDisplay() {
   currentIndex = 0;
   showFile(currentFiles[0]);
   updateNav();
+  // 次のファイルを先読み
+  setTimeout(prefetchNext, 3000);
 }
 
 async function showFile(file) {
@@ -607,6 +612,8 @@ function scheduleNext() {
     updateNav();
     resetProgress();
     scheduleNext();
+    // 次のファイルを先読み
+    setTimeout(prefetchNext, 2000);
   }, cfg.interval * 1000);
 }
 function resetProgress() {
