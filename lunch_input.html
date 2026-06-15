@@ -64,14 +64,14 @@
   .date-btn { border: 1.5px solid var(--border); border-radius: 9px; padding: 7px 4px; text-align: center; font-size: 11px; cursor: pointer; background: var(--surface); font-family: inherit; transition: all .15s; }
   .date-btn .d-day { font-weight: 700; font-size: 14px; }
   .date-btn .d-week { font-size: 9px; color: var(--text-hint); margin-top: 1px; }
-  .date-btn .d-order { font-size: 9px; margin-top: 2px; font-weight: 700; }
+  .date-btn .d-order { font-size: 11px; margin-top: 4px; font-weight: 700; display: inline-block; padding: 2px 6px; border-radius: 20px; min-width: 32px; }
   .date-btn.selected { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
   .date-btn.selected .d-week { color: rgba(255,255,255,0.5); }
-  .date-btn.selected .d-order { color: rgba(255,255,255,0.8); }
+  .date-btn.selected .d-order { opacity: 0.9; }
   .date-btn.today .d-day { color: var(--green); }
-  .date-btn.has-futsuu .d-order { color: var(--green); }
-  .date-btn.has-oomori .d-order { color: var(--blue); }
-  .date-btn.has-nashi .d-order { color: var(--text-hint); }
+  .date-btn.has-futsuu .d-order { color: var(--green-fg); background: var(--green-bg); }
+  .date-btn.has-oomori .d-order { color: var(--blue-fg); background: var(--blue-bg); }
+  .date-btn.has-nashi  .d-order { color: var(--red-fg); background: var(--red-bg); }
 
   /* ORDER BUTTONS */
   .order-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
