@@ -397,6 +397,7 @@ const FOLDER_ID  = '365908983743'; // 工場レイアウト管理フォルダ
 
 let cfg = { token: '', interval: 10, site: 'honsha' };
 let allFiles = [];
+const pdfCache = {}; // PDFキャッシュ
 let currentFiles = [];
 let currentIndex = 0;
 let isPlaying = false;
