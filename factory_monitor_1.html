@@ -107,7 +107,7 @@
   .legend-col { display: flex; flex-direction: column; gap: 10px; }
   .legend-row { display: flex; flex-direction: column; gap: 10px; }
   .legend-title { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.45); margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; display:flex; align-items:center; justify-content:space-between; }
-  .leg-toggle { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); cursor: pointer; transition: all .15s; white-space:nowrap; }
+  .leg-toggle { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); background: rgba(79,142,247,0.25); color: #7aacf9; cursor: pointer; transition: all .15s; white-space:nowrap; flex-shrink:0; }
   .leg-toggle:hover { background: rgba(255,255,255,0.15); color: #fff; }
   .leg-toggle.off { background: rgba(232,85,85,0.2); border-color: rgba(232,85,85,0.4); color: #e85555; }
   .legend-item { display: flex; align-items: center; gap: 12px; font-size: 20px; color: rgba(255,255,255,0.92); white-space: nowrap; }
@@ -575,12 +575,13 @@ function hideLd(){ document.getElementById('ldov').classList.remove('show'); }
 
 // LEGEND TOGGLE
 function toggleLegend(type) {
-  const row = document.getElementById('leg-' + type);
-  const btn = document.getElementById('tog-' + type);
+  const row   = document.getElementById('leg-' + type);
+  const label = document.getElementById('tog-' + type + '-label');
+  const name  = type === 'border' ? '外枠（仕入先）' : '内側（納期）';
   const isHidden = row.style.display === 'none';
-  row.style.display = isHidden ? 'flex' : 'none';
-  btn.textContent  = isHidden ? '表示中' : '非表示';
-  btn.classList.toggle('off', !isHidden);
+  row.style.display  = isHidden ? 'flex' : 'none';
+  label.textContent  = isHidden ? '▼ ' + name : '▶ ' + name;
+  label.style.color  = isHidden ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.25)';
 }
 
 // TOAST
