@@ -397,8 +397,8 @@ function renderTimeline() {
         rsvList.forEach(r=>{
           const block=document.createElement('div');
           block.className=`tl-rsv-block time-${getTimeOfDay(r.start)}`;
-          // 全会議室：会議室名を表示、会議室選択：目的を表示
-          block.textContent = tlSelectedRoom ? (r.purpose||r.name) : (r.name||room.short);
+          // 全会議室：目的を表示、会議室選択：目的を表示
+          block.textContent = r.purpose || r.name;
           block.title=`${r.room} ${r.start}〜${r.end} ${r.dept} ${r.name}「${r.purpose}」`;
           block.onclick=()=>showDetail(r.id);
           inner.appendChild(block);
