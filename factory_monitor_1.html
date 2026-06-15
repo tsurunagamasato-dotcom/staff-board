@@ -608,6 +608,23 @@ function stopSlideshow() {
   document.getElementById('slide-status').innerHTML = '<span class="blink"></span>停止中';
   document.getElementById('progress-fill').style.width = '0%';
 }
+async function prefetchNext() {
+  const nextIndex = currentIndex + 1;
+  if (nextIndex >= currentFiles.length) return;
+  const file = currentFiles[nextIndex];
+  if (pdfCache[file.id]) return;
+  try {
+    const res = await fetch(`${GAS_URL}?action=getFile&fileId=${file.id}`);
+    const data = await res.json();
+    if (data.error) return;
+    const binary = atob(data.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    pdfCache[file.id] = URL.createObjectURL(blob);
+  } catch(e) {}
+}
+
 function scheduleNext() {
   slideshowTimer = setTimeout(() => {
     if (!isPlaying) return;
