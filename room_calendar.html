@@ -10,125 +10,124 @@
   --bg:#1a1a2e;--surface:#16213e;--surface2:#0f3460;
   --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.15);
   --text:#e8e8f0;--text-sub:#9090b0;--text-hint:#5a5a7a;
-  --navy:#1a1a2e;--green:#1D9E75;--red:#e24b4a;
-  --accent:#e94560;
+  --navy:#1a1a2e;--green:#1D9E75;--red:#e24b4a;--accent:#e94560;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ヘッダー */
-.header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
-.header-icon{width:34px;height:34px;background:linear-gradient(135deg,#1D9E75,#0d6e50);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-.header-title{font-size:16px;font-weight:700}
-.header-sub{font-size:11px;color:var(--text-sub);margin-top:1px}
-.header-right{margin-left:auto;display:flex;gap:8px;align-items:center}
-.admin-link{padding:5px 12px;border-radius:7px;border:1px solid var(--border2);color:var(--text);text-decoration:none;font-size:12px;font-weight:600;transition:.15s}
-.admin-link:hover{background:var(--border)}
-
-/* ビューモード切り替え */
-.view-toggle{display:flex;gap:6px;margin-left:12px}
-.view-btn{padding:5px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.header-icon{width:32px;height:32px;background:linear-gradient(135deg,#1D9E75,#0d6e50);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.header-title{font-size:15px;font-weight:700}
+.header-sub{font-size:10px;color:var(--text-sub);margin-top:1px}
+.header-right{margin-left:auto;display:flex;gap:6px;align-items:center}
+.view-toggle{display:flex;gap:4px}
+.view-btn{padding:5px 10px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer;transition:.15s}
 .view-btn.active{background:var(--green);color:#fff;border-color:var(--green)}
 .view-btn:hover:not(.active){background:var(--border2)}
 
-/* 月ナビ */
-.cal-nav{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
-.nav-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:.15s}
-.nav-btn:hover{background:var(--border2)}
-.month-label{font-size:20px;font-weight:800;flex:1}
-.today-btn{padding:5px 14px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
-.today-btn:hover{background:var(--border2)}
-
-/* 会議室フィルター */
-.room-filter{display:flex;gap:6px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
-.room-chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text-sub);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
-.room-chip.active{background:var(--green);color:#fff;border-color:var(--green)}
-
-/* 会議室情報 */
-.room-info-bar{display:flex;gap:12px;padding:10px 20px;background:var(--surface2);border-bottom:1px solid var(--border);overflow-x:auto;flex-wrap:wrap;align-items:center}
-.room-info-card{padding:8px 12px;border-radius:8px;background:var(--surface);border-left:3px solid var(--green);font-size:11px;white-space:nowrap}
-.room-info-card strong{display:block;font-size:12px;font-weight:700;color:var(--text)}
-.room-info-card .capacity{color:var(--text-sub);font-size:10px;margin-top:2px}
-.room-info-card .amenities{color:var(--text-hint);font-size:9px;margin-top:2px}
-
-/* テーマ */
-.theme-bar{display:flex;gap:6px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
-.theme-label{font-size:11px;color:var(--text-sub);font-weight:700;margin-right:4px;flex-shrink:0}
-.theme-btn{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s;flex-shrink:0}
+/* テーマバー */
+.theme-bar{display:flex;gap:5px;padding:6px 14px;background:var(--surface);border-bottom:1px solid var(--border);align-items:center}
+.theme-label{font-size:10px;color:var(--text-sub);font-weight:700;margin-right:4px;flex-shrink:0}
+.theme-btn{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s;flex-shrink:0}
 .theme-btn.active{border-color:#fff;transform:scale(1.2)}
 .theme-btn:hover{transform:scale(1.15)}
 
+/* 月ナビ */
+.cal-nav{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border)}
+.nav-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.nav-btn:hover{background:var(--border2)}
+.month-label{font-size:18px;font-weight:800;flex:1}
+.today-btn{padding:4px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.today-btn:hover{background:var(--border2)}
+
+/* 会議室フィルター */
+.room-filter{display:flex;gap:5px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.room-label{font-size:10px;color:var(--text-sub);font-weight:700;margin-right:4px;flex-shrink:0}
+.room-chip{padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text-sub);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
+.room-chip.active{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* 会議室情報バー */
+.room-info-bar{padding:8px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:none}
+.room-info-bar.visible{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.room-info-card{font-size:11px}
+.room-info-card strong{font-size:12px;font-weight:700;color:var(--text)}
+.room-info-card .capacity{color:var(--text-sub);margin-left:10px}
+.room-info-card .amenities{color:var(--text-hint);margin-left:10px}
+
 /* カレンダーグリッド */
-.cal-wrap{padding:8px 16px;flex:1;display:flex;flex-direction:column;overflow:hidden}
-.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px;flex-shrink:0}
-.cal-header-cell{text-align:center;font-size:12px;font-weight:700;color:var(--text-sub);padding:6px 0}
+.cal-wrap{padding:6px 12px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:3px;flex-shrink:0}
+.cal-header-cell{text-align:center;font-size:11px;font-weight:700;color:var(--text-sub);padding:4px 0}
 .cal-header-cell.sun{color:#e24b4a}
 .cal-header-cell.sat{color:#4a8fe2}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);flex:1;overflow:hidden}
-.cal-cell{background:var(--surface);padding:6px;cursor:pointer;transition:.1s;position:relative;overflow:hidden;min-height:0}
+.cal-cell{background:var(--surface);padding:5px;cursor:pointer;transition:.1s;position:relative;overflow:hidden;min-height:0}
 .cal-cell:hover{background:var(--surface2)}
-.cal-cell.other-month{opacity:.35}
-.cal-cell.today .day-num{background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.cal-cell.other-month{opacity:.3}
+.cal-cell.today .day-num{background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 .cal-cell.weekend-sat .day-num{color:#4a8fe2}
 .cal-cell.weekend-sun .day-num{color:#e24b4a}
-.cal-cell.past{opacity:.5;cursor:default}
-.day-num{font-size:13px;font-weight:700;margin-bottom:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.cal-cell.past{opacity:.45;cursor:default}
+.day-num{font-size:12px;font-weight:700;margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 
-/* 予約ブロック（AM/PM色分け対応） */
-.rsv-item{border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;margin-bottom:3px;overflow:hidden;cursor:pointer;line-height:1.5;border-left:3px solid rgba(255,255,255,.5)}
-
-/* AM/PM/夜間 色分け */
+/* 予約ブロック */
+.rsv-item{border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border-left:3px solid rgba(255,255,255,.4)}
 .rsv-item.time-am{background:linear-gradient(135deg,#185FA5,#0d3a7a);color:#fff}
 .rsv-item.time-pm{background:linear-gradient(135deg,#BA7517,#8a5a10);color:#fff}
 .rsv-item.time-night{background:linear-gradient(135deg,#7B2D8B,#5a1f66);color:#fff}
+.more-btn{font-size:9px;color:var(--text-hint);padding:1px 3px}
 
 /* 空き時間ビュー */
-.timeline-wrap{padding:12px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.timeline-wrap{padding:10px;flex:1;display:flex;flex-direction:column;overflow:hidden;gap:8px}
+.timeline-nav{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tl-nav-btn{padding:5px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.tl-nav-btn:hover{background:var(--border2)}
+.tl-date-label{font-size:15px;font-weight:800;flex:1;text-align:center}
+.tl-today-btn{padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.tl-today-btn:hover{background:var(--border2)}
+.tl-date-input{padding:5px 8px;border:1px solid var(--border2);border-radius:7px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);cursor:pointer}
+
 .timeline-scroll{flex:1;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
-
 .timeline-table{width:100%;border-collapse:collapse;font-size:11px}
-.timeline-table th{background:var(--surface2);color:var(--text);font-weight:700;padding:8px 4px;text-align:center;border-right:1px solid var(--border)}
-.timeline-table td{padding:6px 4px;text-align:center;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
-.timeline-table td.room-name{text-align:left;font-weight:600;background:var(--surface2);min-width:100px;position:sticky;left:0;z-index:10}
-.timeline-table td.free{background:rgba(29,158,117,.2);color:#1D9E75;font-weight:700}
-.timeline-table td.busy{background:rgba(226,75,74,.2);color:#e24b4a}
-.timeline-table td.time-header{background:var(--surface2);font-weight:700;color:var(--text)}
-
-.more-btn{font-size:10px;color:var(--text-sub);padding:1px 4px;cursor:pointer}
-
-/* 会議室カラー */
-.room-0{background:#1D9E75;color:#fff}
-.room-1{background:#185FA5;color:#fff}
-.room-2{background:#7B2D8B;color:#fff}
-.room-3{background:#BA7517;color:#fff}
-.room-4{background:#1a5e7a;color:#fff}
+.timeline-table th{background:var(--surface2);color:var(--text);font-weight:700;padding:7px 4px;text-align:center;border-right:1px solid var(--border);white-space:nowrap}
+.timeline-table td{padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:top}
+.timeline-table td.room-name-cell{text-align:left;font-weight:600;background:var(--surface2);min-width:80px;position:sticky;left:0;z-index:10;padding:6px 8px;white-space:nowrap}
+.timeline-table td.free{background:rgba(29,158,117,.12)}
+.timeline-table td.busy{background:rgba(226,75,74,.12)}
+.tl-cell-inner{padding:4px;min-height:32px;display:flex;flex-direction:column;gap:2px}
+.tl-free-label{font-size:9px;color:#1D9E75;font-weight:700;opacity:.7}
+.tl-rsv-block{border-radius:4px;padding:2px 4px;font-size:9px;font-weight:700;line-height:1.4;cursor:pointer}
+.tl-rsv-block.time-am{background:rgba(24,95,165,.6);color:#fff}
+.tl-rsv-block.time-pm{background:rgba(186,117,23,.6);color:#fff}
+.tl-rsv-block.time-night{background:rgba(123,45,139,.6);color:#fff}
 
 /* モーダル */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal-overlay.hidden{display:none}
-.modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:420px;padding:22px;box-shadow:0 16px 48px rgba(0,0,0,.4);max-height:90vh;overflow-y:auto}
-.modal-title{font-size:16px;font-weight:800;margin-bottom:4px;color:var(--text)}
-.modal-sub{font-size:12px;color:var(--text-sub);margin-bottom:18px}
-.field{margin-bottom:13px}
-.field label{display:block;font-size:11px;font-weight:700;color:var(--text-sub);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-.field select,.field input[type=text],.field textarea{width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:9px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text)}
+.modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:400px;padding:20px;box-shadow:0 16px 48px rgba(0,0,0,.4);max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:800;margin-bottom:4px;color:var(--text)}
+.modal-sub{font-size:11px;color:var(--text-sub);margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--text-sub);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.field select,.field input[type=text],.field textarea{width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text)}
 .field select:focus,.field input:focus,.field textarea:focus{outline:none;border-color:var(--green)}
-.field textarea{resize:vertical;min-height:60px}
-.time-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
-.time-row span{text-align:center;font-size:12px;color:var(--text-sub)}
-.modal-footer{display:flex;gap:8px;margin-top:18px}
-.btn-cancel{flex:1;padding:10px;border-radius:9px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
-.btn-submit{flex:2;padding:10px;border-radius:9px;border:none;background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.field textarea{resize:vertical;min-height:52px}
+.time-row{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center}
+.time-row span{text-align:center;font-size:11px;color:var(--text-sub)}
+.modal-footer{display:flex;gap:8px;margin-top:16px}
+.btn-cancel{flex:1;padding:9px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-submit{flex:2;padding:9px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 .btn-submit:disabled{background:#444;cursor:not-allowed;color:#888}
 
-/* 予約詳細モーダル */
-.detail-item{padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+/* 詳細モーダル */
+.detail-item{padding:9px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .detail-item:last-child{border-bottom:none}
-.detail-label{font-size:12px;color:var(--text-sub)}
-.detail-value{font-size:13px;font-weight:600}
-.btn-delete{width:100%;padding:10px;border-radius:9px;border:none;background:rgba(226,75,74,.2);color:#e24b4a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:14px}
+.detail-label{font-size:11px;color:var(--text-sub)}
+.detail-value{font-size:13px;font-weight:600;text-align:right;max-width:60%}
+.btn-delete{width:100%;padding:9px;border-radius:8px;border:none;background:rgba(226,75,74,.2);color:#e24b4a;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:12px}
 
 /* トースト */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:10px 22px;border-radius:50px;font-size:13px;font-weight:700;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:9px 20px;border-radius:50px;font-size:13px;font-weight:700;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.success{border-color:var(--green);color:var(--green)}
 .toast.error{border-color:var(--red);color:var(--red)}
@@ -142,9 +141,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
     <div class="header-title">会議室予約</div>
     <div class="header-sub">ナカシマ</div>
   </div>
-  <div class="view-toggle">
-    <button class="view-btn active" onclick="setViewMode('calendar')">📅 カレンダー</button>
-    <button class="view-btn" onclick="setViewMode('timeline')">⏰ 空き時間</button>
+  <div class="header-right">
+    <div class="view-toggle">
+      <button class="view-btn active" onclick="setViewMode('calendar')">📅 カレンダー</button>
+      <button class="view-btn" onclick="setViewMode('timeline')">⏰ 空き時間</button>
+    </div>
   </div>
 </div>
 
@@ -165,21 +166,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
 
 <!-- カレンダービュー -->
 <div id="calendarView" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
-  <!-- 月ナビ -->
   <div class="cal-nav">
     <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
     <div class="month-label" id="monthLabel"></div>
     <button class="today-btn" onclick="goToday()">今月</button>
     <button class="nav-btn" onclick="changeMonth(1)">›</button>
   </div>
-
-  <!-- 会議室フィルター -->
   <div class="room-filter" id="roomFilter"></div>
-
-  <!-- 会議室情報 -->
   <div class="room-info-bar" id="roomInfoBar"></div>
-
-  <!-- カレンダー -->
   <div class="cal-wrap">
     <div class="cal-header">
       <div class="cal-header-cell sun">日</div>
@@ -197,11 +191,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
 <!-- 空き時間ビュー -->
 <div id="timelineView" style="display:none;flex-direction:column;flex:1;overflow:hidden">
   <div class="timeline-wrap">
+    <div class="timeline-nav">
+      <button class="tl-nav-btn" onclick="changeTlDate(-1)">‹ 前日</button>
+      <div class="tl-date-label" id="tlDateLabel"></div>
+      <input type="date" class="tl-date-input" id="tlDateInput" onchange="onTlDateInput()">
+      <button class="tl-today-btn" onclick="tlGoToday()">今日</button>
+      <button class="tl-nav-btn" onclick="changeTlDate(1)">翌日 ›</button>
+    </div>
+    <!-- 会議室フィルター（空き時間ビュー用） -->
+    <div class="room-filter" id="tlRoomFilter" style="padding:6px 0"></div>
     <div class="timeline-scroll">
       <table class="timeline-table" id="timelineTable">
-        <thead>
-          <tr id="timelineHeader"></tr>
-        </thead>
+        <thead><tr id="timelineHeader"></tr></thead>
         <tbody id="timelineBody"></tbody>
       </table>
     </div>
@@ -215,9 +216,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
     <div class="modal-sub" id="modalSub"></div>
     <div class="field">
       <label>会議室</label>
-      <select id="roomSelect">
-        <option value="">選択してください</option>
-      </select>
+      <select id="roomSelect"><option value="">選択してください</option></select>
     </div>
     <div class="field">
       <label>日付</label>
@@ -233,9 +232,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
     </div>
     <div class="field">
       <label>部署</label>
-      <select id="deptSelect">
-        <option value="">選択してください</option>
-      </select>
+      <select id="deptSelect"><option value="">選択してください</option></select>
     </div>
     <div class="field">
       <label>氏名</label>
@@ -265,286 +262,273 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbx2eL3PXJGj3TTWwUdckqc1uOqE9izDZoV5QuaQj_iAyNsqPDPwatzjeZG33q-446IS/exec';
-const ROOMS = ['本社会議室','本社3F食堂','旧購買事務所','旧組付詰所','根崎2F食堂'];
+
+// 会議室定義：表示名と短縮名
+const ROOMS = [
+  { name:'本社会議室',  short:'本社会議室' },
+  { name:'本社3F食堂',  short:'本社３F' },
+  { name:'旧購買事務所', short:'旧購買' },
+  { name:'旧組付詰所',  short:'旧組付' },
+  { name:'根崎2F食堂',  short:'根崎２F' },
+];
+const ROOM_NAMES = ROOMS.map(r => r.name);
 const DEPTS = ['社長','役員','総務部','営業部','設計課','電気課','購買課','加工課','組付課','第一製造部'];
 
 let currentMonth = new Date();
+let tlDate = new Date(); // 空き時間ビューの日付
 let reservations = [];
 let roomInfo = {};
-let selectedRoom = null;
+let selectedRoom = null;     // カレンダー用
+let tlSelectedRoom = null;   // 空き時間用
 let currentViewMode = 'calendar';
 let detailRsv = null;
-let staffMaster = {};
 
-// ビューモード切り替え
+// ---- ビューモード切り替え ----
 function setViewMode(mode) {
   currentViewMode = mode;
-  const calView = document.getElementById('calendarView');
-  const tlView = document.getElementById('timelineView');
   document.querySelectorAll('.view-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', (i === 0 && mode === 'calendar') || (i === 1 && mode === 'timeline'));
+    btn.classList.toggle('active', (i===0&&mode==='calendar')||(i===1&&mode==='timeline'));
   });
-  
-  if (mode === 'calendar') {
-    calView.style.display = 'flex';
-    tlView.style.display = 'none';
-    renderCalendar();
-  } else {
-    calView.style.display = 'none';
-    tlView.style.display = 'flex';
-    renderTimeline();
-  }
+  document.getElementById('calendarView').style.display = mode==='calendar' ? 'flex' : 'none';
+  document.getElementById('timelineView').style.display = mode==='timeline' ? 'flex' : 'none';
+  if (mode==='calendar') renderCalendar();
+  else renderTimeline();
 }
 
-// AM/PM判定
-function getTimeOfDay(timeStr) {
-  const [h] = timeStr.split(':').map(Number);
+// ---- AM/PM判定 ----
+function getTimeOfDay(t) {
+  const h = parseInt(t.split(':')[0]);
   if (h < 12) return 'am';
   if (h < 18) return 'pm';
   return 'night';
 }
 
-// カレンダー描画
+// ---- カレンダー描画 ----
 function renderCalendar() {
-  const y = currentMonth.getFullYear();
-  const m = currentMonth.getMonth();
-  
-  const firstDay = new Date(y, m, 1);
-  const lastDay = new Date(y, m + 1, 0);
-  const startDate = new Date(firstDay);
-  startDate.setDate(startDate.getDate() - firstDay.getDay());
-  
+  const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
   document.getElementById('monthLabel').textContent = `${y}年 ${m+1}月`;
-  
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '';
-  
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  
-  for (let i = 0; i < 42; i++) {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + i);
-    const dateStr = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
-    
+  const first = new Date(y,m,1);
+  const start = new Date(first); start.setDate(start.getDate()-first.getDay());
+  const today = new Date(); today.setHours(0,0,0,0);
+  const grid = document.getElementById('calGrid'); grid.innerHTML='';
+
+  for (let i=0;i<42;i++) {
+    const d = new Date(start); d.setDate(d.getDate()+i);
+    const ds = toDateStr(d);
     const cell = document.createElement('div');
-    cell.className = 'cal-cell';
-    if (date.getMonth() !== m) cell.classList.add('other-month');
-    if (date.getTime() === today.getTime()) cell.classList.add('today');
-    if (date < today) cell.classList.add('past');
-    if (date.getDay() === 0) cell.classList.add('weekend-sun');
-    if (date.getDay() === 6) cell.classList.add('weekend-sat');
-    
-    const dayNum = document.createElement('div');
-    dayNum.className = 'day-num';
-    dayNum.textContent = date.getDate();
-    cell.appendChild(dayNum);
-    
-    const rsvs = reservations.filter(r => r.date === dateStr && (!selectedRoom || r.room === selectedRoom));
-    rsvs.slice(0, 3).forEach(r => {
+    cell.className='cal-cell';
+    if (d.getMonth()!==m) cell.classList.add('other-month');
+    if (d.getTime()===today.getTime()) cell.classList.add('today');
+    if (d < today) cell.classList.add('past');
+    if (d.getDay()===0) cell.classList.add('weekend-sun');
+    if (d.getDay()===6) cell.classList.add('weekend-sat');
+
+    const dn = document.createElement('div'); dn.className='day-num'; dn.textContent=d.getDate();
+    cell.appendChild(dn);
+
+    const rsvs = reservations
+      .filter(r => r.date===ds && (!selectedRoom||r.room===selectedRoom))
+      .sort((a,b)=>a.start.localeCompare(b.start));
+
+    rsvs.slice(0,3).forEach(r=>{
       const item = document.createElement('div');
-      item.className = `rsv-item room-${ROOMS.indexOf(r.room)} time-${getTimeOfDay(r.start)}`;
-      item.textContent = `${r.start} ${r.room.split('').slice(0,3).join('')}`;
-      item.onclick = (e) => { e.stopPropagation(); showDetail(r.id); };
+      item.className=`rsv-item time-${getTimeOfDay(r.start)}`;
+      // 全会議室表示時は会議室名、会議室選択時は目的を表示
+      const label = selectedRoom
+        ? `${r.start} ${r.purpose||r.name}`
+        : `${r.start} ${ROOMS.find(x=>x.name===r.room)?.short||r.room}`;
+      item.textContent = label;
+      item.title = `${r.room} ${r.start}〜${r.end} ${r.name}「${r.purpose}」`;
+      item.onclick=(e)=>{e.stopPropagation();showDetail(r.id);};
       cell.appendChild(item);
     });
-    if (rsvs.length > 3) {
-      const more = document.createElement('div');
-      more.className = 'more-btn';
-      more.textContent = `+${rsvs.length-3}件`;
-      cell.appendChild(more);
+    if (rsvs.length>3) {
+      const more=document.createElement('div'); more.className='more-btn';
+      more.textContent=`+${rsvs.length-3}件`; cell.appendChild(more);
     }
-    
-    cell.onclick = () => { if (cell.classList.contains('past')) return; openModal(dateStr); };
+    cell.onclick=()=>{ if(cell.classList.contains('past'))return; openModal(ds); };
     grid.appendChild(cell);
   }
 }
 
-// 空き時間ビュー描画
+// ---- 空き時間ビュー描画 ----
 function renderTimeline() {
-  const dateStr = currentMonth.getFullYear() + '-' + 
-    String(currentMonth.getMonth()+1).padStart(2,'0') + '-' +
-    String(currentMonth.getDate()).padStart(2,'0');
-  
-  const hours = Array.from({length:11}, (_, i) => 8 + i);
-  
-  // ヘッダー
+  const ds = toDateStr(tlDate);
+  const days=['日','月','火','水','木','金','土'];
+  const label = `${tlDate.getFullYear()}年${tlDate.getMonth()+1}月${tlDate.getDate()}日（${days[tlDate.getDay()]}）`;
+  document.getElementById('tlDateLabel').textContent = label;
+  document.getElementById('tlDateInput').value = ds;
+
+  const hours = Array.from({length:11},(_,i)=>8+i);
   const header = document.getElementById('timelineHeader');
-  header.innerHTML = '<th class="room-name">会議室</th>';
-  hours.forEach(h => {
-    const th = document.createElement('th');
-    th.className = 'time-header';
-    th.textContent = `${String(h).padStart(2,'0')}:00`;
+  header.innerHTML='<th style="min-width:72px;position:sticky;left:0;background:var(--surface2)">会議室</th>';
+  hours.forEach(h=>{
+    const th=document.createElement('th');
+    th.textContent=`${String(h).padStart(2,'0')}:00`;
+    th.style.minWidth='52px';
     header.appendChild(th);
   });
-  
-  // ボディ
-  const tbody = document.getElementById('timelineBody');
-  tbody.innerHTML = '';
-  
-  ROOMS.forEach(room => {
-    const tr = document.createElement('tr');
-    const roomTd = document.createElement('td');
-    roomTd.className = 'room-name';
-    roomTd.textContent = room;
-    tr.appendChild(roomTd);
-    
-    hours.forEach(h => {
-      const td = document.createElement('td');
-      const timeStart = String(h).padStart(2,'0') + ':00';
-      const timeEnd = String(h+1).padStart(2,'0') + ':00';
-      
-      const hasRsv = reservations.some(r => 
-        r.room === room && r.date === dateStr &&
-        r.start < timeEnd && r.end > timeStart
+
+  const tbody=document.getElementById('timelineBody'); tbody.innerHTML='';
+  const roomsToShow = tlSelectedRoom ? [ROOMS.find(r=>r.name===tlSelectedRoom)] : ROOMS;
+
+  roomsToShow.forEach(room=>{
+    const tr=document.createElement('tr');
+    const nameTd=document.createElement('td');
+    nameTd.className='room-name-cell';
+    nameTd.textContent=room.short;
+    tr.appendChild(nameTd);
+
+    hours.forEach(h=>{
+      const td=document.createElement('td');
+      const ts=String(h).padStart(2,'0')+':00';
+      const te=String(h+1).padStart(2,'0')+':00';
+      const rsvList=reservations.filter(r=>
+        r.room===room.name && r.date===ds && r.start<te && r.end>ts
       );
-      
-      if (hasRsv) {
-        td.className = 'busy';
-        td.textContent = '✕ 予約';
+      const inner=document.createElement('div'); inner.className='tl-cell-inner';
+
+      if(rsvList.length===0){
+        td.classList.add('free');
+        const fl=document.createElement('div'); fl.className='tl-free-label'; fl.textContent='○';
+        inner.appendChild(fl);
       } else {
-        td.className = 'free';
-        td.textContent = '○ 空き';
+        td.classList.add('busy');
+        rsvList.forEach(r=>{
+          const block=document.createElement('div');
+          block.className=`tl-rsv-block time-${getTimeOfDay(r.start)}`;
+          // 全会議室：会議室名を表示、会議室選択：目的を表示
+          block.textContent = tlSelectedRoom ? (r.purpose||r.name) : (r.name||room.short);
+          block.title=`${r.room} ${r.start}〜${r.end} ${r.dept} ${r.name}「${r.purpose}」`;
+          block.onclick=()=>showDetail(r.id);
+          inner.appendChild(block);
+        });
       }
+      td.appendChild(inner);
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
 }
 
-// 室情報表示
-function renderRoomInfo() {
-  const bar = document.getElementById('roomInfoBar');
-  if (!selectedRoom) {
-    bar.innerHTML = '';
-    return;
-  }
-  
-  const info = roomInfo[selectedRoom];
-  if (!info) {
-    bar.innerHTML = '';
-    return;
-  }
-  
-  const card = document.createElement('div');
-  card.className = 'room-info-card';
-  card.innerHTML = `
-    <strong>${selectedRoom}</strong>
-    <div class="capacity">定員：${info.capacity}名</div>
-    <div class="amenities">設備：${info.amenities || 'なし'}</div>
-  `;
-  bar.appendChild(card);
+// ---- 空き時間日付ナビ ----
+function changeTlDate(d) {
+  tlDate.setDate(tlDate.getDate()+d);
+  renderTimeline();
+}
+function tlGoToday() { tlDate=new Date(); renderTimeline(); }
+function onTlDateInput() {
+  const v=document.getElementById('tlDateInput').value;
+  if(v) { tlDate=new Date(v+'T00:00:00'); renderTimeline(); }
 }
 
-// 月変更
+// ---- 月変更 ----
 function changeMonth(d) {
-  currentMonth.setMonth(currentMonth.getMonth() + d);
-  if (currentViewMode === 'calendar') renderCalendar();
-  else renderTimeline();
+  currentMonth.setMonth(currentMonth.getMonth()+d);
+  renderCalendar();
 }
+function goToday() { currentMonth=new Date(); renderCalendar(); }
 
-function goToday() {
-  currentMonth = new Date();
-  if (currentViewMode === 'calendar') renderCalendar();
-  else renderTimeline();
-}
-
-// フィルター
+// ---- 会議室フィルター（カレンダー用） ----
 function setupRoomFilter() {
-  const filter = document.getElementById('roomFilter');
-  filter.innerHTML = '<div style="font-size:11px;color:var(--text-sub);font-weight:700;margin-right:8px">会議室:</div>';
-  
-  const allBtn = document.createElement('button');
-  allBtn.className = 'room-chip active';
-  allBtn.textContent = '全て';
-  allBtn.onclick = () => { 
-    selectedRoom = null;
-    document.querySelectorAll('.room-chip').forEach((b, i) => {
-      b.classList.toggle('active', i === 0);
-    });
-    renderRoomInfo();
-    if (currentViewMode === 'calendar') renderCalendar();
-    else renderTimeline();
-  };
-  filter.appendChild(allBtn);
-  
-  ROOMS.forEach((room, idx) => {
-    const btn = document.createElement('button');
-    btn.className = 'room-chip';
-    btn.textContent = room.split('').slice(0,3).join('');
-    btn.onclick = () => {
-      selectedRoom = room;
-      document.querySelectorAll('.room-chip').forEach((b, i) => {
-        b.classList.toggle('active', i === idx + 1);
-      });
+  const filter=document.getElementById('roomFilter'); filter.innerHTML='';
+  const label=document.createElement('span'); label.className='room-label'; label.textContent='会議室:'; filter.appendChild(label);
+
+  ROOMS.forEach((room,idx)=>{
+    const btn=document.createElement('button');
+    btn.className='room-chip'+(selectedRoom===room.name?' active':'');
+    btn.textContent=room.short;
+    btn.onclick=()=>{
+      selectedRoom = selectedRoom===room.name ? null : room.name;
+      setupRoomFilter();
       renderRoomInfo();
-      if (currentViewMode === 'calendar') renderCalendar();
-      else renderTimeline();
+      renderCalendar();
     };
     filter.appendChild(btn);
   });
 }
 
-// モーダル
+// ---- 会議室フィルター（空き時間用） ----
+function setupTlRoomFilter() {
+  const filter=document.getElementById('tlRoomFilter'); filter.innerHTML='';
+  const label=document.createElement('span'); label.className='room-label'; label.textContent='会議室:'; filter.appendChild(label);
+
+  const allBtn=document.createElement('button');
+  allBtn.className='room-chip'+(tlSelectedRoom===null?' active':'');
+  allBtn.textContent='全て';
+  allBtn.onclick=()=>{ tlSelectedRoom=null; setupTlRoomFilter(); renderTimeline(); };
+  filter.appendChild(allBtn);
+
+  ROOMS.forEach(room=>{
+    const btn=document.createElement('button');
+    btn.className='room-chip'+(tlSelectedRoom===room.name?' active':'');
+    btn.textContent=room.short;
+    btn.onclick=()=>{
+      tlSelectedRoom=tlSelectedRoom===room.name?null:room.name;
+      setupTlRoomFilter();
+      renderTimeline();
+    };
+    filter.appendChild(btn);
+  });
+}
+
+// ---- 会議室情報バー ----
+function renderRoomInfo() {
+  const bar=document.getElementById('roomInfoBar');
+  bar.innerHTML='';
+  if(!selectedRoom){ bar.classList.remove('visible'); return; }
+  const info=roomInfo[selectedRoom];
+  if(!info){ bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+  bar.innerHTML=`
+    <div class="room-info-card">
+      <strong>${selectedRoom}</strong>
+      <span class="capacity">定員：${info.capacity}名</span>
+      <span class="amenities">設備：${info.amenities||'なし'}</span>
+    </div>`;
+}
+
+// ---- 予約モーダル ----
 function openModal(dateStr) {
-  document.getElementById('modalSub').textContent = dateStr + ' の予約を作成';
-  document.getElementById('dateInput').value = dateStr;
-  document.getElementById('timeStart').value = '09:00';
-  document.getElementById('timeEnd').value = '10:00';
-  document.getElementById('roomSelect').value = selectedRoom || '';
-  document.getElementById('nameInput').value = '';
-  document.getElementById('purposeInput').value = '';
+  document.getElementById('modalSub').textContent=dateStr+' の予約';
+  document.getElementById('dateInput').value=dateStr;
+  document.getElementById('timeStart').value='09:00';
+  document.getElementById('timeEnd').value='10:00';
+  document.getElementById('roomSelect').value=selectedRoom||'';
+  document.getElementById('nameInput').value='';
+  document.getElementById('purposeInput').value='';
   document.getElementById('modalOverlay').classList.remove('hidden');
 }
-
-function closeModal() {
-  document.getElementById('modalOverlay').classList.add('hidden');
-}
+function closeModal(){ document.getElementById('modalOverlay').classList.add('hidden'); }
 
 async function submitReservation() {
-  const form = {
-    room: document.getElementById('roomSelect').value,
-    date: document.getElementById('dateInput').value,
-    start: document.getElementById('timeStart').value,
-    end: document.getElementById('timeEnd').value,
-    dept: document.getElementById('deptSelect').value,
-    name: document.getElementById('nameInput').value,
-    purpose: document.getElementById('purposeInput').value
+  const form={
+    room:document.getElementById('roomSelect').value,
+    date:document.getElementById('dateInput').value,
+    start:document.getElementById('timeStart').value,
+    end:document.getElementById('timeEnd').value,
+    dept:document.getElementById('deptSelect').value,
+    name:document.getElementById('nameInput').value,
+    purpose:document.getElementById('purposeInput').value
   };
-  
-  if (!form.room || !form.date || !form.start || !form.end || !form.dept || !form.name) {
-    showToast('すべてのフィールドを入力してください', 'error');
-    return;
+  if(!form.room||!form.date||!form.start||!form.end||!form.dept||!form.name){
+    showToast('すべてのフィールドを入力してください','error'); return;
   }
-  
-  document.getElementById('submitBtn').disabled = true;
-  try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'addReservation', ...form })
-    });
-    const json = await res.json();
-    if (json.ok) {
-      closeModal();
-      await loadReservations();
-      if (currentViewMode === 'calendar') renderCalendar();
-      else renderTimeline();
-      showToast('予約を作成しました', 'success');
-    } else {
-      showToast(json.message || '予約に失敗しました', 'error');
-    }
-  } catch(e) {
-    showToast('通信エラーが発生しました', 'error');
-  }
-  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitBtn').disabled=true;
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addReservation',...form})});
+    const json=await res.json();
+    if(json.ok){ closeModal(); await loadReservations(); renderCalendar(); showToast('予約を作成しました','success'); }
+    else showToast(json.message||'予約に失敗しました','error');
+  }catch(e){ showToast('通信エラーが発生しました','error'); }
+  document.getElementById('submitBtn').disabled=false;
 }
 
-// 詳細表示
+// ---- 詳細・取消 ----
 function showDetail(id) {
-  detailRsv = reservations.find(r => r.id === id);
-  if (!detailRsv) return;
-  document.getElementById('detailContent').innerHTML = `
+  detailRsv=reservations.find(r=>r.id===id);
+  if(!detailRsv)return;
+  document.getElementById('detailContent').innerHTML=`
     <div class="detail-item"><span class="detail-label">会議室</span><span class="detail-value">${detailRsv.room}</span></div>
     <div class="detail-item"><span class="detail-label">日付</span><span class="detail-value">${detailRsv.date}</span></div>
     <div class="detail-item"><span class="detail-label">時間</span><span class="detail-value">${detailRsv.start}〜${detailRsv.end}</span></div>
@@ -552,143 +536,76 @@ function showDetail(id) {
     <div class="detail-item"><span class="detail-label">氏名</span><span class="detail-value">${detailRsv.name}</span></div>
     <div class="detail-item"><span class="detail-label">目的</span><span class="detail-value">${detailRsv.purpose}</span></div>
   `;
-  document.getElementById('detailDeleteBtn').onclick = () => cancelRsv(detailRsv.id, detailRsv.name);
+  document.getElementById('detailDeleteBtn').onclick=()=>cancelRsv(detailRsv.id,detailRsv.name);
   document.getElementById('detailOverlay').classList.remove('hidden');
 }
+function closeDetail(){ document.getElementById('detailOverlay').classList.add('hidden'); }
 
-function closeDetail() {
-  document.getElementById('detailOverlay').classList.add('hidden');
+async function cancelRsv(id,name){
+  if(!confirm(`${name}さんの予約を取り消してよいですか？`))return;
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'cancelReservation',id})});
+    const json=await res.json();
+    if(json.ok){ reservations=reservations.filter(r=>r.id!==id); closeDetail(); renderCalendar(); if(currentViewMode==='timeline')renderTimeline(); showToast('予約を取り消しました','success'); }
+    else showToast('取消に失敗しました','error');
+  }catch(e){ showToast('通信エラーが発生しました','error'); }
 }
 
-async function cancelRsv(id, name) {
-  if (!confirm(`${name}さんの予約を取り消してよいですか？`)) return;
-  try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'cancelReservation', id })
-    });
-    const json = await res.json();
-    if (json.ok) {
-      reservations = reservations.filter(r => r.id !== id);
-      closeDetail();
-      if (currentViewMode === 'calendar') renderCalendar();
-      else renderTimeline();
-      showToast('予約を取り消しました', 'success');
-    } else {
-      showToast('取消に失敗しました', 'error');
-    }
-  } catch(e) {
-    showToast('通信エラーが発生しました', 'error');
-  }
+// ---- データ読み込み ----
+async function loadReservations(){
+  try{
+    const res=await fetch(GAS_URL+'?action=getReservations&t='+Date.now());
+    const json=await res.json();
+    if(json.ok) reservations=(json.reservations||[]).map(r=>({...r,date:normalizeDate(r.date),start:normalizeTime(r.start),end:normalizeTime(r.end)}));
+  }catch(e){ console.log('取得失敗:',e); }
+}
+async function loadRoomInfo(){
+  try{
+    const res=await fetch(GAS_URL+'?action=getRoomInfo&t='+Date.now());
+    const json=await res.json();
+    if(json.ok&&json.roomInfo) roomInfo=json.roomInfo;
+  }catch(e){ console.log('会議室情報取得失敗:',e); }
 }
 
-// データ読み込み
-async function loadReservations() {
-  try {
-    const res = await fetch(GAS_URL + '?action=getReservations&t=' + Date.now());
-    const json = await res.json();
-    if (json.ok) {
-      reservations = (json.reservations || []).map(r => ({
-        ...r,
-        date: normalizeDate(r.date),
-        start: normalizeTime(r.start),
-        end: normalizeTime(r.end)
-      }));
-    }
-  } catch(e) { console.log('取得失敗:', e); }
+function setupRoomSelect(){
+  const sel=document.getElementById('roomSelect');
+  sel.innerHTML='<option value="">選択してください</option>';
+  ROOMS.forEach(r=>{ const o=document.createElement('option'); o.value=r.name; o.textContent=r.name; sel.appendChild(o); });
+}
+function setupDeptSelect(){
+  const sel=document.getElementById('deptSelect');
+  sel.innerHTML='<option value="">選択してください</option>';
+  DEPTS.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; sel.appendChild(o); });
 }
 
-async function loadRoomInfo() {
-  try {
-    const res = await fetch(GAS_URL + '?action=getRoomInfo&t=' + Date.now());
-    const json = await res.json();
-    if (json.ok && json.roomInfo) {
-      roomInfo = json.roomInfo;
-    }
-  } catch(e) { console.log('会議室情報取得失敗:', e); }
-}
-
-async function loadStaffMaster() {
-  try {
-    const res = await fetch('https://tsurunagamasato-dotcom.github.io/staff-board/data/employee_master.json?t=' + Date.now());
-    const json = await res.json();
-    if (json.ok && json.staff) {
-      staffMaster = json.staff;
-      setupRoomSelect();
-      setupDeptSelect();
-    }
-  } catch(e) { console.log('スタッフマスタ取得失敗:', e); }
-}
-
-function setupRoomSelect() {
-  const sel = document.getElementById('roomSelect');
-  sel.innerHTML = '<option value="">選択してください</option>';
-  ROOMS.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r;
-    opt.textContent = r;
-    sel.appendChild(opt);
-  });
-}
-
-function setupDeptSelect() {
-  const sel = document.getElementById('deptSelect');
-  sel.innerHTML = '<option value="">選択してください</option>';
-  DEPTS.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d;
-    opt.textContent = d;
-    sel.appendChild(opt);
-  });
-}
-
-function normalizeDate(val) {
-  if (!val) return '';
-  const s = String(val);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  try {
-    const d = new Date(s);
-    if (!isNaN(d)) {
-      return d.getFullYear() + '-' +
-        String(d.getMonth()+1).padStart(2,'0') + '-' +
-        String(d.getDate()).padStart(2,'0');
-    }
-  } catch(e) {}
+// ---- ユーティリティ ----
+function toDateStr(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function normalizeDate(val){
+  if(!val)return'';
+  const s=String(val);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  try{ const d=new Date(s); if(!isNaN(d))return toDateStr(d); }catch(e){}
   return s;
 }
-
-function normalizeTime(val) {
-  if (!val) return '';
-  const s = String(val);
-  if (/^\d{1,2}:\d{2}$/.test(s)) return s.padStart(5,'0');
-  try {
-    const d = new Date(s);
-    if (!isNaN(d)) {
-      return String(d.getHours()).padStart(2,'0') + ':' +
-        String(d.getMinutes()).padStart(2,'0');
-    }
-  } catch(e) {}
+function normalizeTime(val){
+  if(!val)return'';
+  const s=String(val);
+  if(/^\d{1,2}:\d{2}$/.test(s))return s.padStart(5,'0');
+  try{ const d=new Date(s); if(!isNaN(d))return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }catch(e){}
   return s;
 }
-
-function showToast(msg, type) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type ? ' ' + type : '');
-  setTimeout(() => { t.className = 'toast'; }, 2500);
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  setTimeout(()=>{ t.className='toast'; },2500);
 }
 
 // モーダル外クリック
-document.getElementById('modalOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('modalOverlay')) closeModal();
-});
-document.getElementById('detailOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('detailOverlay')) closeDetail();
-});
+document.getElementById('modalOverlay').addEventListener('click',e=>{ if(e.target===document.getElementById('modalOverlay'))closeModal(); });
+document.getElementById('detailOverlay').addEventListener('click',e=>{ if(e.target===document.getElementById('detailOverlay'))closeDetail(); });
 
-// テーマ
-const THEMES = [
+// ---- テーマ ----
+const THEMES=[
   {bg:'#1a1a2e',surface:'#16213e',surface2:'#0f3460',border:'rgba(255,255,255,.08)',border2:'rgba(255,255,255,.15)',text:'#e8e8f0',textSub:'#9090b0',textHint:'#5a5a7a',accent:'#e94560'},
   {bg:'#1a2e1a',surface:'#163016',surface2:'#0f3010',border:'rgba(255,255,255,.08)',border2:'rgba(255,255,255,.15)',text:'#e8f0e8',textSub:'#90b090',textHint:'#5a7a5a',accent:'#4ce94f'},
   {bg:'#2e1a1a',surface:'#301616',surface2:'#3d1010',border:'rgba(255,255,255,.08)',border2:'rgba(255,255,255,.15)',text:'#f0e8e8',textSub:'#b09090',textHint:'#7a5a5a',accent:'#e94545'},
@@ -700,36 +617,26 @@ const THEMES = [
   {bg:'#f0e8ff',surface:'#ffffff',surface2:'#e4d0ff',border:'rgba(0,0,0,.06)',border2:'rgba(0,0,0,.12)',text:'#2a1a3e',textSub:'#6a5a8e',textHint:'#a090c0',accent:'#7c4dff'},
   {bg:'#fff8e0',surface:'#ffffff',surface2:'#fff0c0',border:'rgba(0,0,0,.06)',border2:'rgba(0,0,0,.12)',text:'#2e2a10',textSub:'#6e6040',textHint:'#a09060',accent:'#f0a020'},
 ];
-
-function setTheme(idx) {
-  const t = THEMES[idx];
-  const r = document.documentElement.style;
-  r.setProperty('--bg', t.bg);
-  r.setProperty('--surface', t.surface);
-  r.setProperty('--surface2', t.surface2);
-  r.setProperty('--border', t.border);
-  r.setProperty('--border2', t.border2);
-  r.setProperty('--text', t.text);
-  r.setProperty('--text-sub', t.textSub);
-  r.setProperty('--text-hint', t.textHint);
-  r.setProperty('--accent', t.accent);
-  document.querySelectorAll('.theme-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
-  localStorage.setItem('room_theme', idx);
+function setTheme(idx){
+  const t=THEMES[idx], r=document.documentElement.style;
+  r.setProperty('--bg',t.bg); r.setProperty('--surface',t.surface); r.setProperty('--surface2',t.surface2);
+  r.setProperty('--border',t.border); r.setProperty('--border2',t.border2);
+  r.setProperty('--text',t.text); r.setProperty('--text-sub',t.textSub); r.setProperty('--text-hint',t.textHint);
+  r.setProperty('--accent',t.accent);
+  document.querySelectorAll('.theme-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  localStorage.setItem('room_theme',idx);
 }
+setTheme(parseInt(localStorage.getItem('room_theme')||'0'));
 
-const savedTheme = parseInt(localStorage.getItem('room_theme') || '0');
-setTheme(savedTheme);
-
-// 初期化
-async function init() {
+// ---- 初期化 ----
+async function init(){
+  setupRoomSelect(); setupDeptSelect();
+  await Promise.all([loadReservations(),loadRoomInfo()]);
   setupRoomFilter();
-  setupRoomSelect();
-  setupDeptSelect();
-  await Promise.all([loadReservations(), loadRoomInfo(), loadStaffMaster()]);
+  setupTlRoomFilter();
   renderRoomInfo();
   renderCalendar();
 }
-
 init();
 </script>
 </body>
