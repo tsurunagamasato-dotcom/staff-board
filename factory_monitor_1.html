@@ -294,20 +294,10 @@
 <main>
   <div class="sidebar" id="sidebar">
 
-    <!-- Box トークン設定 -->
+    <!-- Box 接続状態 -->
     <div class="sidebar-section">
-      <div class="sidebar-label">Box 接続設定</div>
-      <div class="field-hint" style="margin-bottom:8px;">開発者トークンを貼り付けてください（有効期限1時間）</div>
-      <div class="input-row">
-        <input class="field-input token-field" id="box-token" type="password" placeholder="開発者トークンを貼り付け">
-        <button class="btn" onclick="saveToken()" style="padding:7px 10px;">保存</button>
-      </div>
-      <div id="token-status" class="token-status none">● 未設定</div>
-      <div class="field-hint" style="margin-top:8px;">
-        トークン切れの場合は
-        <a href="https://nakashima-mfg.app.box.com/developers/console/app/2596119/configuration" target="_blank" style="color:var(--accent);">Developer Console</a>
-        で再生成 → Copyして貼り直し
-      </div>
+      <div class="sidebar-label">Box 接続状態</div>
+      <div id="token-status" class="token-status none">● 確認中...</div>
     </div>
 
     <!-- 拠点選択 -->
@@ -412,10 +402,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCfg();
   updateClock();
   setInterval(updateClock, 1000);
-  if (cfg.token) {
-    updateTokenStatus('checking');
-    loadBoxFiles();
-  }
+  updateTokenStatus('checking');
+  loadBoxFiles();
 });
 
 function loadCfg() {
@@ -423,23 +411,12 @@ function loadCfg() {
     const s = localStorage.getItem(CONFIG_KEY);
     if (s) cfg = { ...cfg, ...JSON.parse(s) };
   } catch(e) {}
-  if (cfg.token) {
-    document.getElementById('box-token').value = cfg.token;
-    updateTokenStatus('ok');
-  }
   document.getElementById('interval-input').value = cfg.interval || 10;
   siteChanged(cfg.site || 'honsha', false);
 }
 function saveCfg() { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
-function saveToken() {
-  const t = document.getElementById('box-token').value.trim();
-  if (!t) { showToast('トークンを入力してください', 'error'); return; }
-  cfg.token = t;
-  saveCfg();
-  updateTokenStatus('checking');
-  loadBoxFiles();
-}
+
 
 function updateTokenStatus(state) {
   const el = document.getElementById('token-status');
@@ -480,42 +457,23 @@ function siteChanged(val, doLoad = true) {
 }
 
 // ===== BOX API =====
-const BOX_API = 'https://api.box.com/2.0';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzlGZJ7WSEh0MRfG1vPNSHOQPQE-FPosTLw8LGq5li1YaJbxGLFpWWE2oyQ5vBa8AwF/exec';
 
-async function boxGet(path) {
-  const res = await fetch(`${BOX_API}${path}`, {
-    headers: { 'Authorization': `Bearer ${cfg.token}` }
-  });
-  if (res.status === 401) throw new Error('AUTH');
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+// Box API calls are now proxied through GAS
 
 async function loadBoxFiles() {
-  if (!cfg.token) { showToast('トークンを設定してください', 'error'); return; }
   showLoading('Boxからファイル一覧を取得中...');
-
   try {
-    // ルートフォルダのファイルを取得
-    const data = await boxGet(`/folders/${FOLDER_ID}/items?fields=id,name,type,modified_at,size&limit=100`);
-    const files = (data.entries || []).filter(e => e.type === 'file' && e.name.endsWith('.pdf'));
+    const res = await fetch(`${GAS_URL}?action=listFiles`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
 
-    // サブフォルダ（本社・根崎第2工場）の中身も取得
-    const folders = (data.entries || []).filter(e => e.type === 'folder');
-    for (const folder of folders) {
-      try {
-        const sub = await boxGet(`/folders/${folder.id}/items?fields=id,name,type,modified_at,size&limit=100`);
-        const subFiles = (sub.entries || []).filter(e => e.type === 'file' && e.name.endsWith('.pdf'));
-        files.push(...subFiles);
-      } catch(e) {}
-    }
-
-    allFiles = files.map(f => ({
+    allFiles = (data.files || []).map(f => ({
       id: f.id,
       name: f.name,
       site: detectSite(f.name),
-      modified: f.modified_at,
-    })).sort((a,b) => new Date(b.modified) - new Date(a.modified));
+      modified: f.modified,
+    }));
 
     hideLoading();
     updateTokenStatus('ok');
@@ -525,12 +483,8 @@ async function loadBoxFiles() {
 
   } catch(e) {
     hideLoading();
-    if (e.message === 'AUTH') {
-      updateTokenStatus('ng');
-      showToast('トークンエラー：期限切れかもしれません', 'error');
-    } else {
-      showToast('取得エラー：' + e.message, 'error');
-    }
+    updateTokenStatus('ng');
+    showToast('取得エラー：' + e.message, 'error');
   }
 }
 
@@ -566,12 +520,13 @@ async function showFile(file) {
 
   try {
     // Box APIでダウンロードURLを取得
-    const res = await fetch(`${BOX_API}/files/${file.id}/content`, {
-      headers: { 'Authorization': `Bearer ${cfg.token}` },
-      redirect: 'follow'
-    });
-    if (!res.ok) throw new Error('download failed');
-    const blob = await res.blob();
+    const res = await fetch(`${GAS_URL}?action=getFile&fileId=${file.id}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    const binary = atob(data.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
 
     const pdf = await pdfjsLib.getDocument(url).promise;
