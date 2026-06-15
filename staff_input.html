@@ -402,11 +402,11 @@ function renderStatus() {
     `;
     document.getElementById('submitBtn').before(leaveWrap);
   }
-  leaveWrap.style.display = (selStatus === 'yasumi' || selStatus === 'gaishutsu') ? 'block' : 'none';
+  leaveWrap.style.display = (selStatus === 'yasumi' || selStatus === 'gaishutsu' || selStatus === 'zaitaku') ? 'block' : 'none';
   // 外出時のラベルを変更
   const leaveLabel = leaveWrap.querySelector('.section-label');
   if (leaveLabel) {
-    leaveLabel.textContent = selStatus === 'gaishutsu' ? '外出/出張の期間（任意）' : '長期休暇の期間（任意）';
+    leaveLabel.textContent = selStatus === 'gaishutsu' ? '外出/出張の期間（任意）' : selStatus === 'zaitaku' ? '在宅の期間（任意）' : '長期休暇の期間（任意）';
   }
   const leaveNote = leaveWrap.querySelector('div[style*="font-size:11px"]');
   if (leaveNote) {
