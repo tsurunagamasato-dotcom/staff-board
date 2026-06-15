@@ -90,7 +90,13 @@
   .pdf-container { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; background: #1e2130; position: relative; padding: 24px; }
 
   /* フェード用ラッパー */
-  #pdf-wrapper { transition: opacity 0.7s ease; opacity: 0; display: none; }
+  #pdf-wrapper { opacity: 0; display: none; }
+  @keyframes kenburns {
+    0%   { transform: scale(1.0) translate(0, 0); }
+    50%  { transform: scale(1.06) translate(-1%, -1%); }
+    100% { transform: scale(1.0) translate(0, 0); }
+  }
+  #pdf-wrapper.playing { animation: kenburns 12s ease-in-out infinite; }
 
   #pdf-canvas { max-width: 100%; max-height: 100%; box-shadow: 0 4px 40px rgba(0,0,0,0.5); border-radius: 4px; display: block; }
 
@@ -318,9 +324,14 @@ function setConn(state) {
 
 // ===== FILTER & DISPLAY =====
 function filterAndDisplay() {
-  currentFiles = cfg.site === 'all'
-    ? [...allFiles]
-    : allFiles.filter(f => f.site === cfg.site);
+  if (cfg.site === 'all') {
+    // 両拠点：本社の最新1件 + 根崎第2の最新1件だけ交互に表示
+    const honsha = allFiles.filter(f => f.site === 'honsha')[0];
+    const nezaki  = allFiles.filter(f => f.site === 'nezaki')[0];
+    currentFiles = [honsha, nezaki].filter(Boolean);
+  } else {
+    currentFiles = allFiles.filter(f => f.site === cfg.site);
+  }
 
   if (currentFiles.length === 0) { showEmpty(); return; }
   currentIndex = 0;
@@ -382,6 +393,9 @@ async function showFile(file) {
       requestAnimationFrame(() => {
         wrapper.style.transition = 'opacity 0.7s ease';
         wrapper.style.opacity = '1';
+        // スライドショー中はケン・バーンズ効果
+        if (isPlaying) wrapper.classList.add('playing');
+        else wrapper.classList.remove('playing');
       });
     });
 
@@ -441,6 +455,7 @@ function startSlideshow() {
   document.getElementById('play-btn').textContent = '⏸ 停止';
   document.getElementById('slide-status').className = 'status-badge playing';
   document.getElementById('slide-status').innerHTML = '<span class="blink"></span>スライド中';
+  document.getElementById('pdf-wrapper').classList.add('playing');
   resetProgress();
   scheduleNext();
 }
@@ -450,6 +465,7 @@ function stopSlideshow() {
   document.getElementById('play-btn').textContent = '▶ 開始';
   document.getElementById('slide-status').className = 'status-badge paused';
   document.getElementById('slide-status').innerHTML = '<span class="blink"></span>停止中';
+  document.getElementById('pdf-wrapper').classList.remove('playing');
   document.getElementById('progress-fill').style.transition = 'none';
   document.getElementById('progress-fill').style.width = '0%';
 }
