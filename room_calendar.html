@@ -626,7 +626,7 @@ function setTheme(idx){
   document.querySelectorAll('.theme-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
   localStorage.setItem('room_theme',idx);
 }
-setTheme(parseInt(localStorage.getItem('room_theme')||'0'));
+setTheme(parseInt(localStorage.getItem('room_theme')||'9'));
 
 // ---- 初期化 ----
 async function init(){
