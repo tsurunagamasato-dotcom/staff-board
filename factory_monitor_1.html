@@ -255,10 +255,9 @@
 
       <!-- 凡例 -->
       <div class="legend" id="legend">
-        <!-- 上段：外枠（仕入先） -->
         <div class="legend-col">
-          <div class="legend-title">外枠（仕入先）</div>
-          <div class="legend-row">
+          <div class="legend-title" id="tog-border-label" onclick="toggleLegend('border')" style="cursor:pointer;user-select:none;">&#9656; 外枠（仕入先）</div>
+          <div id="leg-border" class="legend-row" style="display:none;">
             <div class="legend-item"><div class="lbox-border" style="border-color:#4fc3f7;"></div>アイシン国内</div>
             <div class="legend-item"><div class="lbox-border" style="border-color:#2e7d32;"></div>アイシン海外</div>
             <div class="legend-item"><div class="lbox-border" style="border-color:#ce93d8;"></div>トヨタ紡織</div>
@@ -267,10 +266,9 @@
           </div>
         </div>
         <div class="legend-divider"></div>
-        <!-- 下段：内側（納期） -->
         <div class="legend-col">
-          <div class="legend-title">内側（納期）</div>
-          <div class="legend-row">
+          <div class="legend-title" id="tog-inner-label" onclick="toggleLegend('inner')" style="cursor:pointer;user-select:none;">&#9662; 内側（納期）</div>
+          <div id="leg-inner" class="legend-row">
             <div class="legend-item"><div class="lbox" style="background:#a5d6a7;"></div>3ヶ月以上</div>
             <div class="legend-item"><div class="lbox" style="background:#fff176;"></div>2ヶ月以内</div>
             <div class="legend-item"><div class="lbox" style="background:#ffb74d;"></div>1ヶ月以内</div>
@@ -280,9 +278,19 @@
       </div>
     </div>
   </div>
+  </div>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
+function toggleLegend(type) {
+  var row   = document.getElementById('leg-' + type);
+  var label = document.getElementById('tog-' + type + '-label');
+  var name  = type === 'border' ? '外枠（仕入先）' : '内側（納期）';
+  var isHidden = row.style.display === 'none';
+  row.style.display = isHidden ? 'flex' : 'none';
+  label.innerHTML = (isHidden ? '&#9662; ' : '&#9656; ') + name;
+}
+</script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
