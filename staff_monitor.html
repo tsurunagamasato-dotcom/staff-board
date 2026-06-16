@@ -271,6 +271,12 @@
     <div class="reg-name" id="regName"></div>
     <div class="reg-grid" id="regGrid"></div>
 
+    <!-- メモ欄（外出/出張のみ表示） -->
+    <div id="regMemoBox" style="display:none;margin-bottom:10px;background:#f8f8f8;border-radius:12px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#888;margin-bottom:8px;">行先・メモ（任意）</div>
+      <input id="regMemoInput" type="text" placeholder="例：豊田市役所、東京出張など" style="width:100%;padding:9px 10px;border:1.5px solid #e0e0e0;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;">
+    </div>
+
     <!-- 期間入力（外出/出張・在宅・休みのみ表示） -->
     <div id="regPeriodBox" style="display:none;margin-bottom:14px;background:#f8f8f8;border-radius:12px;padding:14px;">
       <div style="font-size:12px;font-weight:700;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">📅 期間</div>
@@ -393,14 +399,20 @@ const SLIDE_DEFS = [
     filter: m => state[m.id] && state[m.id].status==='nezaki2' },
   { label:'外出/出張', subtitle:'',
     color:'#BA7517', bg:'linear-gradient(135deg,#f8e4c0,#faeece)',
-    filter: m => state[m.id] && state[m.id].status==='gaishutsu' },
+    filter: m => { const st=state[m.id]; if(!st||st.status!=='gaishutsu') return false; return !st.leaveStart || st.leaveStart <= getTodayJST(); } },
   { label:'在宅', subtitle:'',
     color:'#639922', bg:'linear-gradient(135deg,#d4edb8,#e0f4c8)',
-    filter: m => state[m.id] && state[m.id].status==='zaitaku' },
+    filter: m => { const st=state[m.id]; if(!st||st.status!=='zaitaku') return false; return !st.leaveStart || st.leaveStart <= getTodayJST(); } },
   { label:'休み', subtitle:'',
     color:'#888780', bg:'linear-gradient(135deg,#e4e2da,#eceae2)',
-    filter: m => state[m.id] && state[m.id].status==='yasumi' },
+    filter: m => { const st=state[m.id]; if(!st||st.status!=='yasumi') return false; return !st.leaveStart || st.leaveStart <= getTodayJST(); } },
 ];
+
+// JSTで今日の日付をYYYY-MM-DD形式で返す
+function getTodayJST() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 
 // 部署別スライド定義
 const DEPT_SLIDE_DEFS = [
