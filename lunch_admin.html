@@ -356,11 +356,9 @@ async function init() {
   // ローディング非表示（画面を即座に表示）
   document.getElementById('loadingOverlay').style.display = 'none';
 
-  // getSettings・loadOrders・loadMenuAdmin・getStaff を並列実行
-  const [settingsResult, , , staffResult] = await Promise.allSettled([
+  // getSettings・getStaff を先に実行（STAFF_MASTERを確定させる）
+  const [settingsResult, staffResult] = await Promise.allSettled([
     fetch(GAS_URL+'?action=getSettings&t='+Date.now()).then(r=>r.json()),
-    loadOrders(),
-    loadMenuAdmin(),
     fetch(GAS_URL+'?action=getStaff&t='+Date.now()).then(r=>r.json())
   ]);
 
@@ -381,6 +379,9 @@ async function init() {
     Object.keys(json.settings).forEach(k => { if(k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k]; });
     renderNGTable();
   }
+
+  // STAFF_MASTER確定後にloadOrders・loadMenuAdminを実行
+  await Promise.allSettled([loadOrders(), loadMenuAdmin()]);
 }
 
 function normalizeDeadline(val) {
