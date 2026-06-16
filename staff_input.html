@@ -388,7 +388,7 @@ function renderStatus() {
     leaveWrap = document.createElement('div');
     leaveWrap.id = 'leaveWrap';
     leaveWrap.style.cssText = 'margin-bottom:16px;';
-    const today = new Date().toISOString().split('T')[0];
+    const today = fmtDateStr(new Date());
     leaveWrap.innerHTML = `
       <div class="section-label" style="margin-bottom:6px;">長期休暇の期間（任意）</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
