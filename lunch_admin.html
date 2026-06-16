@@ -53,6 +53,7 @@
   .loc-stat.s-oomori .s-num { color: var(--blue); }
   .loc-stat.s-total  .s-num { color: var(--text); }
   .loc-stat.s-pending .s-num { color: var(--orange); }
+  .loc-stat.s-nashi .s-num { color: var(--text-sub); }
 
   /* VISITOR SUMMARY */
   .visitor-summary { background: var(--orange-bg); border: 1px solid #f0c060; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; }
@@ -447,15 +448,16 @@ function getEffectiveOrder(staff) {
 }
 
 function renderLocationSummary() {
-  const honsha = {futsuu:0, oomori:0, pending:0};
-  const nezaki  = {futsuu:0, oomori:0, pending:0};
+  const honsha = {futsuu:0, oomori:0, nashi:0, pending:0};
+  const nezaki  = {futsuu:0, oomori:0, nashi:0, pending:0};
 
   STAFF_MASTER.forEach(s => {
     const {order, place} = getEffectiveOrder(s);
     const loc = place==='nezaki' ? nezaki : honsha;
     if (order==='futsuu') loc.futsuu++;
     else if (order==='oomori') loc.oomori++;
-    else if (order!=='nashi') loc.pending++;
+    else if (order==='nashi') loc.nashi++;
+    else loc.pending++;
   });
 
   const card = (title, icon, data) => `
@@ -465,6 +467,7 @@ function renderLocationSummary() {
         <div class="loc-stat s-futsuu"><div class="s-label">○ 普通</div><div class="s-num">${data.futsuu}</div></div>
         <div class="loc-stat s-oomori"><div class="s-label">○ 大盛</div><div class="s-num">${data.oomori}</div></div>
         <div class="loc-stat s-total"><div class="s-label">合計</div><div class="s-num">${data.futsuu+data.oomori}</div></div>
+        <div class="loc-stat s-nashi"><div class="s-label">× 食べない</div><div class="s-num">${data.nashi}</div></div>
         <div class="loc-stat s-pending"><div class="s-label">未回答</div><div class="s-num">${data.pending}</div></div>
       </div>
     </div>`;
