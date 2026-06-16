@@ -164,6 +164,21 @@
   }
   .view-toggle-btn.active { background: #1a1a1a; color: #fff; }
 
+  /* 部署ショートカットナビ */
+  .dept-nav {
+    position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 5px; z-index: 200; flex-wrap: nowrap;
+    background: rgba(255,255,255,0.7); backdrop-filter: blur(4px);
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 999px; padding: 4px;
+  }
+  .dept-nav-btn {
+    padding: 7px 16px; border-radius: 999px; border: none;
+    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+    background: transparent; color: rgba(0,0,0,0.5); transition: all .15s; white-space: nowrap;
+  }
+  .dept-nav-btn:hover { background: rgba(0,0,0,0.08); color: #1a1a1a; }
+  .dept-nav-btn.active { background: #1a1a1a; color: #fff; }
+
   /* 部署別カードのバッジ */
   .status-badge-sm {
     display: inline-flex; align-items: center; gap: 4px;
@@ -236,6 +251,18 @@
 <div class="view-toggle">
   <button class="view-toggle-btn active" id="btnLocation" onclick="setViewMode('location')">📍 居場所別</button>
   <button class="view-toggle-btn" id="btnDept" onclick="setViewMode('dept')">🏢 部署別</button>
+</div>
+
+<!-- 部署ショートカットナビ（部署別表示時のみ表示） -->
+<div class="dept-nav" id="deptNav">
+  <button class="dept-nav-btn" onclick="jumpToDept(0)">役員</button>
+  <button class="dept-nav-btn" onclick="jumpToDept(1)">総務</button>
+  <button class="dept-nav-btn" onclick="jumpToDept(2)">営業</button>
+  <button class="dept-nav-btn" onclick="jumpToDept(3)">購買</button>
+  <button class="dept-nav-btn" onclick="jumpToDept(4)">設計</button>
+  <button class="dept-nav-btn" onclick="jumpToDept(5)">電気</button>
+  <button class="dept-nav-btn" onclick="jumpToDept(6)">加工</button>
+  <button class="dept-nav-btn" onclick="jumpToDept(7)">組付</button>
 </div>
 
 <!-- 目立つ一時停止ボタン -->
@@ -620,6 +647,22 @@ function startProgress(idx) {
   }));
 }
 
+function jumpToDept(deptIdx) {
+  // 部署別ビューに切り替えてから該当スライドへジャンプ
+  if (viewMode !== 'dept') setViewMode('dept');
+  // slideKeysからdeptIdxに対応するスライドを探す
+  const targetSlideIdx = slideKeys.indexOf(deptIdx);
+  if (targetSlideIdx >= 0) {
+    showSlide(targetSlideIdx);
+  }
+  // ジャンプ時は自動で一時停止
+  if (!isPaused) togglePause();
+  // ナビボタンのアクティブ状態を更新
+  document.querySelectorAll('.dept-nav-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === deptIdx);
+  });
+}
+
 function nextSlide() { showSlide((currentIndex+1)%slideKeys.length); resetTimer(); }
 function prevSlide() { showSlide((currentIndex-1+slideKeys.length)%slideKeys.length); resetTimer(); }
 function goSlide(idx) { showSlide(idx); resetTimer(); }
@@ -658,6 +701,7 @@ document.addEventListener('keydown', e => {
 
 function setViewMode(mode) {
   viewMode = mode;
+
   document.getElementById('btnLocation').classList.toggle('active', mode==='location');
   document.getElementById('btnDept').classList.toggle('active', mode==='dept');
   currentIndex = 0;
