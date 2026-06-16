@@ -194,12 +194,15 @@ function fmtDateStr(d) {
 
 // 昼食注文に×を自動登録
 async function syncLunchNG(staff, status, leaveStart, leaveEnd) {
+  // 外出/出張は昼食自動連動しない（午前帰社の場合があるため）
+  if (status === 'gaishutsu') return;
   if (!LUNCH_NG_STATUSES.includes(status)) return;
 
   const today = new Date();
+  const todayStr = fmtDateStr(today);
   const dates = [];
 
-  // ⑨ 8:45以降の当日登録は昼食連動しない（休みの場合のみ）
+  // 8:45以降の当日登録は昼食連動しない（休みの場合のみ）
   if (status === 'yasumi' && !leaveStart) {
     const h = today.getHours(), m = today.getMinutes();
     if (h > 8 || (h === 8 && m >= 45)) {
@@ -209,16 +212,18 @@ async function syncLunchNG(staff, status, leaveStart, leaveEnd) {
   }
 
   if (leaveStart && leaveEnd) {
-    // 期間が設定されている場合はその期間全日分
-    const start = new Date(leaveStart);
-    const end   = new Date(leaveEnd);
+    // 期間が設定されている場合はその期間全日分（今日以降のみ）
+    const start = new Date(leaveStart + 'T00:00:00');
+    const end   = new Date(leaveEnd   + 'T00:00:00');
     for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
       const day = d.getDay();
-      if (day !== 0 && day !== 6) dates.push(fmtDateStr(new Date(d)));
+      const ds = fmtDateStr(new Date(d));
+      if (day !== 0 && day !== 6) dates.push(ds);
     }
   } else {
-    // 期間なしは当日分のみ
-    dates.push(fmtDateStr(today));
+    // 期間なしは当日分のみ（leaveStartが今日より先なら連動しない）
+    if (leaveStart && leaveStart > todayStr) return;
+    dates.push(todayStr);
   }
 
   if (dates.length === 0) return;

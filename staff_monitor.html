@@ -837,6 +837,9 @@ function openRegModal(id) {
   document.getElementById('regPeriodBox').style.display = 'none';
   document.getElementById('regStart').value = '';
   document.getElementById('regEnd').value = '';
+  // メモ欄リセット
+  const memoBox = document.getElementById('regMemoBox');
+  if (memoBox) { memoBox.style.display = 'none'; document.getElementById('regMemoInput').value = ''; }
   // スライドを一時停止
   if (!isPaused) togglePause();
 }
@@ -851,12 +854,15 @@ function selectRegStatus(key) {
   const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(key);
   const periodBox = document.getElementById('regPeriodBox');
   periodBox.style.display = needsPeriod ? 'block' : 'none';
+  // 外出/出張のみメモ欄を表示
+  const memoBox = document.getElementById('regMemoBox');
+  if (memoBox) memoBox.style.display = key === 'gaishutsu' ? 'block' : 'none';
 
   // デフォルトで今日の日付をセット
   if (needsPeriod) {
-    const today = new Date().toISOString().slice(0, 10);
+    const todayJST = (() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
     if (!document.getElementById('regStart').value) {
-      document.getElementById('regStart').value = today;
+      document.getElementById('regStart').value = todayJST;
     }
   }
 }
@@ -885,10 +891,13 @@ async function doRegister() {
   // 終了日が空or開始日と同じ場合は開始日のみ（当日のみ）
   const leaveEnd = needsPeriod && endVal && endVal !== startVal ? endVal : leaveStart;
 
+  const memoInput = document.getElementById('regMemoInput');
+  const memo = memoInput ? memoInput.value.trim() : '';
+
   const payload = {
     id: regStaff.id, name: regStaff.name, dept: regStaff.dept,
     status: regStatus, updated,
-    memo: '', leaveStart, leaveEnd
+    memo, leaveStart, leaveEnd
   };
 
   try {
