@@ -547,13 +547,15 @@ function rebuildSlides() {
     const cardsHtml = members.length > 0
       ? `<div class="staff-grid">${members.map(m => {
           const st = state[m.id];
-          const isNonDefault = st.status !== m.base;
-          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
+          const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
+          const isNonDefault = activeStatus !== m.base;
+          const dispSt = {...st, status: activeStatus};
+          return `<div class="staff-card ${isNonDefault?'non-default':''} ${activeStatus==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <div class="card-dept">${m.dept}</div>
-            ${(st.status !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${st.memo}</div>`:''}
-            ${(st.leaveStart && st.leaveEnd) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${st.leaveStart===st.leaveEnd ? formatDate(st.leaveStart) : formatDate(st.leaveStart)+'〜'+formatDate(st.leaveEnd)}</div>` : ''}
-            ${st.updated?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
+            ${(activeStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
+            ${(dispSt.leaveStart && isActiveToday(m.id, st.status)) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${dispSt.leaveStart===dispSt.leaveEnd ? formatDate(dispSt.leaveStart) : formatDate(dispSt.leaveStart)+'〜'+formatDate(dispSt.leaveEnd)}</div>` : ''}
+            ${dispSt.updated?`<div class="card-time" style="color:#333;font-size:13px;">${dispSt.updated}</div>`:''}
           </div>`;
         }).join('')}</div>`
       : `<div class="empty-msg">現在この場所にいる社員はいません</div>`;
@@ -693,26 +695,27 @@ function rebuildDeptSlides(filterDept) {
     const cardsHtml = members.length > 0
       ? `<div class="staff-grid">${members.map(m => {
           const st = state[m.id];
-          const badge = STATUS_BADGE_MAP[st.status] || STATUS_BADGE_MAP['honsha_office'];
-          const isNonDefault = st.status !== m.base;
+          const activeStatus2 = isActiveToday(m.id, st.status) ? st.status : m.base;
+          const badge = STATUS_BADGE_MAP[activeStatus2] || STATUS_BADGE_MAP['honsha_office'];
+          const isNonDefault = activeStatus2 !== m.base;
           // 本社系は①②③で表示
           const slideLabel = {
             'honsha1': '本社①', 'honsha2': '本社②', 'honsha3': '本社③',
             'nezaki': '根崎', 'nezaki2': '根崎第2'
           };
           let displayLabel = badge.label;
-          if (st.status === 'honsha_office' && m.slide) {
+          if (activeStatus2 === 'honsha_office' && m.slide) {
             displayLabel = slideLabel[m.slide] || badge.label;
           }
-          return `<div class="staff-card ${isNonDefault?'non-default':''} ${st.status==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
+          return `<div class="staff-card ${isNonDefault?'non-default':''} ${activeStatus2==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <span class="status-badge-sm" style="background:${badge.bg};color:${badge.fg};">
               <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
               ${displayLabel}
             </span>
-            ${(st.status !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#3d1f00;font-size:12px;font-weight:700;margin-top:2px;">📍 ${st.memo}</div>`:''}
-            ${(st.leaveStart && st.leaveEnd)?`<div class="card-time" style="color:#00132a;font-size:12px;font-weight:700;margin-top:2px;">📅 ${st.leaveStart===st.leaveEnd ? formatDate(st.leaveStart) : formatDate(st.leaveStart)+'〜'+formatDate(st.leaveEnd)}</div>`:''}
-            ${st.updated?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
+            ${(activeStatus2 !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#3d1f00;font-size:12px;font-weight:700;margin-top:2px;">📍 ${st.memo}</div>`:''}
+            ${(st.leaveStart && isActiveToday(m.id, st.status))?`<div class="card-time" style="color:#00132a;font-size:12px;font-weight:700;margin-top:2px;">📅 ${st.leaveStart===st.leaveEnd ? formatDate(st.leaveStart) : formatDate(st.leaveStart)+'〜'+formatDate(st.leaveEnd)}</div>`:''}
+            ${st.updated && isNonDefault?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
           </div>`;
         }).join('')}</div>`
       : `<div class="empty-msg">メンバーがいません</div>`;
