@@ -399,19 +399,36 @@ const SLIDE_DEFS = [
     filter: m => state[m.id] && state[m.id].status==='nezaki2' },
   { label:'外出/出張', subtitle:'',
     color:'#BA7517', bg:'linear-gradient(135deg,#f8e4c0,#faeece)',
-    filter: m => { const st=state[m.id]; if(!st||st.status!=='gaishutsu') return false; return !st.leaveStart || st.leaveStart <= getTodayJST(); } },
+    filter: m => isActiveToday(m.id, 'gaishutsu') },
   { label:'在宅', subtitle:'',
     color:'#639922', bg:'linear-gradient(135deg,#d4edb8,#e0f4c8)',
-    filter: m => { const st=state[m.id]; if(!st||st.status!=='zaitaku') return false; return !st.leaveStart || st.leaveStart <= getTodayJST(); } },
+    filter: m => isActiveToday(m.id, 'zaitaku') },
   { label:'休み', subtitle:'',
     color:'#888780', bg:'linear-gradient(135deg,#e4e2da,#eceae2)',
-    filter: m => { const st=state[m.id]; if(!st||st.status!=='yasumi') return false; return !st.leaveStart || st.leaveStart <= getTodayJST(); } },
+    filter: m => isActiveToday(m.id, 'yasumi') },
 ];
 
 // JSTで今日の日付をYYYY-MM-DD形式で返す
 function getTodayJST() {
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// 今日そのステータスが有効かどうか判定
+// ・leaveStart/leaveEndが設定されている → 今日がその期間内なら有効
+// ・leaveStart/leaveEndが未設定 → ステータスが一致すれば有効
+// ・leaveStartが未来 → まだ有効でない（デフォルト表示）
+function isActiveToday(id, status) {
+  const st = state[id];
+  if (!st || st.status !== status) return false;
+  const today = getTodayJST();
+  if (st.leaveStart) {
+    // leaveStartが未来 → 今日はまだ有効でない
+    if (st.leaveStart > today) return false;
+    // leaveEndが設定されている場合 → 今日がleaveEnd以内か
+    if (st.leaveEnd && st.leaveEnd < today) return false;
+  }
+  return true;
 }
 
 // 部署別スライド定義
