@@ -346,7 +346,7 @@
 </select>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwT7aSD1CmIOp_TlVa3yzUZr99b-yzMd5h_--kgweBABdyW8SnRMscd3cdWlTp6GsQzUQ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwo73GwwjA1kVVOkq-XKIovxhTjaZSnM_GgMVpOUC_D-39NnvzjQENqABWL-7Tybk0RyQ/exec';
 const FETCH_INTERVAL = 15000;
 
 // STAFF_MASTERはGASから動的取得（起動時に読み込み）
@@ -450,12 +450,30 @@ function isActiveToday(id, status) {
   if (!st || st.status !== status) return false;
   const today = getTodayJST();
   if (st.leaveStart) {
+    // leaveStartをYYYY-MM-DD形式に正規化
+    const ls = normalizeStateDate(st.leaveStart);
+    const le = st.leaveEnd ? normalizeStateDate(st.leaveEnd) : '';
     // leaveStartが未来 → 今日はまだ有効でない
-    if (st.leaveStart > today) return false;
+    if (ls > today) return false;
     // leaveEndが設定されている場合 → 今日がleaveEnd以内か
-    if (st.leaveEnd && st.leaveEnd < today) return false;
+    if (le && le < today) return false;
   }
   return true;
+}
+
+// state内の日付値をYYYY-MM-DD文字列に正規化
+function normalizeStateDate(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // "2026/06/17" 形式
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) return s.replace(/\//g, '-');
+  // Date文字列など
+  try {
+    const d = new Date(s);
+    if (!isNaN(d)) return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  } catch(e) {}
+  return s;
 }
 
 // 部署別スライド定義
@@ -529,9 +547,17 @@ async function fetchAll(silent=false) {
     const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
     setSyncStatus('ok', t+' 更新');
     const deptParam = new URLSearchParams(location.search).get('dept');
+    const savedIndex = currentIndex; // 現在のスライド位置を保存
+    const savedPaused = isPaused;    // 一時停止状態を保存
     if (deptParam) rebuildDeptSlides(deptParam);
     else if (viewMode==='location') rebuildSlides();
     else rebuildDeptSlides();
+    // スライド位置・一時停止状態を復元
+    if (savedIndex > 0 && savedIndex < slideKeys.length) {
+      showSlide(savedIndex);
+      if (savedPaused && !isPaused) togglePause();
+      else if (!savedPaused && isPaused) togglePause();
+    }
   } catch(e) { setSyncStatus('error','通信エラー'); }
 }
 
@@ -580,7 +606,7 @@ function rebuildSlides() {
           return `<div class="staff-card ${isNonDefault?'non-default':''} ${activeStatus==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <div class="card-dept">${m.dept}</div>
-            ${(isNonDefault && activeStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
+            ${(activeStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
             ${(dispSt.leaveStart && isActiveToday(m.id, st.status)) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${dispSt.leaveStart===dispSt.leaveEnd ? formatDate(dispSt.leaveStart) : formatDate(dispSt.leaveStart)+'〜'+formatDate(dispSt.leaveEnd)}</div>` : ''}
             ${isNonDefault && dispSt.updated?`<div class="card-time" style="color:#333;font-size:13px;">${dispSt.updated}</div>`:''}
           </div>`;
@@ -757,7 +783,7 @@ function rebuildDeptSlides(filterDept) {
               <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
               ${displayLabel}
             </span>
-            ${(isNonDefault && activeStatus2 !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#3d1f00;font-size:12px;font-weight:700;margin-top:2px;">📍 ${st.memo}</div>`:''}
+            ${(activeStatus2 !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#3d1f00;font-size:12px;font-weight:700;margin-top:2px;">📍 ${st.memo}</div>`:''}
             ${(st.leaveStart && isActiveToday(m.id, st.status))?`<div class="card-time" style="color:#00132a;font-size:12px;font-weight:700;margin-top:2px;">📅 ${st.leaveStart===st.leaveEnd ? formatDate(st.leaveStart) : formatDate(st.leaveStart)+'〜'+formatDate(st.leaveEnd)}</div>`:''}
             ${isNonDefault && st.updated?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
           </div>`;
