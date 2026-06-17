@@ -538,13 +538,12 @@ function renderOrderTable() {
       const _dept = String(s.dept).replace(/'/g,"");
       const _order = String(order||'').replace(/'/g,"");
       const _place = String(place||'honsha').replace(/'/g,"");
-      return `
-        <tr class="order-row" onclick="openEditPopup('${_id}','${_name}','${_dept}','${_order}','${_place}','${date}')">
-          <td>${s.name}</td>
-          <td><span class="badge ${badgeClass}">${label}</span></td>
-          <td style="font-size:12px;color:var(--text-sub);">${placeLabel}</td>
-          <td style="font-size:11px;color:var(--text-hint);text-align:right;">✏️</td>
-        </tr>`;
+      return '<tr class="order-row" onclick="openEditPopup(\'' + _id + '\',\'' + _name + '\',\'' + _dept + '\',\'' + _order + '\',\'' + _place + '\',\'' + date + '\')">' +
+        '<td>' + s.name + '</td>' +
+        '<td><span class="badge ' + badgeClass + '">' + label + '</span></td>' +
+        '<td style="font-size:12px;color:var(--text-sub);">' + placeLabel + '</td>' +
+        '<td style="font-size:11px;color:var(--text-hint);text-align:right;">✏️</td>' +
+        '</tr>';
     }).join('');
     const futsuu = members.filter(s=>getEffectiveOrder(s).order==='futsuu').length;
     const oomori = members.filter(s=>getEffectiveOrder(s).order==='oomori').length;
