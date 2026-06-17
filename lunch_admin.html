@@ -416,7 +416,7 @@ async function init() {
     const json = settingsResult.value;
     const deadlineRaw = json.settings.deadline || '08:30';
     document.getElementById('deadlineInput').value = normalizeDeadline(deadlineRaw);
-    Object.keys(json.settings).forEach(k => { if(k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k]; });
+    Object.keys(json.settings).forEach(k => { if(k.startsWith('ng_') && (json.settings[k] === true || json.settings[k] === 'TRUE' || json.settings[k] === 'true')) permanentNG[k.replace('ng_','')] = true; });
     renderNGTable();
   }
 
