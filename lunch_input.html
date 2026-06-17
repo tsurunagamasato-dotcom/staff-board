@@ -460,7 +460,10 @@ async function init() {
 
   // バックグラウンドでデータ取得（画面表示をブロックしない）
   // バックグラウンドで統合マスタ更新
-  loadStaffMaster().then(() => renderDeptSelects());
+  loadStaffMaster().then(() => {
+    renderDeptSelects();
+    loadAutoLogin(); // STAFF_MASTERロード後に自動ログイン復元
+  });
 
   Promise.all([
     fetch(GAS_URL+'?action=getSettings&t='+Date.now()).then(r=>r.json()).then(json => {
@@ -840,8 +843,6 @@ function addVisitor() {
   const id = visitorIdCounter;
   visitorList.push({id, name:'', count:1, order:'futsuu', date:fmtDate(new Date())});
   renderVisitorList();
-  // 自動ログイン復元（STAFF_MASTERロード後に実行）
-  loadAutoLogin();
 }
 
 function renderVisitorList() {
