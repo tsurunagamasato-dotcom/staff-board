@@ -383,6 +383,12 @@ async function init() {
 
   // STAFF_MASTER確定後にloadOrders・loadMenuAdminを実行
   await Promise.allSettled([loadOrders(), loadMenuAdmin()]);
+
+  // ポップアップ外クリックで閉じる
+  const overlay = document.getElementById('editPopupOverlay');
+  if (overlay) overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeEditPopup();
+  });
 }
 
 function normalizeDeadline(val) {
@@ -616,10 +622,7 @@ async function saveEditOrder() {
   } catch(e) { showToast('通信エラーが発生しました'); }
 }
 
-// ポップアップ外クリックで閉じる
-document.getElementById('editPopupOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('editPopupOverlay')) closeEditPopup();
-});
+// ポップアップ外クリック → init()内で設定
 
 // ===== EXPORT =====
 // ===== EXPORT MODAL =====
