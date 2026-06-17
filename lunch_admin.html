@@ -514,20 +514,29 @@ function renderOrderTable() {
         </tr>
         <tr class="edit-row" id="${rowId}">
           <td colspan="4">
-            <div class="edit-order-btns">
-              <span style="font-size:11px;font-weight:700;color:var(--text-sub);margin-right:4px;">注文：</span>
-              <button class="edit-order-btn ${order==='futsuu'?'sel-futsuu':''}" id="eob-futsuu-${s.id}" onclick="selectEditOrder('${s.id}','futsuu')">○ 普通</button>
-              <button class="edit-order-btn ${order==='oomori'?'sel-oomori':''}" id="eob-oomori-${s.id}" onclick="selectEditOrder('${s.id}','oomori')">○ 大盛</button>
-              <button class="edit-order-btn ${order==='nashi'?'sel-nashi':''}"  id="eob-nashi-${s.id}"  onclick="selectEditOrder('${s.id}','nashi')">× 食べない</button>
-            </div>
-            <div class="edit-place-btns">
-              <span style="font-size:11px;font-weight:700;color:var(--text-sub);margin-right:4px;">場所：</span>
-              <button class="edit-place-btn ${place!=='nezaki'?'active':''}" id="epb-honsha-${s.id}" onclick="selectEditPlace('${s.id}','honsha')">本社</button>
-              <button class="edit-place-btn ${place==='nezaki'?'active':''}" id="epb-nezaki-${s.id}" onclick="selectEditPlace('${s.id}','nezaki')">根崎</button>
-            </div>
-            <div>
-              <button class="edit-save-btn" onclick="saveEditOrder('${s.id}','${s.name}','${s.dept}','${date}')">保存</button>
-              <button class="edit-cancel-btn" onclick="toggleEditRow('${s.id}')">キャンセル</button>
+            <div class="edit-panel">
+              <div class="edit-group">
+                <div class="edit-group-label">注文</div>
+                <div class="edit-order-btns">
+                  <button class="edit-order-btn ${order==='futsuu'?'sel-futsuu':''}" id="eob-futsuu-${s.id}" onclick="selectEditOrder('${s.id}','futsuu')">○ 普通</button>
+                  <button class="edit-order-btn ${order==='oomori'?'sel-oomori':''}" id="eob-oomori-${s.id}" onclick="selectEditOrder('${s.id}','oomori')">○ 大盛</button>
+                  <button class="edit-order-btn ${order==='nashi'?'sel-nashi':''}"  id="eob-nashi-${s.id}"  onclick="selectEditOrder('${s.id}','nashi')">× 食べない</button>
+                </div>
+              </div>
+              <div class="edit-group">
+                <div class="edit-group-label">食べる場所</div>
+                <div class="edit-place-btns">
+                  <button class="edit-place-btn ${place!=='nezaki'?'active':''}" id="epb-honsha-${s.id}" onclick="selectEditPlace('${s.id}','honsha')">🏢 本社</button>
+                  <button class="edit-place-btn ${place==='nezaki'?'active':''}" id="epb-nezaki-${s.id}" onclick="selectEditPlace('${s.id}','nezaki')">🏭 根崎</button>
+                </div>
+              </div>
+              <div class="edit-group" style="justify-content:flex-end;margin-top:auto;">
+                <div class="edit-group-label" style="visibility:hidden;">　</div>
+                <div class="edit-actions">
+                  <button class="edit-save-btn" onclick="saveEditOrder('${s.id}','${s.name}','${s.dept}','${date}')">💾 保存</button>
+                  <button class="edit-cancel-btn" onclick="toggleEditRow('${s.id}')">キャンセル</button>
+                </div>
+              </div>
             </div>
           </td>
         </tr>`;
