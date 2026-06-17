@@ -494,6 +494,7 @@ function renderOrderTable() {
   const grouped = {};
   DEPT_ORDER.forEach(d => { grouped[d]=[]; });
   STAFF_MASTER.forEach(s => { if(grouped[s.dept]) grouped[s.dept].push(s); });
+  const date = document.getElementById('targetDate').value;
 
   container.innerHTML = DEPT_ORDER.map(dept => {
     const members = grouped[dept];
@@ -503,18 +504,113 @@ function renderOrderTable() {
       const badgeClass = order==='futsuu'?'badge-futsuu':order==='oomori'?'badge-oomori':order==='nashi'?'badge-nashi':'badge-none';
       const label = order==='futsuu'?'○ 普通':order==='oomori'?'○ 大盛':order==='nashi'?'× 食べない':'未回答';
       const placeLabel = place==='nezaki'?'根崎':'本社';
-      return `<tr><td>${s.name}</td><td><span class="badge ${badgeClass}">${label}</span></td><td style="font-size:12px;color:var(--text-sub);">${placeLabel}</td></tr>`;
+      const rowId = `edit-${s.id}`;
+      return `
+        <tr>
+          <td>${s.name}</td>
+          <td><span class="badge ${badgeClass}">${label}</span></td>
+          <td style="font-size:12px;color:var(--text-sub);">${placeLabel}</td>
+          <td style="text-align:right;"><button class="edit-btn" onclick="toggleEditRow('${s.id}','${s.name}','${order||''}','${place||'honsha'}','${date}')">編集</button></td>
+        </tr>
+        <tr class="edit-row" id="${rowId}">
+          <td colspan="4">
+            <div class="edit-order-btns">
+              <span style="font-size:11px;font-weight:700;color:var(--text-sub);margin-right:4px;">注文：</span>
+              <button class="edit-order-btn ${order==='futsuu'?'sel-futsuu':''}" id="eob-futsuu-${s.id}" onclick="selectEditOrder('${s.id}','futsuu')">○ 普通</button>
+              <button class="edit-order-btn ${order==='oomori'?'sel-oomori':''}" id="eob-oomori-${s.id}" onclick="selectEditOrder('${s.id}','oomori')">○ 大盛</button>
+              <button class="edit-order-btn ${order==='nashi'?'sel-nashi':''}"  id="eob-nashi-${s.id}"  onclick="selectEditOrder('${s.id}','nashi')">× 食べない</button>
+            </div>
+            <div class="edit-place-btns">
+              <span style="font-size:11px;font-weight:700;color:var(--text-sub);margin-right:4px;">場所：</span>
+              <button class="edit-place-btn ${place!=='nezaki'?'active':''}" id="epb-honsha-${s.id}" onclick="selectEditPlace('${s.id}','honsha')">本社</button>
+              <button class="edit-place-btn ${place==='nezaki'?'active':''}" id="epb-nezaki-${s.id}" onclick="selectEditPlace('${s.id}','nezaki')">根崎</button>
+            </div>
+            <div>
+              <button class="edit-save-btn" onclick="saveEditOrder('${s.id}','${s.name}','${s.dept}','${date}')">保存</button>
+              <button class="edit-cancel-btn" onclick="toggleEditRow('${s.id}')">キャンセル</button>
+            </div>
+          </td>
+        </tr>`;
     }).join('');
     const futsuu = members.filter(s=>getEffectiveOrder(s).order==='futsuu').length;
     const oomori = members.filter(s=>getEffectiveOrder(s).order==='oomori').length;
     return `<div class="dept-section">
       <div class="dept-label">${dept} <span style="font-weight:400;color:var(--text-sub);">普通${futsuu} 大盛${oomori}</span></div>
       <table class="order-table">
-        <thead><tr><th>氏名</th><th>注文</th><th>場所</th></tr></thead>
+        <thead><tr><th>氏名</th><th>注文</th><th>場所</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
   }).join('');
+}
+
+// 編集中の状態管理
+const editState = {};
+
+function toggleEditRow(id, name, order, place, date) {
+  const row = document.getElementById(`edit-${id}`);
+  if (!row) return;
+  const isOpen = row.classList.contains('open');
+  // 全部閉じる
+  document.querySelectorAll('.edit-row.open').forEach(r => r.classList.remove('open'));
+  if (!isOpen) {
+    row.classList.add('open');
+    editState[id] = { order, place };
+  }
+}
+
+function selectEditOrder(id, order) {
+  editState[id] = editState[id] || {};
+  editState[id].order = order;
+  ['futsuu','oomori','nashi'].forEach(o => {
+    const btn = document.getElementById(`eob-${o}-${id}`);
+    if (btn) btn.className = `edit-order-btn${order===o?' sel-'+o:''}`;
+  });
+}
+
+function selectEditPlace(id, place) {
+  editState[id] = editState[id] || {};
+  editState[id].place = place;
+  ['honsha','nezaki'].forEach(p => {
+    const btn = document.getElementById(`epb-${p}-${id}`);
+    if (btn) btn.classList.toggle('active', place===p);
+  });
+}
+
+async function saveEditOrder(id, name, dept, date) {
+  const state = editState[id];
+  if (!state || !state.order) { showToast('注文を選択してください'); return; }
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'saveOrder',
+        id, name, dept, date,
+        order: state.order,
+        place: state.place || 'honsha',
+        count: 1
+      })
+    });
+    const json = await res.json();
+    if (json.ok) {
+      // ローカルのordersDataを更新
+      const existing = ordersData.find(o => normalizeId(o.id) === normalizeId(id) && o.date === date);
+      if (existing) {
+        existing.order = state.order;
+        existing.place = state.place || 'honsha';
+      } else {
+        ordersData.push({id, name, dept, date, order: state.order, place: state.place || 'honsha'});
+      }
+      showToast(`${name} の注文を更新しました`);
+      document.getElementById(`edit-${id}`).classList.remove('open');
+      renderOrderTable();
+      renderLocationSummary();
+    } else {
+      showToast('保存に失敗しました');
+    }
+  } catch(e) {
+    showToast('通信エラーが発生しました');
+  }
 }
 
 // ===== EXPORT =====
