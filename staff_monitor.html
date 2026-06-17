@@ -433,6 +433,9 @@ const SLIDE_DEFS = [
   { label:'休み', subtitle:'',
     color:'#888780', bg:'linear-gradient(135deg,#e4e2da,#eceae2)',
     filter: m => isActiveToday(m.id, 'yasumi') },
+  { label:'離席/会議等', subtitle:'',
+    color:'#c0392b', bg:'linear-gradient(135deg,#fdecea,#fce8e6)',
+    filter: m => isActiveToday(m.id, 'risseki') },
 ];
 
 // JSTで今日の日付をYYYY-MM-DD形式で返す
@@ -497,6 +500,7 @@ const STATUS_BADGE_MAP = {
   gaishutsu:      { label:'外出/出張',  bg:'#faeeda', fg:'#633806', dot:'#BA7517' },
   zaitaku:        { label:'在宅',       bg:'#eaf3de', fg:'#27500a', dot:'#639922' },
   yasumi:         { label:'休み',       bg:'#f1efe8', fg:'#444441', dot:'#888780' },
+  risseki:        { label:'離席/会議等', bg:'#fdecea', fg:'#7b1a14', dot:'#c0392b' },
 };
 
 let viewMode = 'location'; // 'location' or 'dept'
@@ -902,6 +906,7 @@ const STATUSES_REG = [
   { key:'gaishutsu',      label:'外出/出張',  icon:'🚗' },
   { key:'zaitaku',        label:'在宅',       icon:'🏠' },
   { key:'yasumi',         label:'休み',       icon:'😴' },
+  { key:'risseki',        label:'離席/会議等', icon:'🚶' },
 ];
 
 let regStaff = null;
@@ -953,12 +958,12 @@ function selectRegStatus(key) {
   document.getElementById('regSubmit').disabled = false;
 
   // 外出/出張・在宅・休みのみ期間入力欄を表示
-  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(key);
+  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(key); // rissekiは期間なし
   const periodBox = document.getElementById('regPeriodBox');
   periodBox.style.display = needsPeriod ? 'block' : 'none';
   // 外出/出張のみメモ欄を表示
   const memoBox = document.getElementById('regMemoBox');
-  if (memoBox) memoBox.style.display = key === 'gaishutsu' ? 'block' : 'none';
+  if (memoBox) memoBox.style.display = (key === 'gaishutsu' || key === 'risseki') ? 'block' : 'none';
 
   // デフォルトで今日の日付をセット
   if (needsPeriod) {
@@ -986,7 +991,7 @@ async function doRegister() {
   const updated = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + '更新';
 
   // 期間取得
-  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(regStatus);
+  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(regStatus); // rissekiは期間なし
   const startVal = document.getElementById('regStart').value;
   const endVal = document.getElementById('regEnd').value;
   const leaveStart = needsPeriod && startVal ? startVal : '';

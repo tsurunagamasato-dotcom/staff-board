@@ -63,6 +63,7 @@
   .sel-btn.status-btn.sel-gaishutsu      { border-color: #BA7517; background: #faeeda; color: #633806; }
   .sel-btn.status-btn.sel-zaitaku        { border-color: #639922; background: #eaf3de; color: #27500a; }
   .sel-btn.status-btn.sel-yasumi         { border-color: #888780; background: #f1efe8; color: #444441; }
+  .sel-btn.status-btn.sel-risseki        { border-color: #c0392b; background: #fdecea; color: #7b1a14; }
 
   .status-icon { font-size: 22px; margin-bottom: 4px; }
 
@@ -257,6 +258,7 @@ const STATUSES = [
   { key:'gaishutsu',      label:'外出/出張',  bg:'#faeeda', fg:'#633806', dot:'#BA7517', icon:'🚗' },
   { key:'zaitaku',        label:'在宅',       bg:'#eaf3de', fg:'#27500a', dot:'#639922', icon:'🏠' },
   { key:'yasumi',         label:'休み',       bg:'#f1efe8', fg:'#444441', dot:'#888780', icon:'🌙' },
+  { key:'risseki',        label:'離席/会議等', bg:'#fdecea', fg:'#7b1a14', dot:'#c0392b', icon:'🚶' },
 ];
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.key, s]));
 
@@ -385,7 +387,7 @@ function renderStatus() {
     `;
     document.getElementById('submitBtn').before(memoWrap);
   }
-  memoWrap.style.display = selStatus === 'gaishutsu' ? 'block' : 'none';
+  memoWrap.style.display = (selStatus === 'gaishutsu' || selStatus === 'risseki') ? 'block' : 'none';
 
   // 長期休暇欄（休みのみ）
   let leaveWrap = document.getElementById('leaveWrap');
