@@ -610,7 +610,7 @@ function rebuildSlides() {
           return `<div class="staff-card ${isNonDefault?'non-default':''} ${activeStatus==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
             <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
             <div class="card-dept">${m.dept}</div>
-            ${(activeStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
+            ${(isNonDefault && activeStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
             ${(dispSt.leaveStart && isActiveToday(m.id, st.status)) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${dispSt.leaveStart===dispSt.leaveEnd ? formatDate(dispSt.leaveStart) : formatDate(dispSt.leaveStart)+'〜'+formatDate(dispSt.leaveEnd)}</div>` : ''}
             ${isNonDefault && dispSt.updated?`<div class="card-time" style="color:#333;font-size:13px;">${dispSt.updated}</div>`:''}
           </div>`;
