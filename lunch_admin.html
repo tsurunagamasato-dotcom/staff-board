@@ -553,74 +553,73 @@ function renderOrderTable() {
   }).join('');
 }
 
-// 編集中の状態管理
-const editState = {};
+// ===== 編集ポップアップ =====
+const editState = { id:'', name:'', dept:'', date:'', order:'', place:'' };
 
-function toggleEditRow(id, name, order, place, date) {
-  const row = document.getElementById(`edit-${id}`);
-  if (!row) return;
-  const isOpen = row.classList.contains('open');
-  // 全部閉じる
-  document.querySelectorAll('.edit-row.open').forEach(r => r.classList.remove('open'));
-  if (!isOpen) {
-    row.classList.add('open');
-    editState[id] = { order, place };
-  }
-}
+function openEditPopup(id, name, dept, order, place, date) {
+  editState.id=id; editState.name=name; editState.dept=dept;
+  editState.date=date; editState.order=order; editState.place=place;
 
-function selectEditOrder(id, order) {
-  editState[id] = editState[id] || {};
-  editState[id].order = order;
+  document.getElementById('editPopupTitle').textContent = name + ' さんの注文を変更';
+  document.getElementById('editPopupSub').textContent = date + ' ／ ' + dept;
+
+  // 注文ボタン初期化
   ['futsuu','oomori','nashi'].forEach(o => {
-    const btn = document.getElementById(`eob-${o}-${id}`);
-    if (btn) btn.className = `edit-order-btn${order===o?' sel-'+o:''}`;
+    const btn = document.getElementById('pop-'+o);
+    btn.className = 'edit-order-btn' + (order===o?' sel-'+o:'');
   });
-}
-
-function selectEditPlace(id, place) {
-  editState[id] = editState[id] || {};
-  editState[id].place = place;
+  // 場所ボタン初期化
   ['honsha','nezaki'].forEach(p => {
-    const btn = document.getElementById(`epb-${p}-${id}`);
-    if (btn) btn.classList.toggle('active', place===p);
+    document.getElementById('pop-'+p).classList.toggle('active', place===p || (p==='honsha'&&place!=='nezaki'));
+  });
+
+  document.getElementById('editSaveBtn').onclick = () => saveEditOrder();
+  document.getElementById('editPopupOverlay').classList.remove('hidden');
+}
+
+function closeEditPopup() {
+  document.getElementById('editPopupOverlay').classList.add('hidden');
+}
+
+function selectEditOrder(_, order) {
+  editState.order = order;
+  ['futsuu','oomori','nashi'].forEach(o => {
+    document.getElementById('pop-'+o).className = 'edit-order-btn' + (order===o?' sel-'+o:'');
   });
 }
 
-async function saveEditOrder(id, name, dept, date) {
-  const state = editState[id];
-  if (!state || !state.order) { showToast('注文を選択してください'); return; }
+function selectEditPlace(_, place) {
+  editState.place = place;
+  ['honsha','nezaki'].forEach(p => {
+    document.getElementById('pop-'+p).classList.toggle('active', place===p);
+  });
+}
+
+async function saveEditOrder() {
+  if (!editState.order) { showToast('注文を選択してください'); return; }
+  const {id, name, dept, date, order, place} = editState;
   try {
     const res = await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({
-        action: 'saveOrder',
-        id, name, dept, date,
-        order: state.order,
-        place: state.place || 'honsha',
-        count: 1
-      })
+      body: JSON.stringify({ action:'saveOrder', id, name, dept, date, order, place: place||'honsha', count:1 })
     });
     const json = await res.json();
     if (json.ok) {
-      // ローカルのordersDataを更新
-      const existing = ordersData.find(o => normalizeId(o.id) === normalizeId(id) && o.date === date);
-      if (existing) {
-        existing.order = state.order;
-        existing.place = state.place || 'honsha';
-      } else {
-        ordersData.push({id, name, dept, date, order: state.order, place: state.place || 'honsha'});
-      }
-      showToast(`${name} の注文を更新しました`);
-      document.getElementById(`edit-${id}`).classList.remove('open');
+      const existing = ordersData.find(o => normalizeId(o.id)===normalizeId(id) && o.date===date);
+      if (existing) { existing.order=order; existing.place=place||'honsha'; }
+      else ordersData.push({id, name, dept, date, order, place: place||'honsha'});
+      closeEditPopup();
+      showToast(name + ' の注文を更新しました');
       renderOrderTable();
       renderLocationSummary();
-    } else {
-      showToast('保存に失敗しました');
-    }
-  } catch(e) {
-    showToast('通信エラーが発生しました');
-  }
+    } else { showToast('保存に失敗しました'); }
+  } catch(e) { showToast('通信エラーが発生しました'); }
 }
+
+// ポップアップ外クリックで閉じる
+document.getElementById('editPopupOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('editPopupOverlay')) closeEditPopup();
+});
 
 // ===== EXPORT =====
 // ===== EXPORT MODAL =====
