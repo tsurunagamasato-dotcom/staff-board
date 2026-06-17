@@ -164,6 +164,18 @@
   </div>
 </header>
 
+<!-- 自動選択バナー -->
+<div class="auto-login-bar hidden" id="autoLoginBar">
+  <span>👤</span>
+  <span class="auto-login-name" id="autoLoginName"></span>
+  <span style="color:#3d6b5a;font-size:12px;">さんとして登録</span>
+  <button class="auto-login-change" onclick="clearAutoLogin()">変更</button>
+  <label class="auto-login-check">
+    <input type="checkbox" id="autoLoginKeep" onchange="onAutoLoginKeepChange()" checked>
+    次回も自動選択
+  </label>
+</div>
+
 <div class="main">
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('order')">注文</button>
@@ -501,6 +513,8 @@ function onNameChange() {
   if (selStaff) {
     selPlace = getDefaultPlace(selStaff);
     if (permanentNG[selStaff.id]) selOrder = 'nashi';
+    // 自動ログイン情報を保存（代行モードでない場合のみ）
+    if (!isProxy) saveAutoLogin(selStaff);
   }
   updateNGNote(); updateOrderButtons(); updatePlaceButtons();
   updateDateGrid();
@@ -750,6 +764,8 @@ function addVisitor() {
   const id = visitorIdCounter;
   visitorList.push({id, name:'', count:1, order:'futsuu', date:fmtDate(new Date())});
   renderVisitorList();
+  // 自動ログイン復元（STAFF_MASTERロード後に実行）
+  loadAutoLogin();
 }
 
 function renderVisitorList() {
@@ -792,11 +808,15 @@ function updateVisitor(id, key, val) {
   if (key==='count') v.count = Math.max(1, parseInt(val)||1);
   else v[key] = val;
   renderVisitorList();
+  // 自動ログイン復元（STAFF_MASTERロード後に実行）
+  loadAutoLogin();
 }
 
 function removeVisitor(id) {
   visitorList = visitorList.filter(v=>v.id!==id);
   renderVisitorList();
+  // 自動ログイン復元（STAFF_MASTERロード後に実行）
+  loadAutoLogin();
 }
 
 async function submitVisitor() {
