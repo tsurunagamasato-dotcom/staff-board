@@ -127,6 +127,45 @@
     .header { padding: 10px 16px; }
     .main { padding: 16px; }
   }
+
+  /* 編集ポップアップ */
+  .edit-row { cursor: pointer; }
+  .edit-row:hover td { background: #f8f8f8; }
+  .edit-popup-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .edit-popup-overlay.hidden { display: none; }
+  .edit-popup {
+    background: #fff; border-radius: 16px; padding: 24px;
+    width: 100%; max-width: 380px; box-shadow: 0 16px 48px rgba(0,0,0,.2);
+  }
+  .edit-popup-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+  .edit-popup-sub { font-size: 12px; color: var(--text-sub); margin-bottom: 20px; }
+  .edit-popup-label { font-size: 11px; font-weight: 700; color: var(--text-sub); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .4px; }
+  .edit-popup .order-btns { display: flex; gap: 8px; margin-bottom: 16px; }
+  .edit-popup .order-btn {
+    flex: 1; padding: 12px 8px; border-radius: 10px; border: 1.5px solid #e0e0e0;
+    background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; text-align: center;
+  }
+  .edit-popup .order-btn.sel-futsuu { background: var(--green-bg); color: var(--green-fg); border-color: var(--green-fg); }
+  .edit-popup .order-btn.sel-oomori { background: var(--blue-bg); color: var(--blue-fg); border-color: var(--blue-fg); }
+  .edit-popup .order-btn.sel-nashi  { background: var(--red-bg); color: var(--red-fg); border-color: var(--red-fg); }
+  .edit-popup .place-btns { display: flex; gap: 8px; margin-bottom: 20px; }
+  .edit-popup .place-btn {
+    flex: 1; padding: 10px; border-radius: 10px; border: 1.5px solid #e0e0e0;
+    background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; text-align: center;
+  }
+  .edit-popup .place-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .edit-popup-footer { display: flex; gap: 8px; }
+  .edit-popup-footer .btn-save {
+    flex: 2; padding: 12px; border-radius: 10px; border: none;
+    background: var(--green-fg); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .edit-popup-footer .btn-cancel {
+    flex: 1; padding: 12px; border-radius: 10px; border: 1.5px solid #e0e0e0;
+    background: transparent; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
 </style>
 </head>
 <body>
@@ -274,31 +313,8 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- 編集ポップアップ -->
-<div class="edit-popup-overlay hidden" id="editPopupOverlay">
-  <div class="edit-popup">
-    <div class="edit-popup-title" id="editPopupTitle"></div>
-    <div class="edit-popup-sub" id="editPopupSub"></div>
-    <div class="edit-popup-label">注文</div>
-    <div class="edit-order-btns">
-      <button class="edit-order-btn" id="pop-futsuu" onclick="selectEditOrder('x','futsuu')">○ 普通</button>
-      <button class="edit-order-btn" id="pop-oomori" onclick="selectEditOrder('x','oomori')">○ 大盛</button>
-      <button class="edit-order-btn" id="pop-nashi"  onclick="selectEditOrder('x','nashi')">× 食べない</button>
-    </div>
-    <div class="edit-popup-label">食べる場所</div>
-    <div class="edit-place-btns">
-      <button class="edit-place-btn" id="pop-honsha" onclick="selectEditPlace('x','honsha')">🏢 本社</button>
-      <button class="edit-place-btn" id="pop-nezaki" onclick="selectEditPlace('x','nezaki')">🏭 根崎</button>
-    </div>
-    <div class="edit-popup-footer">
-      <button class="edit-cancel-btn" onclick="closeEditPopup()">キャンセル</button>
-      <button class="edit-save-btn" id="editSaveBtn" onclick="saveEditOrder()">💾 保存</button>
-    </div>
-  </div>
-</div>
-
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzpkI_qBzEedCMnE0VmVjDWotO1r7TTw_k-JWWBQKwaet2QfnoDhIQ0NT1KpjmCgB_0Pg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwmJaPLUm_W_w5o-bn3wUFKBRerKRhJnZUmH91MjMyaeH-QuuZnhN7l-avy5VTePPOVxg/exec';
 
 const DEPT_ORDER = ['社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
 const HONSHA_DEPTS = ['社長','役員','総務部','営業部','設計課','電気課'];
@@ -406,12 +422,6 @@ async function init() {
 
   // STAFF_MASTER確定後にloadOrders・loadMenuAdminを実行
   await Promise.allSettled([loadOrders(), loadMenuAdmin()]);
-
-  // ポップアップ外クリックで閉じる
-  const overlay = document.getElementById('editPopupOverlay');
-  if (overlay) overlay.addEventListener('click', e => {
-    if (e.target === overlay) closeEditPopup();
-  });
 }
 
 function normalizeDeadline(val) {
@@ -472,8 +482,7 @@ function getEffectiveOrder(staff) {
   const staffId = normalizeId(staff.id);
   const found = ordersData.find(o => normalizeId(o.id) === staffId);
   if (found) return {order:found.order, place:found.place||getDefaultPlace(staff)};
-  if (permanentNG[staff.id] === true || permanentNG[staff.id] === 'true' ||
-      permanentNG[staffId]   === true || permanentNG[staffId]   === 'true') return {order:'nashi', place:getDefaultPlace(staff)};
+  if (permanentNG[staff.id] === true || permanentNG[staff.id] === 'true' || permanentNG[staffId] === true || permanentNG[staffId] === 'true') return {order:'nashi', place:getDefaultPlace(staff)};
   return {order:null, place:getDefaultPlace(staff)};
 }
 
@@ -520,10 +529,10 @@ function renderVisitorSummary() {
 
 function renderOrderTable() {
   const container = document.getElementById('orderContent');
+  const date = document.getElementById('targetDate').value;
   const grouped = {};
   DEPT_ORDER.forEach(d => { grouped[d]=[]; });
   STAFF_MASTER.forEach(s => { if(grouped[s.dept]) grouped[s.dept].push(s); });
-  const date = document.getElementById('targetDate').value;
 
   container.innerHTML = DEPT_ORDER.map(dept => {
     const members = grouped[dept];
@@ -533,16 +542,13 @@ function renderOrderTable() {
       const badgeClass = order==='futsuu'?'badge-futsuu':order==='oomori'?'badge-oomori':order==='nashi'?'badge-nashi':'badge-none';
       const label = order==='futsuu'?'○ 普通':order==='oomori'?'○ 大盛':order==='nashi'?'× 食べない':'未回答';
       const placeLabel = place==='nezaki'?'根崎':'本社';
-      const _id = String(s.id).replace(/'/g,"");
-      const _name = String(s.name).replace(/'/g,"");
-      const _dept = String(s.dept).replace(/'/g,"");
-      const _order = String(order||'').replace(/'/g,"");
-      const _place = String(place||'honsha').replace(/'/g,"");
-      return '<tr class="order-row" onclick="openEditPopup(\'' + _id + '\',\'' + _name + '\',\'' + _dept + '\',\'' + _order + '\',\'' + _place + '\',\'' + date + '\')">' +
+      const oo = order || '';
+      const pp = place || 'honsha';
+      return '<tr class="edit-row" data-id="' + s.id + '" data-name="' + escapeAttr(s.name) + '" data-dept="' + escapeAttr(s.dept) + '" data-order="' + oo + '" data-place="' + pp + '" data-date="' + date + '" style="cursor:pointer;">' +
         '<td>' + s.name + '</td>' +
         '<td><span class="badge ' + badgeClass + '">' + label + '</span></td>' +
         '<td style="font-size:12px;color:var(--text-sub);">' + placeLabel + '</td>' +
-        '<td style="font-size:11px;color:var(--text-hint);text-align:right;">✏️</td>' +
+        '<td style="text-align:right;font-size:14px;">✏️</td>' +
         '</tr>';
     }).join('');
     const futsuu = members.filter(s=>getEffectiveOrder(s).order==='futsuu').length;
@@ -556,71 +562,6 @@ function renderOrderTable() {
     </div>`;
   }).join('');
 }
-
-// ===== 編集ポップアップ =====
-const editState = { id:'', name:'', dept:'', date:'', order:'', place:'' };
-
-function openEditPopup(id, name, dept, order, place, date) {
-  editState.id=id; editState.name=name; editState.dept=dept;
-  editState.date=date; editState.order=order; editState.place=place;
-
-  document.getElementById('editPopupTitle').textContent = name + ' さんの注文を変更';
-  document.getElementById('editPopupSub').textContent = date + ' ／ ' + dept;
-
-  // 注文ボタン初期化
-  ['futsuu','oomori','nashi'].forEach(o => {
-    const btn = document.getElementById('pop-'+o);
-    btn.className = 'edit-order-btn' + (order===o?' sel-'+o:'');
-  });
-  // 場所ボタン初期化
-  ['honsha','nezaki'].forEach(p => {
-    document.getElementById('pop-'+p).classList.toggle('active', place===p || (p==='honsha'&&place!=='nezaki'));
-  });
-
-  document.getElementById('editSaveBtn').onclick = () => saveEditOrder();
-  document.getElementById('editPopupOverlay').classList.remove('hidden');
-}
-
-function closeEditPopup() {
-  document.getElementById('editPopupOverlay').classList.add('hidden');
-}
-
-function selectEditOrder(_, order) {
-  editState.order = order;
-  ['futsuu','oomori','nashi'].forEach(o => {
-    document.getElementById('pop-'+o).className = 'edit-order-btn' + (order===o?' sel-'+o:'');
-  });
-}
-
-function selectEditPlace(_, place) {
-  editState.place = place;
-  ['honsha','nezaki'].forEach(p => {
-    document.getElementById('pop-'+p).classList.toggle('active', place===p);
-  });
-}
-
-async function saveEditOrder() {
-  if (!editState.order) { showToast('注文を選択してください'); return; }
-  const {id, name, dept, date, order, place} = editState;
-  try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action:'saveOrder', id, name, dept, date, order, place: place||'honsha', count:1 })
-    });
-    const json = await res.json();
-    if (json.ok) {
-      const existing = ordersData.find(o => normalizeId(o.id)===normalizeId(id) && o.date===date);
-      if (existing) { existing.order=order; existing.place=place||'honsha'; }
-      else ordersData.push({id, name, dept, date, order, place: place||'honsha'});
-      closeEditPopup();
-      showToast(name + ' の注文を更新しました');
-      renderOrderTable();
-      renderLocationSummary();
-    } else { showToast('保存に失敗しました'); }
-  } catch(e) { showToast('通信エラーが発生しました'); }
-}
-
-// ポップアップ外クリック → init()内で設定
 
 // ===== EXPORT =====
 // ===== EXPORT MODAL =====
@@ -817,12 +758,9 @@ async function saveDeadline() {
 
 function renderNGTable() {
   document.getElementById('ngTableBody').innerHTML = STAFF_MASTER.map(s => {
-    const isNG = permanentNG[s.id] === true || permanentNG[s.id] === 'true';
-    return `<tr>
-      <td>${s.name}</td>
-      <td>${s.dept}</td>
-      <td><button class="toggle-ng-btn ${isNG?'ng-on':'ng-off'}" onclick="toggleNG('${s.id}')">${isNG?'ON':'OFF'}</button></td>
-    </tr>`;
+    const isNG = !!permanentNG[s.id];
+    return `<tr><td>${s.name}</td><td style="color:var(--text-sub);">${s.dept}</td>
+      <td><button class="toggle-btn ${isNG?'ng-on':'ng-off'}" onclick="toggleNG(${s.id})">${isNG?'ON（×固定）':'OFF'}</button></td></tr>`;
   }).join('');
 }
 
@@ -1126,6 +1064,111 @@ async function deleteTopic() {
 }
 
 init();
+
+// ===== 編集ポップアップ =====
+// HTML属性用エスケープ
+function escapeAttr(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// イベント委譲：edit-row クリックでポップアップを開く
+document.addEventListener('click', function(e) {
+  var row = e.target.closest ? e.target.closest('.edit-row') : null;
+  if (row && row.dataset && row.dataset.id) {
+    openEditPopup(
+      row.dataset.id, row.dataset.name, row.dataset.dept,
+      row.dataset.order, row.dataset.place, row.dataset.date
+    );
+  }
+});
+
+var _epop = {id:'', name:'', dept:'', date:'', order:'', place:''};
+
+function openEditPopup(id, name, dept, order, place, date) {
+  _epop.id=id; _epop.name=name; _epop.dept=dept;
+  _epop.date=date; _epop.order=order; _epop.place=place||'honsha';
+  document.getElementById('editPopupTitle').textContent = name + ' さんの注文を変更';
+  document.getElementById('editPopupSub').textContent = date + '  ' + dept;
+  ['futsuu','oomori','nashi'].forEach(function(o){
+    var btn = document.getElementById('epop-'+o);
+    btn.className = 'order-btn' + (order===o ? ' sel-'+o : '');
+  });
+  var pl = place||'honsha';
+  document.getElementById('epop-honsha').className = 'place-btn' + (pl!=='nezaki'?' active':'');
+  document.getElementById('epop-nezaki').className = 'place-btn' + (pl==='nezaki'?' active':'');
+  document.getElementById('editPopupOverlay').classList.remove('hidden');
+}
+
+function epopClose() {
+  document.getElementById('editPopupOverlay').classList.add('hidden');
+}
+
+function epopSelectOrder(order) {
+  _epop.order = order;
+  ['futsuu','oomori','nashi'].forEach(function(o){
+    document.getElementById('epop-'+o).className = 'order-btn' + (order===o ? ' sel-'+o : '');
+  });
+}
+
+function epopSelectPlace(place) {
+  _epop.place = place;
+  document.getElementById('epop-honsha').className = 'place-btn' + (place==='honsha'?' active':'');
+  document.getElementById('epop-nezaki').className = 'place-btn' + (place==='nezaki'?' active':'');
+}
+
+async function epopSave() {
+  if (!_epop.order) { showToast('注文を選択してください'); return; }
+  try {
+    var res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'saveOrder',
+        id: _epop.id, name: _epop.name, dept: _epop.dept,
+        date: _epop.date, order: _epop.order,
+        place: _epop.place||'honsha', count: 1
+      })
+    });
+    var json = await res.json();
+    if (json.ok) {
+      var existing = ordersData.find(function(o){ return normalizeId(o.id)===normalizeId(_epop.id) && o.date===_epop.date; });
+      if (existing) { existing.order=_epop.order; existing.place=_epop.place; }
+      else ordersData.push({id:_epop.id, name:_epop.name, dept:_epop.dept, date:_epop.date, order:_epop.order, place:_epop.place});
+      epopClose();
+      showToast(_epop.name + ' の注文を更新しました');
+      renderOrderTable();
+      renderLocationSummary();
+    } else { showToast('保存に失敗しました'); }
+  } catch(e) { showToast('通信エラーが発生しました'); }
+}
+
+document.addEventListener('click', function(e){
+  var overlay = document.getElementById('editPopupOverlay');
+  if (e.target === overlay) epopClose();
+});
+// ===== 編集ポップアップ終 =====
 </script>
+
+<!-- 編集ポップアップ -->
+<div class="edit-popup-overlay hidden" id="editPopupOverlay">
+  <div class="edit-popup">
+    <div class="edit-popup-title" id="editPopupTitle"></div>
+    <div class="edit-popup-sub" id="editPopupSub"></div>
+    <div class="edit-popup-label">注文</div>
+    <div class="order-btns">
+      <button class="order-btn" id="epop-futsuu" onclick="epopSelectOrder('futsuu')">○ 普通</button>
+      <button class="order-btn" id="epop-oomori" onclick="epopSelectOrder('oomori')">○ 大盛</button>
+      <button class="order-btn" id="epop-nashi"  onclick="epopSelectOrder('nashi')">× 食べない</button>
+    </div>
+    <div class="edit-popup-label">食べる場所</div>
+    <div class="place-btns">
+      <button class="place-btn" id="epop-honsha" onclick="epopSelectPlace('honsha')">🏢 本社</button>
+      <button class="place-btn" id="epop-nezaki" onclick="epopSelectPlace('nezaki')">🏭 根崎</button>
+    </div>
+    <div class="edit-popup-footer">
+      <button class="btn-cancel" onclick="epopClose()">キャンセル</button>
+      <button class="btn-save" onclick="epopSave()">💾 保存</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
