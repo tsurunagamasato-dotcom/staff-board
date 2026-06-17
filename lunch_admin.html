@@ -443,7 +443,8 @@ function getEffectiveOrder(staff) {
   const staffId = normalizeId(staff.id);
   const found = ordersData.find(o => normalizeId(o.id) === staffId);
   if (found) return {order:found.order, place:found.place||getDefaultPlace(staff)};
-  if (permanentNG[staff.id] || permanentNG[staffId]) return {order:'nashi', place:getDefaultPlace(staff)};
+  if (permanentNG[staff.id] === true || permanentNG[staff.id] === 'true' ||
+      permanentNG[staffId]   === true || permanentNG[staffId]   === 'true') return {order:'nashi', place:getDefaultPlace(staff)};
   return {order:null, place:getDefaultPlace(staff)};
 }
 
