@@ -1007,70 +1007,76 @@ async function loadToday() {
     if (!json.ok) throw new Error();
     const orders = json.orders || [];
 
-    let hF=0,hO=0,nF=0,nO=0;
+    // 場所×部署で集計
+    const locs = {
+      honsha: { total:{f:0,o:0}, byDept:{} },
+      nezaki:  { total:{f:0,o:0}, byDept:{} }
+    };
 
-    // 部署ごとに集計
-    const deptMap = {};
     orders.forEach(o => {
       if (!o.order || o.order==='nashi') return;
-      const isNezaki = o.place==='nezaki' || o.place==='nezaki2';
-      if (isNezaki) {
-        if (o.order==='futsuu') nF++; else nO++;
-      } else {
-        if (o.order==='futsuu') hF++; else hO++;
-      }
+      const loc = locs[(o.place==='nezaki'||o.place==='nezaki2') ? 'nezaki' : 'honsha'];
       const dept = o.dept || '不明';
-      if (!deptMap[dept]) deptMap[dept] = [];
-      deptMap[dept].push({ name: o.name, order: o.order, place: o.place });
+      if (!loc.byDept[dept]) loc.byDept[dept] = {f:0, o:0, members:[]};
+      if (o.order==='futsuu') { loc.total.f++; loc.byDept[dept].f++; }
+      else                    { loc.total.o++; loc.byDept[dept].o++; }
+      loc.byDept[dept].members.push({name:o.name, order:o.order});
     });
 
-    document.getElementById('todayHonshaCount').textContent = hF+hO;
-    document.getElementById('todayHonshaFutsuu').textContent = hF;
-    document.getElementById('todayHonshaOomori').textContent = hO;
-    document.getElementById('todayNezakiCount').textContent = nF+nO;
-    document.getElementById('todayNezakiFutsuu').textContent = nF;
-    document.getElementById('todayNezakiOomori').textContent = nO;
+    document.getElementById('todayHonshaCount').textContent  = locs.honsha.total.f + locs.honsha.total.o;
+    document.getElementById('todayHonshaFutsuu').textContent = locs.honsha.total.f;
+    document.getElementById('todayHonshaOomori').textContent = locs.honsha.total.o;
+    document.getElementById('todayNezakiCount').textContent  = locs.nezaki.total.f + locs.nezaki.total.o;
+    document.getElementById('todayNezakiFutsuu').textContent = locs.nezaki.total.f;
+    document.getElementById('todayNezakiOomori').textContent = locs.nezaki.total.o;
 
-    // 部署別折りたたみ
-    const deptOrder = ['社長','役員','総務部','営業部','設計課','電気課','購買課','加工課','組付課','第一製造部','来訪者'];
-    const sortedDepts = Object.keys(deptMap).sort((a,b) => {
-      const ai = deptOrder.indexOf(a), bi = deptOrder.indexOf(b);
-      return (ai<0?99:ai) - (bi<0?99:bi);
-    });
+    const deptOrder = ['社長','役員','総務部','営業部','設計課','電気課','購買課','加工課','組付課','第一製造部','NIM','NVM','来訪者'];
 
-    if (sortedDepts.length === 0) {
-      document.getElementById('todayDeptList').innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-hint);font-size:13px;">本日の注文はまだありません</div>';
-      return;
-    }
-
-    const html = sortedDepts.map((dept, idx) => {
-      const members = deptMap[dept];
-      const f = members.filter(m=>m.order==='futsuu').length;
-      const o = members.filter(m=>m.order==='oomori').length;
-      const memberHtml = members.map(m => {
-        const label = m.order==='futsuu'?'普通':'大盛';
-        const color = m.order==='futsuu'?'var(--green-fg)':'var(--blue-fg)';
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
-          <span style="font-size:13px;">${m.name}</span>
-          <span style="font-size:12px;font-weight:700;color:${color};">○${label}</span>
+    const buildLocSection = (locKey, icon, label) => {
+      const loc = locs[locKey];
+      const depts = Object.keys(loc.byDept).sort((a,b) => {
+        const ai = deptOrder.indexOf(a), bi = deptOrder.indexOf(b);
+        return (ai<0?99:ai) - (bi<0?99:bi);
+      });
+      if (depts.length === 0) return '';
+      const total = loc.total.f + loc.total.o;
+      const deptHtml = depts.map((dept, idx) => {
+        const d = loc.byDept[dept];
+        const memberHtml = d.members.map(m => {
+          const lbl = m.order==='futsuu'?'普通':'大盛';
+          const color = m.order==='futsuu'?'var(--green-fg)':'var(--blue-fg)';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:13px;">${m.name}</span>
+            <span style="font-size:12px;font-weight:700;color:${color};">○${lbl}</span>
+          </div>`;
+        }).join('');
+        const uid = `${locKey}_dept${idx}`;
+        return `<div style="border-radius:10px;margin-bottom:6px;overflow:hidden;border:1px solid var(--border);background:var(--surface);">
+          <div onclick="toggleDept('${uid}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none;">
+            <span style="font-size:13px;font-weight:700;">${dept}</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:12px;color:var(--green-fg);">普通 ${d.f}</span>
+              <span style="font-size:12px;color:var(--blue-fg);">大盛 ${d.o}</span>
+              <span style="font-size:13px;font-weight:700;color:var(--text-sub);">${d.f+d.o}名 ▼</span>
+            </div>
+          </div>
+          <div id="${uid}" style="display:none;padding:0 14px 10px;">${memberHtml}</div>
         </div>`;
       }).join('');
-      return `<div style="background:var(--surface);border-radius:12px;margin-bottom:8px;overflow:hidden;border:1px solid var(--border);">
-        <div onclick="toggleDept('dept${idx}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;user-select:none;">
-          <span style="font-size:13px;font-weight:700;">${dept}</span>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:12px;color:var(--green-fg);">普通 ${f}</span>
-            <span style="font-size:12px;color:var(--blue-fg);">大盛 ${o}</span>
-            <span style="font-size:13px;font-weight:700;color:var(--text-sub);">${members.length}名 ▼</span>
-          </div>
-        </div>
-        <div id="dept${idx}" style="display:none;padding:0 14px 10px;">
-          ${memberHtml}
-        </div>
-      </div>`;
-    }).join('');
 
-    document.getElementById('todayDeptList').innerHTML = html;
+      return `<div style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:800;color:var(--text-sub);margin-bottom:8px;padding:6px 2px;border-bottom:2px solid var(--border);">
+          ${icon} ${label} <span style="font-weight:400;margin-left:6px;">普通${loc.total.f} 大盛${loc.total.o} 計${total}名</span>
+        </div>
+        ${deptHtml}
+      </div>`;
+    };
+
+    const html = buildLocSection('honsha','🏢','本社') + buildLocSection('nezaki','🏭','根崎');
+
+    document.getElementById('todayDeptList').innerHTML = html ||
+      '<div style="padding:16px;text-align:center;color:var(--text-hint);font-size:13px;">本日の注文はまだありません</div>';
+
   } catch(e) {
     document.getElementById('todayDeptList').innerHTML = '<div style="padding:16px;text-align:center;color:var(--red-fg);font-size:13px;">取得に失敗しました</div>';
   }
