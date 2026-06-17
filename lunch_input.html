@@ -506,6 +506,82 @@ function onDeptChange() {
   updateOrderButtons(); updatePlaceButtons();
 }
 
+// ===== 自動ログイン =====
+const AUTO_LOGIN_KEY = 'nim_auto_login';
+
+function loadAutoLogin() {
+  try {
+    const saved = localStorage.getItem(AUTO_LOGIN_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    if (!data.keep) return;
+    const staff = STAFF_MASTER.find(s => String(s.id) === String(data.id));
+    if (!staff) return;
+    const deptSel = document.getElementById('deptSelect');
+    deptSel.value = staff.dept;
+    onDeptChange();
+    const nameSel = document.getElementById('nameSelect');
+    nameSel.value = staff.id;
+    // saveAutoLoginを呼ばずに直接バナー表示
+    selStaff = STAFF_MASTER.find(s=>s.id==staff.id) || null;
+    if (selStaff) {
+      selPlace = getDefaultPlace(selStaff);
+      if (permanentNG[selStaff.id]) selOrder = 'nashi';
+    }
+    updateNGNote(); updateOrderButtons(); updatePlaceButtons();
+    updateDateGrid();
+    showAutoLoginBar(staff);
+  } catch(e) { console.log('autoLogin error:', e); }
+}
+
+function saveAutoLogin(staff) {
+  try {
+    const existing = localStorage.getItem(AUTO_LOGIN_KEY);
+    const keep = existing ? JSON.parse(existing).keep !== false : true;
+    localStorage.setItem(AUTO_LOGIN_KEY, JSON.stringify({
+      id: staff.id, name: staff.name, dept: staff.dept, keep
+    }));
+    showAutoLoginBar(staff);
+  } catch(e) {}
+}
+
+function showAutoLoginBar(staff) {
+  const bar = document.getElementById('autoLoginBar');
+  if (!bar) return;
+  document.getElementById('autoLoginName').textContent = staff.name;
+  try {
+    const saved = localStorage.getItem(AUTO_LOGIN_KEY);
+    if (saved) document.getElementById('autoLoginKeep').checked = JSON.parse(saved).keep !== false;
+  } catch(e) {}
+  bar.classList.remove('hidden');
+}
+
+function clearAutoLogin() {
+  document.getElementById('autoLoginBar').classList.add('hidden');
+  document.getElementById('deptSelect').value = '';
+  onDeptChange();
+  try {
+    const saved = localStorage.getItem(AUTO_LOGIN_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      data.keep = false;
+      localStorage.setItem(AUTO_LOGIN_KEY, JSON.stringify(data));
+    }
+  } catch(e) {}
+}
+
+function onAutoLoginKeepChange() {
+  try {
+    const saved = localStorage.getItem(AUTO_LOGIN_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      data.keep = document.getElementById('autoLoginKeep').checked;
+      localStorage.setItem(AUTO_LOGIN_KEY, JSON.stringify(data));
+    }
+  } catch(e) {}
+}
+// ===== 自動ログイン終 =====
+
 function onNameChange() {
   const id = document.getElementById('nameSelect').value;
   selStaff = STAFF_MASTER.find(s=>s.id==id) || null;
