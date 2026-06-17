@@ -480,8 +480,18 @@ function normalizeId(id) {
 
 function getEffectiveOrder(staff) {
   const staffId = normalizeId(staff.id);
-  const found = ordersData.find(o => normalizeId(o.id) === staffId);
-  if (found) return {order:found.order, place:found.place||getDefaultPlace(staff)};
+  const staffName = String(staff.name).trim();
+  // ID汚染対策：まずID一致かつ名前一致を優先（最新日付を採用）
+  let candidates = ordersData.filter(o => normalizeId(o.id) === staffId && String(o.name).trim() === staffName);
+  // ID一致+名前一致がなければ、名前一致のみで探す（IDが古い形式の場合の救済）
+  if (candidates.length === 0) {
+    candidates = ordersData.filter(o => String(o.name).trim() === staffName && normalizeId(o.id) === staffId);
+  }
+  if (candidates.length > 0) {
+    // 複数あれば最新（配列の後ろ）を採用
+    const found = candidates[candidates.length - 1];
+    return {order:found.order, place:found.place||getDefaultPlace(staff)};
+  }
   if (permanentNG[staff.id] === true || permanentNG[staff.id] === 'true' || permanentNG[staffId] === true || permanentNG[staffId] === 'true') return {order:'nashi', place:getDefaultPlace(staff)};
   return {order:null, place:getDefaultPlace(staff)};
 }
