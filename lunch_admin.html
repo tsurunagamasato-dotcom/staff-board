@@ -274,6 +274,29 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- 編集ポップアップ -->
+<div class="edit-popup-overlay hidden" id="editPopupOverlay">
+  <div class="edit-popup">
+    <div class="edit-popup-title" id="editPopupTitle"></div>
+    <div class="edit-popup-sub" id="editPopupSub"></div>
+    <div class="edit-popup-label">注文</div>
+    <div class="edit-order-btns">
+      <button class="edit-order-btn" id="pop-futsuu" onclick="selectEditOrder('x','futsuu')">○ 普通</button>
+      <button class="edit-order-btn" id="pop-oomori" onclick="selectEditOrder('x','oomori')">○ 大盛</button>
+      <button class="edit-order-btn" id="pop-nashi"  onclick="selectEditOrder('x','nashi')">× 食べない</button>
+    </div>
+    <div class="edit-popup-label">食べる場所</div>
+    <div class="edit-place-btns">
+      <button class="edit-place-btn" id="pop-honsha" onclick="selectEditPlace('x','honsha')">🏢 本社</button>
+      <button class="edit-place-btn" id="pop-nezaki" onclick="selectEditPlace('x','nezaki')">🏭 根崎</button>
+    </div>
+    <div class="edit-popup-footer">
+      <button class="edit-cancel-btn" onclick="closeEditPopup()">キャンセル</button>
+      <button class="edit-save-btn" id="editSaveBtn" onclick="saveEditOrder()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzpkI_qBzEedCMnE0VmVjDWotO1r7TTw_k-JWWBQKwaet2QfnoDhIQ0NT1KpjmCgB_0Pg/exec';
 
@@ -510,41 +533,17 @@ function renderOrderTable() {
       const badgeClass = order==='futsuu'?'badge-futsuu':order==='oomori'?'badge-oomori':order==='nashi'?'badge-nashi':'badge-none';
       const label = order==='futsuu'?'○ 普通':order==='oomori'?'○ 大盛':order==='nashi'?'× 食べない':'未回答';
       const placeLabel = place==='nezaki'?'根崎':'本社';
-      const rowId = `edit-${s.id}`;
+      const _id = String(s.id).replace(/'/g,"");
+      const _name = String(s.name).replace(/'/g,"");
+      const _dept = String(s.dept).replace(/'/g,"");
+      const _order = String(order||'').replace(/'/g,"");
+      const _place = String(place||'honsha').replace(/'/g,"");
       return `
-        <tr>
+        <tr class="order-row" onclick="openEditPopup('${_id}','${_name}','${_dept}','${_order}','${_place}','${date}')">
           <td>${s.name}</td>
           <td><span class="badge ${badgeClass}">${label}</span></td>
           <td style="font-size:12px;color:var(--text-sub);">${placeLabel}</td>
-          <td style="text-align:right;"><button class="edit-btn" onclick="toggleEditRow('${s.id}','${s.name}','${order||''}','${place||'honsha'}','${date}')">編集</button></td>
-        </tr>
-        <tr class="edit-row" id="${rowId}">
-          <td colspan="4">
-            <div class="edit-panel">
-              <div class="edit-group">
-                <div class="edit-group-label">注文</div>
-                <div class="edit-order-btns">
-                  <button class="edit-order-btn ${order==='futsuu'?'sel-futsuu':''}" id="eob-futsuu-${s.id}" onclick="selectEditOrder('${s.id}','futsuu')">○ 普通</button>
-                  <button class="edit-order-btn ${order==='oomori'?'sel-oomori':''}" id="eob-oomori-${s.id}" onclick="selectEditOrder('${s.id}','oomori')">○ 大盛</button>
-                  <button class="edit-order-btn ${order==='nashi'?'sel-nashi':''}"  id="eob-nashi-${s.id}"  onclick="selectEditOrder('${s.id}','nashi')">× 食べない</button>
-                </div>
-              </div>
-              <div class="edit-group">
-                <div class="edit-group-label">食べる場所</div>
-                <div class="edit-place-btns">
-                  <button class="edit-place-btn ${place!=='nezaki'?'active':''}" id="epb-honsha-${s.id}" onclick="selectEditPlace('${s.id}','honsha')">🏢 本社</button>
-                  <button class="edit-place-btn ${place==='nezaki'?'active':''}" id="epb-nezaki-${s.id}" onclick="selectEditPlace('${s.id}','nezaki')">🏭 根崎</button>
-                </div>
-              </div>
-              <div class="edit-group" style="justify-content:flex-end;margin-top:auto;">
-                <div class="edit-group-label" style="visibility:hidden;">　</div>
-                <div class="edit-actions">
-                  <button class="edit-save-btn" onclick="saveEditOrder('${s.id}','${s.name}','${s.dept}','${date}')">💾 保存</button>
-                  <button class="edit-cancel-btn" onclick="toggleEditRow('${s.id}')">キャンセル</button>
-                </div>
-              </div>
-            </div>
-          </td>
+          <td style="font-size:11px;color:var(--text-hint);text-align:right;">✏️</td>
         </tr>`;
     }).join('');
     const futsuu = members.filter(s=>getEffectiveOrder(s).order==='futsuu').length;
@@ -819,9 +818,12 @@ async function saveDeadline() {
 
 function renderNGTable() {
   document.getElementById('ngTableBody').innerHTML = STAFF_MASTER.map(s => {
-    const isNG = !!permanentNG[s.id];
-    return `<tr><td>${s.name}</td><td style="color:var(--text-sub);">${s.dept}</td>
-      <td><button class="toggle-btn ${isNG?'ng-on':'ng-off'}" onclick="toggleNG(${s.id})">${isNG?'ON（×固定）':'OFF'}</button></td></tr>`;
+    const isNG = permanentNG[s.id] === true || permanentNG[s.id] === 'true';
+    return `<tr>
+      <td>${s.name}</td>
+      <td>${s.dept}</td>
+      <td><button class="toggle-ng-btn ${isNG?'ng-on':'ng-off'}" onclick="toggleNG('${s.id}')">${isNG?'ON':'OFF'}</button></td>
+    </tr>`;
   }).join('');
 }
 
