@@ -42,6 +42,11 @@
   .date-input { padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--surface); outline: none; }
 
   /* SUMMARY - 本社・根崎別 */
+  .loc-dept-breakdown { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .loc-dept-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 3px 0; }
+  .loc-dept-name { color: var(--text-sub); font-weight: 600; }
+  .loc-dept-stat { color: var(--text); font-size: 12px; }
+  .loc-dept-stat strong { color: var(--text); font-size: 13px; margin-left: 6px; }
   .location-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   .loc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
   .loc-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
@@ -502,32 +507,51 @@ function getEffectiveOrder(staff) {
 }
 
 function renderLocationSummary() {
-  const honsha = {futsuu:0, oomori:0, nashi:0, pending:0};
-  const nezaki  = {futsuu:0, oomori:0, nashi:0, pending:0};
+  // 場所ごと・部署ごとに集計
+  const locs = {
+    honsha: { total:{futsuu:0,oomori:0,nashi:0,pending:0}, byDept:{} },
+    nezaki:  { total:{futsuu:0,oomori:0,nashi:0,pending:0}, byDept:{} }
+  };
 
   STAFF_MASTER.forEach(s => {
     const {order, place} = getEffectiveOrder(s);
-    const loc = place==='nezaki' ? nezaki : honsha;
-    if (order==='futsuu') loc.futsuu++;
-    else if (order==='oomori') loc.oomori++;
-    else if (order==='nashi') loc.nashi++;
-    else loc.pending++;
+    const loc = locs[place==='nezaki' ? 'nezaki' : 'honsha'];
+    const dept = s.dept || 'その他';
+    if (!loc.byDept[dept]) loc.byDept[dept] = {futsuu:0, oomori:0, nashi:0, pending:0};
+    const t = loc.total, d = loc.byDept[dept];
+    if (order==='futsuu')      { t.futsuu++; d.futsuu++; }
+    else if (order==='oomori') { t.oomori++; d.oomori++; }
+    else if (order==='nashi')  { t.nashi++;  d.nashi++;  }
+    else                       { t.pending++;d.pending++;}
   });
+
+  const deptRows = (byDept) => DEPT_ORDER
+    .filter(d => byDept[d] && (byDept[d].futsuu+byDept[d].oomori+byDept[d].nashi+byDept[d].pending)>0)
+    .map(d => {
+      const v = byDept[d];
+      const eating = v.futsuu + v.oomori;
+      if (eating === 0) return '';
+      return `<div class="loc-dept-row">
+        <span class="loc-dept-name">${d}</span>
+        <span class="loc-dept-stat">普通${v.futsuu} 大盛${v.oomori} <strong>${eating}名</strong></span>
+      </div>`;
+    }).join('');
 
   const card = (title, icon, data) => `
     <div class="loc-card">
       <div class="loc-title">${icon} ${title}</div>
       <div class="loc-row">
-        <div class="loc-stat s-futsuu"><div class="s-label">○ 普通</div><div class="s-num">${data.futsuu}</div></div>
-        <div class="loc-stat s-oomori"><div class="s-label">○ 大盛</div><div class="s-num">${data.oomori}</div></div>
-        <div class="loc-stat s-total"><div class="s-label">合計</div><div class="s-num">${data.futsuu+data.oomori}</div></div>
-        <div class="loc-stat s-nashi"><div class="s-label">× 食べない</div><div class="s-num">${data.nashi}</div></div>
-        <div class="loc-stat s-pending"><div class="s-label">未回答</div><div class="s-num">${data.pending}</div></div>
+        <div class="loc-stat s-futsuu"><div class="s-label">○ 普通</div><div class="s-num">${data.total.futsuu}</div></div>
+        <div class="loc-stat s-oomori"><div class="s-label">○ 大盛</div><div class="s-num">${data.total.oomori}</div></div>
+        <div class="loc-stat s-total"><div class="s-label">合計</div><div class="s-num">${data.total.futsuu+data.total.oomori}</div></div>
+        <div class="loc-stat s-nashi"><div class="s-label">× 食べない</div><div class="s-num">${data.total.nashi}</div></div>
+        <div class="loc-stat s-pending"><div class="s-label">未回答</div><div class="s-num">${data.total.pending}</div></div>
       </div>
+      <div class="loc-dept-breakdown">${deptRows(data.byDept)}</div>
     </div>`;
 
   document.getElementById('locationSummary').innerHTML =
-    card('本社','🏢',honsha) + card('根崎','🏭',nezaki);
+    card('本社','🏢',locs.honsha) + card('根崎','🏭',locs.nezaki);
 }
 
 function renderVisitorSummary() {
