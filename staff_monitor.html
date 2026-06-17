@@ -381,7 +381,7 @@ function _applyEmployees(emps) {
   STAFF_MASTER = emps
     .filter(e => e.showLocation !== '0')
     .map(e => ({
-      id: e.id,
+      id: e.empNo || e.id,
       name: String(e.name),
       dept: String(e.dept),
       base: e.defaultPlace || 'honsha_office',

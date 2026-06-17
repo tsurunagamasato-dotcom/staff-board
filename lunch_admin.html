@@ -372,7 +372,10 @@ let STAFF_MASTER = [
 ];
 
 function getDefaultPlace(staff) {
-  if (NEZAKI_IDS.includes(staff.id)) return 'nezaki';
+  // employee_masterのdefaultPlace(base)を最優先
+  if (staff.base === 'nezaki' || staff.base === 'nezaki2') return 'nezaki';
+  if (staff.base === 'honsha_office' || staff.base === 'honsha_factory') return 'honsha';
+  // フォールバック：部署で判定
   if (NEZAKI_DEPTS.includes(staff.dept)) return 'nezaki';
   return 'honsha';
 }
@@ -396,18 +399,20 @@ async function init() {
   // ローディング非表示（画面を即座に表示）
   document.getElementById('loadingOverlay').style.display = 'none';
 
-  // getSettings・getStaff を先に実行（STAFF_MASTERを確定させる）
-  const [settingsResult, staffResult] = await Promise.allSettled([
+  // getSettings・getEmployees を先に実行（STAFF_MASTERを確定させる）
+  const [settingsResult, empResult] = await Promise.allSettled([
     fetch(GAS_URL+'?action=getSettings&t='+Date.now()).then(r=>r.json()),
-    fetch(GAS_URL+'?action=getStaff&t='+Date.now()).then(r=>r.json())
+    fetch(EMP_GAS_URL+'?action=getEmployees&t='+Date.now()).then(r=>r.json())
   ]);
 
-  // 社員マスタ反映（在籍者のみを集計・NG表に使用）
-  if (staffResult && staffResult.status === 'fulfilled' && staffResult.value.ok
-      && Array.isArray(staffResult.value.staff) && staffResult.value.staff.length) {
-    ALL_STAFF = staffResult.value.staff.map(s => ({
-      id: Number(s.id), name: s.name, dept: s.dept, location: s.location || '', active: s.active || '在籍'
+  // 社員マスタ反映（employee_masterを唯一のマスタとして使用、IDはempNo）
+  if (empResult && empResult.status === 'fulfilled' && empResult.value.ok
+      && Array.isArray(empResult.value.employees) && empResult.value.employees.length) {
+    ALL_STAFF = empResult.value.employees.map(e => ({
+      id: String(e.empNo || e.id), empNo: String(e.empNo || ''), name: String(e.name), dept: String(e.dept),
+      category: e.category || '社員', location: e.place || '', active: e.active || '在籍', base: e.defaultPlace || 'honsha_office'
     }));
+    localStorage.setItem(EMP_LS_KEY, JSON.stringify(empResult.value.employees));
     refreshActiveStaff();
   }
 
@@ -790,7 +795,7 @@ function escStaff(str){return String(str==null?'':str).replace(/[&<>"]/g,c=>({'&
 function refreshActiveStaff() {
   if (!ALL_STAFF.length) return;
   STAFF_MASTER = ALL_STAFF.filter(s => s.active !== '退職')
-    .map(s => ({ id: s.id, name: s.name, dept: s.dept, location: s.location || '' }));
+    .map(s => ({ id: s.id, name: s.name, dept: s.dept, location: s.location || '', base: s.base || '' }));
   renderNGTable();
 }
 
@@ -811,7 +816,7 @@ async function loadStaffAdmin() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.length > 0) {
-          ALL_STAFF = parsed.map(e => ({ id:e.id, empNo:e.empNo||'', name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍' }));
+          ALL_STAFF = parsed.map(e => ({ id:String(e.empNo||e.id), empNo:String(e.empNo||''), name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍', base:e.defaultPlace||'honsha_office' }));
           refreshActiveStaff();
           renderStaffMaster();
         }
@@ -820,7 +825,7 @@ async function loadStaffAdmin() {
       const res = await fetch(EMP_GAS_URL+'?action=getEmployees&t='+Date.now());
       const json = await res.json();
       if (json.ok && Array.isArray(json.employees)) {
-        ALL_STAFF = json.employees.map(e => ({ id:e.id, empNo:e.empNo||'', name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍' }));
+        ALL_STAFF = json.employees.map(e => ({ id:String(e.empNo||e.id), empNo:String(e.empNo||''), name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍', base:e.defaultPlace||'honsha_office' }));
         localStorage.setItem(EMP_LS_KEY, JSON.stringify(json.employees));
         refreshActiveStaff();
       }

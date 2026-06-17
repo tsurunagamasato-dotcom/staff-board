@@ -365,7 +365,7 @@ function _applyEmployees(emps) {
   STAFF_MASTER = emps
     .filter(e => e.showLunch !== '0')
     .map(e => ({
-      id: e.id,
+      id: e.empNo || e.id,
       name: String(e.name),
       dept: String(e.dept),
       base: e.defaultPlace || 'honsha_office',
@@ -378,7 +378,10 @@ function _applyEmployees(emps) {
 
 
 function getDefaultPlace(staff) {
-  if (NEZAKI_IDS.includes(staff.id)) return 'nezaki';
+  // employee_masterのdefaultPlace(base)を最優先
+  if (staff.base === 'nezaki' || staff.base === 'nezaki2') return 'nezaki';
+  if (staff.base === 'honsha_office' || staff.base === 'honsha_factory') return 'honsha';
+  // フォールバック：部署で判定
   if (NEZAKI_DEPTS.includes(staff.dept)) return 'nezaki';
   return 'honsha';
 }
