@@ -1018,12 +1018,14 @@ async function loadToday() {
 
     deduped.forEach(o => {
       if (!o.order || o.order==='nashi') return;
+      const cnt = String(o.id).startsWith('visitor_') ? (parseInt(o.count)||1) : 1;
       const loc = locs[(o.place==='nezaki'||o.place==='nezaki2') ? 'nezaki' : 'honsha'];
       const dept = o.dept || '不明';
       if (!loc.byDept[dept]) loc.byDept[dept] = {f:0, o:0, members:[]};
-      if (o.order==='futsuu') { loc.total.f++; loc.byDept[dept].f++; }
-      else                    { loc.total.o++; loc.byDept[dept].o++; }
-      loc.byDept[dept].members.push({name:o.name, order:o.order});
+      if (o.order==='futsuu') { loc.total.f+=cnt; loc.byDept[dept].f+=cnt; }
+      else                    { loc.total.o+=cnt; loc.byDept[dept].o+=cnt; }
+      const dispName = cnt > 1 ? (o.name||'来訪者') + '（' + cnt + '名）' : (o.name||'来訪者');
+      loc.byDept[dept].members.push({name:dispName, order:o.order});
     });
 
     document.getElementById('todayHonshaCount').textContent  = locs.honsha.total.f + locs.honsha.total.o;

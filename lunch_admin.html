@@ -209,7 +209,7 @@
 
     <!-- 月 -->
     <div class="modal-section hidden" id="rtMonthSection">
-      <div class="modal-section-title">月</div>
+      <div class="modal-section-title">月 <span style="font-weight:400;font-size:11px;color:var(--text-sub);">（前月26日〜当月25日）</span></div>
       <input type="month" class="month-select" id="exportMonth">
     </div>
 
@@ -525,7 +525,18 @@ function renderLocationSummary() {
     else                       { t.pending++;d.pending++;}
   });
 
-  const deptRows = (byDept) => DEPT_ORDER
+  // 来訪者も集計に含める（count対応）
+  visitorData.forEach(v => {
+    if (!v.order || v.order==='nashi') return;
+    const cnt = parseInt(v.count) || 1;
+    const loc = locs[(v.place==='nezaki'||v.place==='nezaki2') ? 'nezaki' : 'honsha'];
+    if (!loc.byDept['来訪者']) loc.byDept['来訪者'] = {futsuu:0, oomori:0, nashi:0, pending:0};
+    const t = loc.total, d = loc.byDept['来訪者'];
+    if (v.order==='futsuu')      { t.futsuu+=cnt; d.futsuu+=cnt; }
+    else if (v.order==='oomori') { t.oomori+=cnt; d.oomori+=cnt; }
+  });
+
+  const deptRows = (byDept) => [...DEPT_ORDER, '来訪者']
     .filter(d => byDept[d] && (byDept[d].futsuu+byDept[d].oomori+byDept[d].nashi+byDept[d].pending)>0)
     .map(d => {
       const v = byDept[d];
@@ -652,10 +663,16 @@ async function doExport() {
     const m = document.getElementById('exportMonth').value;
     if (!m) { showToast('月を選択してください'); return; }
     const [y, mo] = m.split('-').map(Number);
-    const last = new Date(y, mo, 0).getDate();
-    for (let i=1; i<=last; i++) {
-      const d = new Date(y, mo-1, i);
-      if (d.getDay()!==0 && d.getDay()!==6) dates.push(`${y}-${String(mo).padStart(2,'0')}-${String(i).padStart(2,'0')}`);
+    // 締め日：前月26日〜当月25日
+    const startDate = new Date(y, mo-2, 26);  // 前月26日
+    const endDate   = new Date(y, mo-1, 25);  // 当月25日
+    const cur = new Date(startDate);
+    while (cur <= endDate) {
+      if (cur.getDay()!==0 && cur.getDay()!==6) {
+        const yy = cur.getFullYear(), mm = cur.getMonth()+1, dd = cur.getDate();
+        dates.push(`${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`);
+      }
+      cur.setDate(cur.getDate()+1);
     }
   }
 
