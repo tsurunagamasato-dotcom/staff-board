@@ -319,7 +319,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwmJaPLUm_W_w5o-bn3wUFKBRerKRhJnZUmH91MjMyaeH-QuuZnhN7l-avy5VTePPOVxg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx35ctoRO2obqw5Snq6CS-A5FPA9eS9aou2J_-jX9u1_7mlwywSmnF-Pbpp4gmhvz8A7w/exec';
 
 const DEPT_ORDER = ['社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
 const HONSHA_DEPTS = ['社長','役員','総務部','営業部','設計課','電気課'];
@@ -473,7 +473,7 @@ async function loadOrders() {
     const res = await fetch(GAS_URL+'?action=getOrders&date='+date+'&t='+Date.now());
     const json = await res.json();
     if (json.ok) {
-      ordersData = json.orders.filter(o => !String(o.id).startsWith('visitor_'));
+      ordersData = json.orders.filter(o => !String(o.id).startsWith('visitor_') && !String(o.id).startsWith('E-'));
       visitorData = json.orders.filter(o => String(o.id).startsWith('visitor_'));
       if (json.permanentNG) permanentNG = json.permanentNG;
       renderLocationSummary();
