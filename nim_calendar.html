@@ -209,7 +209,7 @@
   }
   .slot-entry:hover{filter:brightness(1.1);}
   .slot-entry.slot-drop-over{outline:2px solid var(--accent);outline-offset:-1px;}
-  .slot-entry.ended{filter:grayscale(1) brightness(.7);opacity:.6;cursor:pointer;}
+  .slot-entry.ended{filter:grayscale(1) brightness(.7);opacity:.5;cursor:default;pointer-events:none;}
   .proj-ended-badge{font-size:9px;background:rgba(120,128,164,.3);color:var(--text-dim);border-radius:3px;padding:1px 5px;margin-left:4px;}
   .slot-bar{display:flex;align-items:center;width:100%;gap:4px;}
   .slot-bar-plan{display:flex;align-items:center;width:100%;gap:4px;overflow:hidden;}
@@ -854,8 +854,9 @@ function renderSidePanel(){
 
     // ヘッダ（クリックで開閉）
     const hdr=document.createElement('div');
-    hdr.className='side-proj-header';
-    hdr.innerHTML=`<span class="side-proj-name">${proj.name}</span><span class="side-proj-arrow">▼</span>`;
+    hdr.className='side-proj-header'+(proj.ended?' ended-proj':'');
+    if(proj.ended) item.style.cssText='opacity:.45;pointer-events:none;filter:grayscale(1);';
+    hdr.innerHTML=`<span class="side-proj-name">${proj.name}${proj.ended?'<span style="font-size:9px;margin-left:4px;color:#aaa;">[終了]</span>':''}</span><span class="side-proj-arrow">▼</span>`;
     hdr.onclick=()=>{
       openProjId=(openProjId===proj.id)?null:proj.id;
       renderSidePanel();
