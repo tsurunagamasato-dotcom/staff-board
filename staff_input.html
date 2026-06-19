@@ -460,36 +460,29 @@ function updateSidebar() {
 
   if (!att || !att.clockIn) {
     // 未打刻
-    btnIn.disabled = false;
-    btnOut.disabled = true;
     inTime.textContent = '';
     outTime.textContent = '';
     inIcon.textContent = '🟢';
     msgEl.innerHTML = '出勤ボタンを押すか、<br>右側で居場所を登録すると<br>出勤になります';
   } else if (!att.clockOut) {
     // 出勤中
-    btnIn.disabled = true;
-    btnOut.disabled = false;
     inTime.textContent = att.clockIn;
     outTime.textContent = '';
     inIcon.textContent = '✓';
     msgEl.innerHTML = `🟢 <strong>${att.clockIn}</strong> に出勤しました`;
   } else {
-    // 退勤済み
-    btnIn.disabled = true;
-    btnOut.disabled = true;
+    // 退勤済み（再度押せば上書き可能）
     inTime.textContent = att.clockIn;
     outTime.textContent = att.clockOut;
     inIcon.textContent = '✓';
-    msgEl.innerHTML = `⏹ <strong>${att.clockIn}</strong> → <strong>${att.clockOut}</strong> 退勤済み`;
+    msgEl.innerHTML = `⏹ <strong>${att.clockIn}</strong> → <strong>${att.clockOut}</strong> 退勤済み<br><span style="font-size:10px;opacity:0.6;">※再度押せば上書きできます</span>`;
   }
 }
 
 // ====== 出勤クイックアクション ======
 async function quickClockIn() {
   if (!selStaff) return;
-  const att = getAttendance(selStaff.id);
-  if (att && att.clockIn) return;
+  // 常に上書き可能（出勤時刻リセット、退勤取消）
   setAttendance(selStaff.id, { clockIn: nowTimeStr(), clockOut: '' });
   selStatus = selStaff.base;
   saveLastUser(selStaff);
@@ -500,8 +493,9 @@ async function quickClockIn() {
 async function quickClockOut() {
   if (!selStaff) return;
   const att = getAttendance(selStaff.id);
-  if (!att || !att.clockIn || att.clockOut) return;
-  setAttendance(selStaff.id, { clockIn: att.clockIn, clockOut: nowTimeStr() });
+  // 出勤打刻がなければ現在時刻で補完
+  const clockIn = (att && att.clockIn) ? att.clockIn : nowTimeStr();
+  setAttendance(selStaff.id, { clockIn, clockOut: nowTimeStr() });
   selStatus = 'taikin';
   saveLastUser(selStaff);
   await submitToGAS();
