@@ -1329,7 +1329,7 @@ async function autoLoadFromGAS(){
         projId:    String(e.projId),
         typeId:    String(e.typeId),
         note:      e.note==null?'':String(e.note),
-        completed: e.completed===true || e.completed==='TRUE' || e.completed===1
+        completed: e.completed===true || e.completed==='TRUE' || e.completed==='true' || e.completed===1 || e.completed==='1'
       }));
       saveState();
       renderCalendar();renderMaster();
