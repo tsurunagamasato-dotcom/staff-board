@@ -262,7 +262,7 @@
       <select id="bulkPeriod" onchange="renderBulkTable()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--surface);outline:none;">
         <option value="week">今週</option>
         <option value="nextweek">来週</option>
-        <option value="month">今月</option>
+        <option value="month">今月（26日〜翌25日）</option>
       </select>
     </div>
     <div class="section-label">一括設定</div>
@@ -754,9 +754,23 @@ function getBulkDates() {
     monday.setDate(today.getDate()+diff+offset);
     for (let i=0;i<5;i++) { const d=new Date(monday); d.setDate(monday.getDate()+i); if(!isWeekend(d)) dates.push(d); }
   } else {
-    const year=today.getFullYear(), month=today.getMonth();
-    const last=new Date(year,month+1,0).getDate();
-    for(let i=1;i<=last;i++){const d=new Date(year,month,i);if(!isWeekend(d))dates.push(d);}
+    // 締め日：前月26日〜当月25日（管理画面と同じ）
+    const year = today.getFullYear(), month = today.getMonth(); // 0-indexed
+    let startDate, endDate;
+    if (today.getDate() >= 26) {
+      // 26日以降 → 今月26日〜翌月25日
+      startDate = new Date(year, month, 26);
+      endDate   = new Date(year, month + 1, 25);
+    } else {
+      // 1〜25日 → 前月26日〜今月25日
+      startDate = new Date(year, month - 1, 26);
+      endDate   = new Date(year, month, 25);
+    }
+    const cur = new Date(startDate);
+    while (cur <= endDate) {
+      if (!isWeekend(cur)) dates.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
   }
   return dates;
 }
