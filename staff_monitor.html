@@ -58,6 +58,7 @@
     border-radius:12px;
     padding:14px 16px;
     position:relative; overflow:hidden;
+    transition: opacity .3s, filter .3s;
   }
   .staff-card.non-default {
     background:rgba(255,255,255,0.75);
@@ -67,7 +68,7 @@
     content:''; position:absolute; left:0; top:0; bottom:0;
     width:4px; background:#BA7517; border-radius:10px 0 0 10px;
   }
-  /* 休みカード：全体を赤く */
+  /* 休みカード：赤枠 */
   .staff-card.yasumi-card {
     background:rgba(255,80,80,0.18);
     border:2px solid rgba(220,50,50,0.5);
@@ -75,6 +76,39 @@
   .staff-card.yasumi-card .card-name {
     color:#b71c1c;
   }
+
+  /* ====== 出退勤ステータス表示 ====== */
+  /* 出勤中：左に緑バー */
+  .staff-card.att-working::before {
+    content:''; position:absolute; left:0; top:0; bottom:0;
+    width:4px; background:#1D9E75; border-radius:10px 0 0 10px;
+  }
+  /* 退勤済み：グレーアウト */
+  .staff-card.att-left {
+    opacity:0.35; filter:grayscale(0.8);
+    background:rgba(240,238,234,0.7) !important;
+    border-color:rgba(0,0,0,0.06) !important;
+  }
+  .staff-card.att-left::before { display:none !important; }
+  /* 休み：グレーアウトしない（既存の yasumi-card スタイルのみ） */
+  .staff-card.att-off {
+    /* 薄くしない */
+  }
+  /* 未打刻：グレー破線枠（デフォルト居場所かつ未更新の人のみ） */
+  .staff-card.att-none {
+    border:2px dashed rgba(0,0,0,0.15);
+    background:rgba(255,255,255,0.3);
+  }
+  /* 出退勤バッジ */
+  .att-badge {
+    display:inline-flex; align-items:center; gap:3px;
+    padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700;
+    margin-top:4px;
+  }
+  .att-badge.working { background:#e8f5f0; color:#0f6e56; }
+  .att-badge.left    { background:#f1efe8; color:#666; }
+  .att-badge.off     { background:#fdecea; color:#b71c1c; }
+  .att-badge.none    { background:#f4f4f2; color:#999; }
 
   .card-name {
     font-size:var(--card-name-size,22px); font-weight:700;
@@ -349,7 +383,6 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwo73GwwjA1kVVOkq-XKIovxhTjaZSnM_GgMVpOUC_D-39NnvzjQENqABWL-7Tybk0RyQ/exec';
 const FETCH_INTERVAL = 15000;
 
-// STAFF_MASTERはGASから動的取得（起動時に読み込み）
 let STAFF_MASTER = [];
 
 const EMP_GAS_URL = 'https://script.google.com/macros/s/AKfycbwFE4wAC6cdFT8H2JmwW2XONgJz0j1rCI4xE2C9x1tKdMaib5aRgUKXE2N3hkQ034hu/exec';
@@ -357,15 +390,11 @@ const EMP_LS_KEY = 'employee_master_cache';
 
 async function loadStaffMaster() {
   try {
-    // localStorageキャッシュで即座に表示
     const cached = localStorage.getItem(EMP_LS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.length > 0) {
-        _applyEmployees(parsed);
-      }
+      if (parsed.length > 0) _applyEmployees(parsed);
     }
-    // バックグラウンドで統合マスタから最新データ取得
     const res = await fetch(EMP_GAS_URL + '?action=getEmployees&t=' + Date.now());
     const json = await res.json();
     if (json.ok && json.employees && json.employees.length > 0) {
@@ -377,7 +406,6 @@ async function loadStaffMaster() {
 }
 
 function _applyEmployees(emps) {
-  // 所在地ボード：showLocation !== '0' の社員のみ表示
   STAFF_MASTER = emps
     .filter(e => e.showLocation !== '0')
     .map(e => ({
@@ -399,6 +427,36 @@ function _applyEmployees(emps) {
 // state
 let state = {};
 
+// ====== 出退勤 localStorage（staff_input と共有） ======
+const ATTENDANCE_KEY = 'nakashima_attendance';
+
+function getTodayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function getAttLocal(id) {
+  try {
+    const all = JSON.parse(localStorage.getItem(ATTENDANCE_KEY) || '{}');
+    const rec = all[id];
+    if (rec && rec.date !== getTodayStr()) return null;
+    return rec || null;
+  } catch(e) { return null; }
+}
+
+function setAttLocal(id, data) {
+  try {
+    const all = JSON.parse(localStorage.getItem(ATTENDANCE_KEY) || '{}');
+    all[id] = { ...data, date: getTodayStr() };
+    localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(all));
+  } catch(e) {}
+}
+
+function nowTimeStr() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
 function initState() {
   state = {};
   STAFF_MASTER.forEach(s => { state[s.id] = { status: s.base, updated: '', memo: '', leaveStart: '', leaveEnd: '' }; });
@@ -408,22 +466,22 @@ function initState() {
 const SLIDE_DEFS = [
   { label:'本社事務所①', subtitle:'社長・役員・総務部・営業部',
     color:'#1D9E75', bg:'linear-gradient(135deg,#c8ede3,#d8f4ec)',
-    filter: m => { const s=isActiveToday(m.id,state[m.id]?.status)?state[m.id].status:m.base; return s==='honsha_office' && m.slide==='honsha1'; } },
+    filter: m => { const s=getDisplayStatus(m); return s==='honsha_office' && m.slide==='honsha1'; } },
   { label:'本社事務所②', subtitle:'設計課・第一製造部',
     color:'#1D9E75', bg:'linear-gradient(135deg,#b8e8d8,#caeee3)',
-    filter: m => { const s=isActiveToday(m.id,state[m.id]?.status)?state[m.id].status:m.base; return s==='honsha_office' && m.slide==='honsha2'; } },
+    filter: m => { const s=getDisplayStatus(m); return s==='honsha_office' && m.slide==='honsha2'; } },
   { label:'本社事務所③', subtitle:'電気課・購買課',
     color:'#1D9E75', bg:'linear-gradient(135deg,#a8e0ce,#beeadb)',
-    filter: m => { const s=isActiveToday(m.id,state[m.id]?.status)?state[m.id].status:m.base; return s==='honsha_office' && m.slide==='honsha3'; } },
+    filter: m => { const s=getDisplayStatus(m); return s==='honsha_office' && m.slide==='honsha3'; } },
   { label:'本社工場', subtitle:'',
     color:'#0e7fa8', bg:'linear-gradient(135deg,#c0e8f4,#d0f0fa)',
-    filter: m => { const s=isActiveToday(m.id,state[m.id]?.status)?state[m.id].status:m.base; return s==='honsha_factory'; } },
+    filter: m => { const s=getDisplayStatus(m); return s==='honsha_factory'; } },
   { label:'根崎', subtitle:'加工課',
     color:'#185FA5', bg:'linear-gradient(135deg,#c4d8f0,#d4e6f8)',
-    filter: m => { const s=isActiveToday(m.id,state[m.id]?.status)?state[m.id].status:m.base; return s==='nezaki'; } },
+    filter: m => { const s=getDisplayStatus(m); return s==='nezaki'; } },
   { label:'根崎第2', subtitle:'組付課・購買課',
     color:'#534AB7', bg:'linear-gradient(135deg,#d0cef4,#dddcfa)',
-    filter: m => { const s=isActiveToday(m.id,state[m.id]?.status)?state[m.id].status:m.base; return s==='nezaki2'; } },
+    filter: m => { const s=getDisplayStatus(m); return s==='nezaki2'; } },
   { label:'外出/出張', subtitle:'',
     color:'#BA7517', bg:'linear-gradient(135deg,#f8e4c0,#faeece)',
     filter: m => isActiveToday(m.id, 'gaishutsu') },
@@ -438,40 +496,75 @@ const SLIDE_DEFS = [
     filter: m => isActiveToday(m.id, 'risseki') },
 ];
 
+// ====== 出退勤状態の判定 ======
+// 表示用ステータスを取得（退勤者はデフォルト居場所に戻す）
+function getDisplayStatus(m) {
+  const st = state[m.id];
+  if (!st) return m.base;
+  const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
+  // 退勤者はデフォルト居場所のスライドに表示（グレーアウトで）
+  if (activeStatus === 'taikin') return m.base;
+  return activeStatus;
+}
+
+// 出退勤ステータス: 'working' | 'left' | 'off' | 'none'
+function getAttendanceClass(m) {
+  const st = state[m.id];
+  if (!st) return 'none';
+  const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
+
+  // 退勤 → グレーアウト
+  if (activeStatus === 'taikin') return 'left';
+
+  // 休み → 通常表示（グレーアウトしない）
+  if (activeStatus === 'yasumi') return 'off';
+
+  // 今日更新あり → 出勤中
+  if (st.updated && st.updated !== '') return 'working';
+
+  // デフォルトと異なるステータスが有効（外出/在宅の期間指定等）→ 出勤扱い
+  // ※外出/出張で出勤ボタンを押し忘れてもグレーアウトしない
+  if (activeStatus !== m.base) return 'working';
+
+  // デフォルト居場所で未更新 → 未打刻
+  return 'none';
+}
+
+function getAttendanceBadgeHtml(m) {
+  const cls = getAttendanceClass(m);
+  switch(cls) {
+    case 'working': return '<span class="att-badge working">🟢 出勤中</span>';
+    case 'left':    return '<span class="att-badge left">⏹ 退勤済</span>';
+    case 'off':     return ''; // 休みは yasumi-card スタイルで十分、バッジ不要
+    case 'none':    return '<span class="att-badge none">未打刻</span>';
+    default:        return '';
+  }
+}
+
 // JSTで今日の日付をYYYY-MM-DD形式で返す
 function getTodayJST() {
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
-// 今日そのステータスが有効かどうか判定
-// ・leaveStart/leaveEndが設定されている → 今日がその期間内なら有効
-// ・leaveStart/leaveEndが未設定 → ステータスが一致すれば有効
-// ・leaveStartが未来 → まだ有効でない（デフォルト表示）
 function isActiveToday(id, status) {
   const st = state[id];
   if (!st || st.status !== status) return false;
   const today = getTodayJST();
   if (st.leaveStart) {
-    // leaveStartをYYYY-MM-DD形式に正規化
     const ls = normalizeStateDate(st.leaveStart);
     const le = st.leaveEnd ? normalizeStateDate(st.leaveEnd) : '';
-    // leaveStartが未来 → 今日はまだ有効でない
     if (ls > today) return false;
-    // leaveEndが設定されている場合 → 今日がleaveEnd以内か
     if (le && le < today) return false;
   }
   return true;
 }
 
-// state内の日付値をYYYY-MM-DD文字列に正規化
 function normalizeStateDate(val) {
   if (!val) return '';
   const s = String(val).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  // "2026/06/17" 形式
   if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) return s.replace(/\//g, '-');
-  // Date文字列など
   try {
     const d = new Date(s);
     if (!isNaN(d)) return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -486,7 +579,6 @@ const DEPT_SLIDE_DEFS = [
   { label:'営業部',      depts:['営業部'],           color:'#1D9E75', bg:'linear-gradient(135deg,#b8e8d8,#caeee3)' },
   { label:'購買課',      depts:['購買課'],           color:'#0e7fa8', bg:'linear-gradient(135deg,#c0e8f4,#d0f0fa)' },
   { label:'設計課・第一製造部', depts:['設計課','第一製造部'], color:'#185FA5', bg:'linear-gradient(135deg,#c4d8f0,#d4e6f8)' },
-
   { label:'電気課',      depts:['電気課'],           color:'#185FA5', bg:'linear-gradient(135deg,#b8d0ec,#c8e0f4)' },
   { label:'加工課',      depts:['加工課'],           color:'#BA7517', bg:'linear-gradient(135deg,#f8e4c0,#faeece)' },
   { label:'組付課',      depts:['組付課'],           color:'#639922', bg:'linear-gradient(135deg,#d4edb8,#e0f4c8)' },
@@ -501,9 +593,10 @@ const STATUS_BADGE_MAP = {
   zaitaku:        { label:'在宅',       bg:'#eaf3de', fg:'#27500a', dot:'#639922' },
   yasumi:         { label:'休み',       bg:'#f1efe8', fg:'#444441', dot:'#888780' },
   risseki:        { label:'離席/会議等', bg:'#fdecea', fg:'#7b1a14', dot:'#c0392b' },
+  taikin:         { label:'退勤済み',   bg:'#f1efe8', fg:'#666666', dot:'#888780' },
 };
 
-let viewMode = 'location'; // 'location' or 'dept'
+let viewMode = 'location';
 let currentIndex = 0;
 let slideInterval = 8000;
 let isPaused = false;
@@ -533,9 +626,6 @@ function formatDate(dateStr) {
   return (d.getMonth()+1) + '/' + d.getDate();
 }
 
-
-
-
 async function fetchAll(silent=false) {
   if (!silent) setSyncStatus('syncing','取得中...');
   try {
@@ -543,7 +633,7 @@ async function fetchAll(silent=false) {
     const json = await res.json();
     if (!json.ok) throw new Error();
     json.data.forEach(row => {
-      const id = row.id;  // E-58などの文字列IDをそのまま使用
+      const id = row.id;
       if (id && state[id] !== undefined && row.status) {
         state[id] = { status: row.status, updated: row.updated||'', memo: row.memo||'', leaveStart: row.leaveStart||'', leaveEnd: row.leaveEnd||'' };
       }
@@ -551,12 +641,11 @@ async function fetchAll(silent=false) {
     const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
     setSyncStatus('ok', t+' 更新');
     const deptParam = new URLSearchParams(location.search).get('dept');
-    const savedIndex = currentIndex; // 現在のスライド位置を保存
-    const savedPaused = isPaused;    // 一時停止状態を保存
+    const savedIndex = currentIndex;
+    const savedPaused = isPaused;
     if (deptParam) rebuildDeptSlides(deptParam);
     else if (viewMode==='location') rebuildSlides();
     else rebuildDeptSlides();
-    // スライド位置・一時停止状態を復元
     if (savedIndex > 0 && savedIndex < slideKeys.length) {
       showSlide(savedIndex);
       if (savedPaused && !isPaused) togglePause();
@@ -565,25 +654,58 @@ async function fetchAll(silent=false) {
   } catch(e) { setSyncStatus('error','通信エラー'); }
 }
 
+// ====== カード生成共通関数 ======
+function buildCardHtml(m, showBadge) {
+  const st = state[m.id];
+  const rawStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
+  const displayStatus = (rawStatus === 'taikin') ? m.base : rawStatus;
+  const isNonDefault = displayStatus !== m.base && rawStatus !== 'taikin';
+  const attClass = getAttendanceClass(m);
+
+  // CSSクラス組み立て
+  let classes = 'staff-card clickable';
+  if (isNonDefault) classes += ' non-default';
+  if (rawStatus === 'yasumi') classes += ' yasumi-card';
+  classes += ' att-' + attClass;
+
+  const dispSt = {...st, status: displayStatus};
+
+  // バッジ（部署別表示用）
+  let badgeHtml = '';
+  if (showBadge) {
+    const badge = STATUS_BADGE_MAP[rawStatus] || STATUS_BADGE_MAP['honsha_office'];
+    const slideLabel = { 'honsha1':'本社①','honsha2':'本社②','honsha3':'本社③','nezaki':'根崎','nezaki2':'根崎第2' };
+    let displayLabel = badge.label;
+    if (displayStatus === 'honsha_office' && m.slide) displayLabel = slideLabel[m.slide] || badge.label;
+    badgeHtml = `<span class="status-badge-sm" style="background:${badge.bg};color:${badge.fg};">
+      <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
+      ${displayLabel}
+    </span>`;
+  }
+
+  return `<div class="${classes}" onclick="openRegModal('${m.id}')">
+    <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
+    ${showBadge ? badgeHtml : `<div class="card-dept">${m.dept}</div>`}
+    ${getAttendanceBadgeHtml(m)}
+    ${(isNonDefault && rawStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
+    ${(dispSt.leaveStart && isActiveToday(m.id, st.status)) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${dispSt.leaveStart===dispSt.leaveEnd ? formatDate(dispSt.leaveStart) : formatDate(dispSt.leaveStart)+'〜'+formatDate(dispSt.leaveEnd)}</div>` : ''}
+    ${isNonDefault && dispSt.updated?`<div class="card-time" style="color:#333;font-size:13px;">${dispSt.updated}</div>`:''}
+  </div>`;
+}
+
+
 function rebuildSlides() {
-  // 中島節雄さんは出勤（honsha_office）登録時のみ表示するフィルター
   function filterWithChairman(def, m) {
     if (m.dept === '会長') {
-      // 会長は「出勤登録済み（updatedが空でない）」かつ「honsha_office」の時のみ表示
-      return def.filter(m)
-        && state[m.id]
-        && state[m.id].status === 'honsha_office'
-        && state[m.id].updated !== '';
+      return def.filter(m) && state[m.id] && state[m.id].status === 'honsha_office' && state[m.id].updated !== '';
     }
     return state[m.id] && def.filter(m);
   }
 
-  // 0名スライドはスキップ（本社工場・外出・在宅・休みのみ）
   slideKeys = SLIDE_DEFS
     .map((def,idx) => idx)
     .filter(idx => {
       const members = STAFF_MASTER.filter(m => filterWithChairman(SLIDE_DEFS[idx], m));
-      // 本社①②③は常に表示、その他は0名ならスキップ
       if (idx <= 2) return true;
       return members.length > 0;
     });
@@ -602,19 +724,7 @@ function rebuildSlides() {
     slide.style.color = '#1a1a1a';
 
     const cardsHtml = members.length > 0
-      ? `<div class="staff-grid">${members.map(m => {
-          const st = state[m.id];
-          const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
-          const isNonDefault = activeStatus !== m.base;
-          const dispSt = {...st, status: activeStatus};
-          return `<div class="staff-card ${isNonDefault?'non-default':''} ${activeStatus==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
-            <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
-            <div class="card-dept">${m.dept}</div>
-            ${(isNonDefault && activeStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:900;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
-            ${(dispSt.leaveStart && isActiveToday(m.id, st.status)) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:900;margin-top:4px;">📅 ${dispSt.leaveStart===dispSt.leaveEnd ? formatDate(dispSt.leaveStart) : formatDate(dispSt.leaveStart)+'〜'+formatDate(dispSt.leaveEnd)}</div>` : ''}
-            ${isNonDefault && dispSt.updated?`<div class="card-time" style="color:#333;font-size:13px;">${dispSt.updated}</div>`:''}
-          </div>`;
-        }).join('')}</div>`
+      ? `<div class="staff-grid">${members.map(m => buildCardHtml(m, false)).join('')}</div>`
       : `<div class="empty-msg">現在この場所にいる社員はいません</div>`;
 
     slide.innerHTML = `
@@ -661,7 +771,7 @@ function showSlide(idx, animate=true) {
   document.querySelectorAll('.ind-dot').forEach((el,i) => {
     const def = SLIDE_DEFS[slideKeys[i]];
     el.classList.toggle('active', i===idx);
-    el.style.background = i===idx ? def.color : '';
+    el.style.background = i===idx ? (def ? def.color : '') : '';
   });
   startProgress(idx);
 }
@@ -678,19 +788,11 @@ function startProgress(idx) {
 }
 
 function jumpToDept(deptIdx) {
-  // 部署別ビューに切り替えてから該当スライドへジャンプ
   if (viewMode !== 'dept') setViewMode('dept');
-  // slideKeysからdeptIdxに対応するスライドを探す
   const targetSlideIdx = slideKeys.indexOf(deptIdx);
-  if (targetSlideIdx >= 0) {
-    showSlide(targetSlideIdx);
-  }
-  // ジャンプ時は自動で一時停止
+  if (targetSlideIdx >= 0) showSlide(targetSlideIdx);
   if (!isPaused) togglePause();
-  // ナビボタンのアクティブ状態を更新
-  document.querySelectorAll('.dept-nav-btn').forEach((b, i) => {
-    b.classList.toggle('active', i === deptIdx);
-  });
+  document.querySelectorAll('.dept-nav-btn').forEach((b, i) => b.classList.toggle('active', i === deptIdx));
 }
 
 function nextSlide() { showSlide((currentIndex+1)%slideKeys.length); resetTimer(); }
@@ -731,7 +833,6 @@ document.addEventListener('keydown', e => {
 
 function setViewMode(mode) {
   viewMode = mode;
-
   document.getElementById('btnLocation').classList.toggle('active', mode==='location');
   document.getElementById('btnDept').classList.toggle('active', mode==='dept');
   currentIndex = 0;
@@ -742,11 +843,9 @@ function setViewMode(mode) {
 }
 
 function rebuildDeptSlides(filterDept) {
-  // filterDeptが指定された場合はその部署のみ表示
   let defs = DEPT_SLIDE_DEFS;
   if (filterDept) {
     defs = DEPT_SLIDE_DEFS.filter(def => def.depts.some(d => d === filterDept));
-    // 該当がなければ部署名で直接生成
     if (defs.length === 0) {
       defs = [{ label: filterDept, depts: [filterDept], color: '#185FA5', bg: 'linear-gradient(135deg,#c4d8f0,#d4e6f8)' }];
     }
@@ -767,31 +866,7 @@ function rebuildDeptSlides(filterDept) {
     slide.style.color = '#1a1a1a';
 
     const cardsHtml = members.length > 0
-      ? `<div class="staff-grid">${members.map(m => {
-          const st = state[m.id];
-          const activeStatus2 = isActiveToday(m.id, st.status) ? st.status : m.base;
-          const badge = STATUS_BADGE_MAP[activeStatus2] || STATUS_BADGE_MAP['honsha_office'];
-          const isNonDefault = activeStatus2 !== m.base;
-          // 本社系は①②③で表示
-          const slideLabel = {
-            'honsha1': '本社①', 'honsha2': '本社②', 'honsha3': '本社③',
-            'nezaki': '根崎', 'nezaki2': '根崎第2'
-          };
-          let displayLabel = badge.label;
-          if (activeStatus2 === 'honsha_office' && m.slide) {
-            displayLabel = slideLabel[m.slide] || badge.label;
-          }
-          return `<div class="staff-card ${isNonDefault?'non-default':''} ${activeStatus2==='yasumi'?'yasumi-card':''} clickable" onclick="openRegModal('${m.id}')">
-            <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
-            <span class="status-badge-sm" style="background:${badge.bg};color:${badge.fg};">
-              <span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>
-              ${displayLabel}
-            </span>
-            ${(activeStatus2 !== 'yasumi' && st.memo)?`<div class="card-time" style="color:#3d1f00;font-size:12px;font-weight:700;margin-top:2px;">📍 ${st.memo}</div>`:''}
-            ${(st.leaveStart && isActiveToday(m.id, st.status))?`<div class="card-time" style="color:#00132a;font-size:12px;font-weight:700;margin-top:2px;">📅 ${st.leaveStart===st.leaveEnd ? formatDate(st.leaveStart) : formatDate(st.leaveStart)+'〜'+formatDate(st.leaveEnd)}</div>`:''}
-            ${isNonDefault && st.updated?`<div class="card-time" style="color:#333;font-size:13px;">${st.updated}</div>`:''}
-          </div>`;
-        }).join('')}</div>`
+      ? `<div class="staff-grid">${members.map(m => buildCardHtml(m, true)).join('')}</div>`
       : `<div class="empty-msg">メンバーがいません</div>`;
 
     slide.innerHTML = `
@@ -822,8 +897,8 @@ function rebuildDeptSlides(filterDept) {
   indWrap.innerHTML = slideKeys.map((defIdx, idx) => {
     const def = DEPT_SLIDE_DEFS[defIdx];
     return `<div class="ind-dot ${idx===currentIndex?'active':''}"
-      style="${idx===currentIndex?`background:${def.color};`:''}"
-      onclick="goSlide(${idx})" title="${def.label}"></div>`;
+      style="${idx===currentIndex?`background:${def ? def.color : '#999'};`:''}"
+      onclick="goSlide(${idx})" title="${def ? def.label : ''}"></div>`;
   }).join('');
 
   updateClock();
@@ -831,17 +906,20 @@ function rebuildDeptSlides(filterDept) {
 }
 
 async function init() {
-  // URLパラメータで部署固定モードを判定
   const urlParams = new URLSearchParams(location.search);
   const deptParam = urlParams.get('dept');
 
   // localStorageキャッシュで即座に表示
   try {
-    const cached = localStorage.getItem(STAFF_LSKEY);
+    const cached = localStorage.getItem(EMP_LS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed.length > 0) {
-        STAFF_MASTER = parsed;
+        STAFF_MASTER = parsed.filter(e => e.showLocation !== '0').map(e => ({
+          id: e.empNo || e.id, name: String(e.name), dept: String(e.dept),
+          base: e.defaultPlace || 'honsha_office', slide: e.slide || 'honsha1',
+          empNo: e.empNo || '', category: e.category || '社員', location: e.place || ''
+        }));
         initState();
         if (deptParam) rebuildDeptSlides(deptParam);
         else rebuildSlides();
@@ -849,7 +927,6 @@ async function init() {
     }
   } catch(e) {}
 
-  // 部署固定モードの場合はUIを調整
   if (deptParam) {
     document.querySelectorAll('.mode-btn').forEach(el => el.style.display = 'none');
     document.title = deptParam + ' — 所在地ボード';
@@ -857,7 +934,6 @@ async function init() {
 
   document.getElementById('loadingOverlay').style.display = 'none';
 
-  // staffマスタ取得 → state初期化 → 状態取得の順に実行
   await loadStaffMaster();
   await fetchAll(false);
 
@@ -865,11 +941,8 @@ async function init() {
   else rebuildSlides();
 
   slideTimer = setInterval(nextSlide, slideInterval);
-  setInterval(async () => {
-    await fetchAll(true);
-  }, FETCH_INTERVAL);
+  setInterval(async () => { await fetchAll(true); }, FETCH_INTERVAL);
 
-  // カードサイズをlocalStorageから復元
   const savedSize = localStorage.getItem('monitor_card_size') || 'medium';
   setCardSize(savedSize);
 }
@@ -885,15 +958,12 @@ let currentSize = 'medium';
 function setCardSize(size) {
   currentSize = size;
   const s = CARD_SIZES[size];
-  // CSS変数で管理（rebuildで上書きされない）
   document.documentElement.style.setProperty('--card-min-width', s.minWidth);
   document.documentElement.style.setProperty('--card-name-size', s.nameSize);
   document.documentElement.style.setProperty('--card-name-long-size', s.longSize);
-  // ボタンのactive状態更新
   document.querySelectorAll('.size-btn').forEach(btn => {
     btn.classList.toggle('active', btn.textContent === {small:'小',medium:'中',large:'大'}[size]);
   });
-  // localStorageに保存
   localStorage.setItem('monitor_card_size', size);
 }
 
@@ -907,6 +977,7 @@ const STATUSES_REG = [
   { key:'zaitaku',        label:'在宅',       icon:'🏠' },
   { key:'yasumi',         label:'休み',       icon:'😴' },
   { key:'risseki',        label:'離席/会議等', icon:'🚶' },
+  { key:'taikin',         label:'退勤',       icon:'⏹' },
 ];
 
 let regStaff = null;
@@ -932,7 +1003,6 @@ function openRegModal(id) {
   ).join('');
   document.getElementById('regSubmit').disabled = true;
 
-  // 現在のステータスをハイライト
   const cur = state[id]?.status;
   if (cur) {
     const curBtn = document.getElementById('regbtn-' + cur);
@@ -940,14 +1010,11 @@ function openRegModal(id) {
   }
 
   document.getElementById('regOverlay').classList.remove('hidden');
-  // 期間欄リセット
   document.getElementById('regPeriodBox').style.display = 'none';
   document.getElementById('regStart').value = '';
   document.getElementById('regEnd').value = '';
-  // メモ欄リセット
   const memoBox = document.getElementById('regMemoBox');
   if (memoBox) { memoBox.style.display = 'none'; document.getElementById('regMemoInput').value = ''; }
-  // スライドを一時停止
   if (!isPaused) togglePause();
 }
 
@@ -957,27 +1024,21 @@ function selectRegStatus(key) {
   document.getElementById('regbtn-' + key)?.classList.add('selected');
   document.getElementById('regSubmit').disabled = false;
 
-  // 外出/出張・在宅・休みのみ期間入力欄を表示
-  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(key); // rissekiは期間なし
+  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(key);
   const periodBox = document.getElementById('regPeriodBox');
   periodBox.style.display = needsPeriod ? 'block' : 'none';
-  // 外出/出張のみメモ欄を表示
   const memoBox = document.getElementById('regMemoBox');
   if (memoBox) memoBox.style.display = (key === 'gaishutsu' || key === 'risseki') ? 'block' : 'none';
 
-  // デフォルトで今日の日付をセット
   if (needsPeriod) {
     const todayJST = (() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
-    if (!document.getElementById('regStart').value) {
-      document.getElementById('regStart').value = todayJST;
-    }
+    if (!document.getElementById('regStart').value) document.getElementById('regStart').value = todayJST;
   }
 }
 
 function closeRegModal() {
   document.getElementById('regOverlay').classList.add('hidden');
   regStaff = null; regStatus = null;
-  // スライド再開
   if (isPaused) togglePause();
 }
 
@@ -990,12 +1051,10 @@ async function doRegister() {
   const now = new Date();
   const updated = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + '更新';
 
-  // 期間取得
-  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(regStatus); // rissekiは期間なし
+  const needsPeriod = ['gaishutsu', 'zaitaku', 'yasumi'].includes(regStatus);
   const startVal = document.getElementById('regStart').value;
   const endVal = document.getElementById('regEnd').value;
   const leaveStart = needsPeriod && startVal ? startVal : '';
-  // 終了日が空or開始日と同じ場合は開始日のみ（当日のみ）
   const leaveEnd = needsPeriod && endVal && endVal !== startVal ? endVal : leaveStart;
 
   const memoInput = document.getElementById('regMemoInput');
@@ -1015,7 +1074,21 @@ async function doRegister() {
     });
     const json = await res.json();
     if (json.ok) {
-      state[regStaff.id] = { status: regStatus, updated, memo: '', leaveStart, leaveEnd };
+      state[regStaff.id] = { status: regStatus, updated, memo: memo || '', leaveStart, leaveEnd };
+
+      // 出退勤 localStorage 連携（staff_input と共有）
+      if (regStatus === 'taikin') {
+        // 退勤：clockOut を記録
+        const att = getAttLocal(regStaff.id);
+        const clockIn = (att && att.clockIn) ? att.clockIn : nowTimeStr();
+        setAttLocal(regStaff.id, { clockIn, clockOut: nowTimeStr() });
+      } else if (regStatus !== 'yasumi') {
+        // 出勤扱い：clockIn がなければ記録
+        const att = getAttLocal(regStaff.id);
+        if (!att || !att.clockIn) {
+          setAttLocal(regStaff.id, { clockIn: nowTimeStr(), clockOut: '' });
+        }
+      }
       closeRegModal();
       const dp = new URLSearchParams(location.search).get('dept');
       if (dp) rebuildDeptSlides(dp);
@@ -1028,7 +1101,6 @@ async function doRegister() {
   }
 }
 
-// モーダル外クリックで閉じる
 document.getElementById('regOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('regOverlay')) closeRegModal();
 });

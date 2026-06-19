@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>所在地登録</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #f4f4f2; --surface: #ffffff; --border: #e2e0db;
@@ -13,6 +13,7 @@
   }
   body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
 
+  /* ===== ヘッダー ===== */
   .header {
     background: var(--surface); border-bottom: 1px solid var(--border);
     padding: 16px 20px; display: flex; align-items: center; gap: 12px;
@@ -26,8 +27,86 @@
   .header-title { font-size: 16px; font-weight: 700; }
   .header-sub { font-size: 12px; color: var(--text-sub); margin-top: 1px; }
 
-  .main { padding: 24px 20px 48px; max-width: 480px; margin: 0 auto; }
+  /* ===== 2カラムレイアウト ===== */
+  .layout { display: flex; min-height: calc(100vh - 66px); }
 
+  /* --- 左サイドバー（出勤/退勤パネル） --- */
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: var(--bg); border-right: 1px solid var(--border);
+    padding: 20px 16px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .sidebar-label {
+    font-size: 11px; font-weight: 700; color: var(--text-hint);
+    letter-spacing: 0.5px;
+  }
+  .sidebar-user {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .sidebar-user-icon { font-size: 18px; }
+  .sidebar-user-name { font-size: 15px; font-weight: 700; }
+  .sidebar-user-suffix { font-size: 13px; color: var(--text-sub); }
+  .change-btn {
+    padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--border);
+    background: var(--surface); font-size: 11px; font-weight: 700; color: var(--text-sub);
+    cursor: pointer; font-family: inherit; transition: .15s;
+  }
+  .change-btn:hover { background: #eee; }
+
+  .att-btns { display: flex; gap: 8px; }
+  .att-btn {
+    flex: 1; aspect-ratio: 1; border-radius: 16px; border: 2.5px solid;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    cursor: pointer; font-family: inherit; font-size: 16px; font-weight: 900;
+    transition: transform .1s, opacity .15s; position: relative; overflow: hidden;
+  }
+  .att-btn:active { transform: scale(0.95); }
+  .att-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .att-btn:disabled:active { transform: none; }
+
+  .att-btn.btn-in {
+    background: linear-gradient(145deg, #d4f0e4, #b8e6d0);
+    border-color: #1D9E75; color: #0a5c3f;
+  }
+  .att-btn.btn-out {
+    background: linear-gradient(145deg, #f5d4d4, #edb8b8);
+    border-color: #d35050; color: #7a1a1a;
+  }
+  .att-btn .att-icon { font-size: 24px; }
+  .att-btn .att-label { font-size: 14px; }
+  .att-btn .att-time {
+    font-size: 10px; font-weight: 500; opacity: 0.7;
+    position: absolute; bottom: 6px;
+  }
+
+  .att-status-msg {
+    font-size: 11px; color: var(--text-sub); line-height: 1.5;
+    padding: 8px 10px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+  }
+
+  /* サイドバー未選択時 */
+  .sidebar-empty {
+    font-size: 12px; color: var(--text-hint); line-height: 1.6;
+    padding: 12px 0;
+  }
+
+  /* --- 右メインエリア --- */
+  .main-area { flex: 1; min-width: 0; }
+  .main { padding: 24px 20px 48px; max-width: 560px; margin: 0 auto; }
+
+  /* ===== モバイル：サイドバー→上部パネル化 ===== */
+  @media (max-width: 640px) {
+    .layout { flex-direction: column; }
+    .sidebar {
+      width: 100%; border-right: none; border-bottom: 1px solid var(--border);
+      padding: 16px 20px; flex-direction: column; gap: 12px;
+    }
+    .att-btns { max-width: 280px; }
+    .att-btn { aspect-ratio: auto; padding: 14px 8px; }
+  }
+
+  /* ===== ステップインジケーター ===== */
   .steps { display: flex; align-items: center; margin-bottom: 28px; }
   .step { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-hint); flex: 1; }
   .step.active { color: var(--text); }
@@ -140,39 +219,79 @@
   </div>
 </header>
 
-<div class="main">
-  <div class="steps" id="stepIndicator">
-    <div class="step active" id="stepEl1"><div class="step-num">1</div><span>部署</span></div>
-    <div class="step-line"></div>
-    <div class="step" id="stepEl2"><div class="step-num">2</div><span>氏名</span></div>
-    <div class="step-line"></div>
-    <div class="step" id="stepEl3"><div class="step-num">3</div><span>居場所</span></div>
-  </div>
+<div class="layout">
+  <!-- ===== 左サイドバー：出勤/退勤パネル ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-label">出勤 / 退勤</div>
 
-  <div id="step1">
-    <div class="section-label">部署を選んでください</div>
-    <div class="btn-grid" id="deptGrid"></div>
-  </div>
+    <!-- 未選択時 -->
+    <div id="sidebarEmpty" class="sidebar-empty">
+      右側で氏名を選ぶと<br>ここに出勤/退勤ボタンが<br>表示されます
+    </div>
 
-  <div id="step2" class="hidden">
-    <button class="back-btn" onclick="goStep(1)">← 部署を選び直す</button>
-    <div class="section-label" id="step2Label">氏名を選んでください</div>
-    <div class="name-list" id="nameList"></div>
-  </div>
+    <!-- 選択済み時 -->
+    <div id="sidebarActive" class="hidden">
+      <div class="sidebar-user">
+        <span class="sidebar-user-icon">🧑</span>
+        <span class="sidebar-user-name" id="sidebarName"></span>
+        <span class="sidebar-user-suffix">さん</span>
+        <button class="change-btn" onclick="clearLastUser()">変更</button>
+      </div>
 
-  <div id="step3" class="hidden">
-    <button class="back-btn" onclick="goStep(2)">← 氏名を選び直す</button>
-    <div class="section-label" id="step3Label">居場所を選んでください</div>
-    <div class="btn-grid col3" id="statusGrid"></div>
-    <button class="submit-btn" id="submitBtn" onclick="submit()" disabled>登録する</button>
-  </div>
+      <div class="att-btns">
+        <button class="att-btn btn-in" id="btnClockIn" onclick="quickClockIn()">
+          <span class="att-icon" id="attInIcon">🟢</span>
+          <span class="att-label">出勤</span>
+          <span class="att-time" id="attInTime"></span>
+        </button>
+        <button class="att-btn btn-out" id="btnClockOut" onclick="quickClockOut()">
+          <span class="att-icon">⏹</span>
+          <span class="att-label">退勤</span>
+          <span class="att-time" id="attOutTime"></span>
+        </button>
+      </div>
 
-  <div class="result-screen" id="resultScreen">
-    <div class="result-icon">✓</div>
-    <div class="result-title">登録しました</div>
-    <div class="result-sub" id="resultSub"></div>
-    <div class="result-badge" id="resultBadge"></div>
-    <button class="again-btn" onclick="reset()">別の人を登録する</button>
+      <div class="att-status-msg" id="attStatusMsg"></div>
+    </div>
+  </aside>
+
+  <!-- ===== 右メインエリア：所在地登録 ===== -->
+  <div class="main-area">
+    <div class="main">
+      <div class="steps" id="stepIndicator">
+        <div class="step active" id="stepEl1"><div class="step-num">1</div><span>部署</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="stepEl2"><div class="step-num">2</div><span>氏名</span></div>
+        <div class="step-line"></div>
+        <div class="step" id="stepEl3"><div class="step-num">3</div><span>居場所</span></div>
+      </div>
+
+      <div id="step1">
+        <div class="section-label">部署を選んでください</div>
+        <div class="btn-grid" id="deptGrid"></div>
+      </div>
+
+      <div id="step2" class="hidden">
+        <button class="back-btn" onclick="goStep(1)">← 部署を選び直す</button>
+        <div class="section-label" id="step2Label">氏名を選んでください</div>
+        <div class="name-list" id="nameList"></div>
+      </div>
+
+      <div id="step3" class="hidden">
+        <button class="back-btn" onclick="goStep(2)">← 氏名を選び直す</button>
+        <div class="section-label" id="step3Label">居場所を選んでください</div>
+        <div class="btn-grid col3" id="statusGrid"></div>
+        <button class="submit-btn" id="submitBtn" onclick="submit()" disabled>登録する</button>
+      </div>
+
+      <div class="result-screen" id="resultScreen">
+        <div class="result-icon" id="resultIcon">✓</div>
+        <div class="result-title" id="resultTitle">登録しました</div>
+        <div class="result-sub" id="resultSub"></div>
+        <div class="result-badge" id="resultBadge"></div>
+        <button class="again-btn" onclick="reset()">別の人を登録する</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -185,69 +304,40 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwo73GwwjA1kVVOkq-XKIovxhTjaZSnM_GgMVpOUC_D-39NnvzjQENqABWL-7Tybk0RyQ/exec';
 const LUNCH_GAS_URL = 'https://script.google.com/macros/s/AKfycbwADKRSZHd0Tpiv3X3v7PRNfRccM6H-y3L8mnJF3CulCB_T3zKK_faBccYx0ZI-LFGYGw/exec';
 
-// 昼食×連携対象ステータス
 const LUNCH_NG_STATUSES = ['gaishutsu', 'yasumi', 'zaitaku'];
 
-// 日付フォーマット
 function fmtDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-// 昼食注文に×を自動登録
 async function syncLunchNG(staff, status, leaveStart, leaveEnd) {
-  // 外出/出張は昼食自動連動しない（午前帰社の場合があるため）
   if (status === 'gaishutsu') return;
   if (!LUNCH_NG_STATUSES.includes(status)) return;
-
   const today = new Date();
   const todayStr = fmtDateStr(today);
   const dates = [];
-
-  // 8:45以降の当日登録は昼食連動しない（休みの場合のみ）
   if (status === 'yasumi' && !leaveStart) {
     const h = today.getHours(), m = today.getMinutes();
-    if (h > 8 || (h === 8 && m >= 45)) {
-      console.log('8:45以降の休み登録のため昼食連動をスキップ');
-      return;
-    }
+    if (h > 8 || (h === 8 && m >= 45)) return;
   }
-
   if (leaveStart && leaveEnd) {
-    // 期間が設定されている場合はその期間全日分（今日以降のみ）
     const start = new Date(leaveStart + 'T00:00:00');
     const end   = new Date(leaveEnd   + 'T00:00:00');
     for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
       const day = d.getDay();
-      const ds = fmtDateStr(new Date(d));
-      if (day !== 0 && day !== 6) dates.push(ds);
+      if (day !== 0 && day !== 6) dates.push(fmtDateStr(new Date(d)));
     }
   } else {
-    // 期間なしは当日分のみ（leaveStartが今日より先なら連動しない）
     if (leaveStart && leaveStart > todayStr) return;
     dates.push(todayStr);
   }
-
   if (dates.length === 0) return;
-
   const orders = dates.map(date => ({
-    action: 'saveOrder',
-    date,
-    id: staff.id,
-    name: staff.name,
-    dept: staff.dept,
-    order: 'nashi',
-    place: '',
-    proxy: false
+    action:'saveOrder', date, id:staff.id, name:staff.name, dept:staff.dept, order:'nashi', place:'', proxy:false
   }));
-
   try {
-    await fetch(LUNCH_GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveOrders', orders })
-    });
-  } catch(e) {
-    console.log('昼食連携エラー:', e);
-  }
+    await fetch(LUNCH_GAS_URL, { method:'POST', body:JSON.stringify({action:'saveOrders',orders}) });
+  } catch(e) { console.log('昼食連携エラー:', e); }
 }
 
 const STATUSES = [
@@ -261,16 +351,19 @@ const STATUSES = [
   { key:'risseki',        label:'離席/会議等', bg:'#fdecea', fg:'#7b1a14', dot:'#c0392b', icon:'🚶' },
 ];
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.key, s]));
+STATUS_MAP['taikin'] = { key:'taikin', label:'退勤済み', bg:'#f1efe8', fg:'#444441', dot:'#888780', icon:'⏹' };
 
 const DEPT_ORDER = ['会長/社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
 
 let STAFF_MASTER = [];
-
 let selDept = null, selStaff = null, selStatus = null;
 
 const EMP_GAS_URL = 'https://script.google.com/macros/s/AKfycbwFE4wAC6cdFT8H2JmwW2XONgJz0j1rCI4xE2C9x1tKdMaib5aRgUKXE2N3hkQ034hu/exec';
 const EMP_LS_KEY = 'employee_master_cache';
+const LAST_USER_KEY = 'staff_input_last_user';
+const ATTENDANCE_KEY = 'nakashima_attendance';
 
+// ====== 従業員マスタ ======
 async function loadStaffMaster() {
   try {
     const cached = localStorage.getItem(EMP_LS_KEY);
@@ -292,37 +385,211 @@ function _applyEmployees(emps) {
   STAFF_MASTER = emps
     .filter(e => e.showLocation !== '0')
     .map(e => ({
-      id: e.empNo || e.id,
-      name: String(e.name),
-      dept: String(e.dept),
-      base: e.defaultPlace || 'honsha_office',
-      slide: e.slide || 'honsha1',
-      empNo: e.empNo || '',
-      category: e.category || '社員',
-      location: e.place || ''
+      id: e.empNo || e.id, name: String(e.name), dept: String(e.dept),
+      base: e.defaultPlace || 'honsha_office', slide: e.slide || 'honsha1',
+      empNo: e.empNo || '', category: e.category || '社員', location: e.place || ''
     }));
 }
 
+// ====== 出退勤 localStorage ======
+function getTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 
+function getAttendance(id) {
+  try {
+    const all = JSON.parse(localStorage.getItem(ATTENDANCE_KEY) || '{}');
+    const rec = all[id];
+    if (rec && rec.date !== getTodayStr()) return null;
+    return rec || null;
+  } catch(e) { return null; }
+}
+
+function setAttendance(id, data) {
+  try {
+    const all = JSON.parse(localStorage.getItem(ATTENDANCE_KEY) || '{}');
+    all[id] = { ...data, date: getTodayStr() };
+    localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(all));
+  } catch(e) {}
+}
+
+function nowTimeStr() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+// ====== 記憶ユーザー ======
+function getLastUser() {
+  try { return JSON.parse(localStorage.getItem(LAST_USER_KEY)); } catch(e) { return null; }
+}
+function saveLastUser(staff) {
+  try { localStorage.setItem(LAST_USER_KEY, JSON.stringify({id:staff.id, name:staff.name, dept:staff.dept})); } catch(e) {}
+}
+function clearLastUser() {
+  localStorage.removeItem(LAST_USER_KEY);
+  selDept = null; selStaff = null; selStatus = null;
+  updateSidebar();
+  renderDepts();
+  goStep(1);
+}
+
+// ====== サイドバー表示更新 ======
+function updateSidebar() {
+  if (!selStaff) {
+    document.getElementById('sidebarEmpty').classList.remove('hidden');
+    document.getElementById('sidebarActive').classList.add('hidden');
+    return;
+  }
+  document.getElementById('sidebarEmpty').classList.add('hidden');
+  document.getElementById('sidebarActive').classList.remove('hidden');
+  document.getElementById('sidebarName').textContent = selStaff.name;
+
+  // 会長は出勤/退勤パネル非表示
+  const isChairman = selStaff.dept === '会長';
+  document.querySelector('.att-btns').style.display = isChairman ? 'none' : 'flex';
+  document.getElementById('attStatusMsg').style.display = isChairman ? 'none' : 'block';
+
+  const att = getAttendance(selStaff.id);
+  const btnIn  = document.getElementById('btnClockIn');
+  const btnOut = document.getElementById('btnClockOut');
+  const msgEl  = document.getElementById('attStatusMsg');
+  const inTime = document.getElementById('attInTime');
+  const outTime = document.getElementById('attOutTime');
+  const inIcon = document.getElementById('attInIcon');
+
+  if (!att || !att.clockIn) {
+    // 未打刻
+    btnIn.disabled = false;
+    btnOut.disabled = true;
+    inTime.textContent = '';
+    outTime.textContent = '';
+    inIcon.textContent = '🟢';
+    msgEl.innerHTML = '出勤ボタンを押すか、<br>右側で居場所を登録すると<br>出勤になります';
+  } else if (!att.clockOut) {
+    // 出勤中
+    btnIn.disabled = true;
+    btnOut.disabled = false;
+    inTime.textContent = att.clockIn;
+    outTime.textContent = '';
+    inIcon.textContent = '✓';
+    msgEl.innerHTML = `🟢 <strong>${att.clockIn}</strong> に出勤しました`;
+  } else {
+    // 退勤済み
+    btnIn.disabled = true;
+    btnOut.disabled = true;
+    inTime.textContent = att.clockIn;
+    outTime.textContent = att.clockOut;
+    inIcon.textContent = '✓';
+    msgEl.innerHTML = `⏹ <strong>${att.clockIn}</strong> → <strong>${att.clockOut}</strong> 退勤済み`;
+  }
+}
+
+// ====== 出勤クイックアクション ======
+async function quickClockIn() {
+  if (!selStaff) return;
+  const att = getAttendance(selStaff.id);
+  if (att && att.clockIn) return;
+  setAttendance(selStaff.id, { clockIn: nowTimeStr(), clockOut: '' });
+  selStatus = selStaff.base;
+  saveLastUser(selStaff);
+  await submitToGAS();
+}
+
+// ====== 退勤クイックアクション ======
+async function quickClockOut() {
+  if (!selStaff) return;
+  const att = getAttendance(selStaff.id);
+  if (!att || !att.clockIn || att.clockOut) return;
+  setAttendance(selStaff.id, { clockIn: att.clockIn, clockOut: nowTimeStr() });
+  selStatus = 'taikin';
+  saveLastUser(selStaff);
+  await submitToGAS();
+}
+
+// ====== GAS送信 ======
+async function submitToGAS() {
+  if (!selStaff || !selStatus) return;
+  const now = new Date();
+  const updatedStr = now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + '更新';
+  const memo = document.getElementById('memoInput') ? document.getElementById('memoInput').value.trim() : '';
+  const leaveStart = document.getElementById('leaveStart') ? document.getElementById('leaveStart').value : '';
+  const leaveEnd   = document.getElementById('leaveEnd')   ? document.getElementById('leaveEnd').value   : '';
+
+  document.getElementById('savingOverlay').classList.add('show');
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({id:selStaff.id, name:selStaff.name, dept:selStaff.dept, status:selStatus, updated:updatedStr, memo, leaveStart, leaveEnd})
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+
+    if (selStatus !== 'taikin') {
+      await syncLunchNG(selStaff, selStatus, leaveStart, leaveEnd);
+    }
+
+    const s = STATUS_MAP[selStatus];
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step3').classList.add('hidden');
+    document.getElementById('stepIndicator').classList.add('hidden');
+
+    const isTaikin = selStatus === 'taikin';
+    const lunchSynced = !isTaikin && LUNCH_NG_STATUSES.includes(selStatus);
+    const lunchMsg = lunchSynced ? '\n🍱 昼食注文も自動で「×食べない」に登録しました' : '';
+
+    document.getElementById('resultSub').textContent = isTaikin
+      ? `${selStaff.name}さんの退勤を登録しました`
+      : `${selStaff.name}さん（${selStaff.dept}）の居場所を登録しました${lunchMsg}`;
+    document.getElementById('resultBadge').style.cssText = `background:${s.bg};color:${s.fg};`;
+    document.getElementById('resultBadge').innerHTML = `<span class="result-dot" style="background:${s.dot}"></span>${s.label}`;
+    document.getElementById('resultIcon').textContent = isTaikin ? '⏹' : '✓';
+    document.getElementById('resultTitle').textContent = isTaikin ? '退勤しました' : '登録しました';
+    document.getElementById('resultIcon').style.background = isTaikin ? '#f1efe8' : '#e8f5f0';
+    document.getElementById('resultScreen').style.display = 'block';
+    window.scrollTo(0,0);
+
+    // サイドバー更新
+    updateSidebar();
+  } catch(e) {
+    alert('登録に失敗しました。もう一度お試しください。');
+  } finally {
+    document.getElementById('savingOverlay').classList.remove('show');
+  }
+}
+
+// ====== メイン初期化 ======
 async function init() {
-  // まずキャッシュで即座に表示
   try {
     const cached = localStorage.getItem(EMP_LS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.length > 0) {
-        _applyEmployees(parsed);
-        renderDepts();
-      }
+      if (parsed.length > 0) { _applyEmployees(parsed); renderDepts(); }
     }
   } catch(e) {}
 
-  // バックグラウンドで最新データを取得
-  loadStaffMaster().then(() => renderDepts());
+  loadStaffMaster().then(() => {
+    renderDepts();
+    tryRestoreLastUser();
+  });
+}
+
+function tryRestoreLastUser() {
+  const last = getLastUser();
+  if (!last || !last.id) { updateSidebar(); return; }
+  const found = STAFF_MASTER.find(s => String(s.id) === String(last.id));
+  if (!found) { updateSidebar(); return; }
+
+  selStaff = found;
+  selDept = found.dept;
+  if (found.dept === '会長' || found.dept === '社長') selDept = '会長/社長';
+  selStatus = null;
+  updateSidebar();
+  goStep(3);
 }
 
 function renderDepts() {
-  // 会長・社長が両方いる場合は「会長/社長」としてまとめる
   const hasChaiman = STAFF_MASTER.some(s => s.dept === '会長' || s.dept === '社長');
   const otherDepts = DEPT_ORDER.filter(d => d !== '会長/社長' && STAFF_MASTER.some(s => s.dept === d));
   const depts = [...(hasChaiman ? ['会長/社長'] : []), ...otherDepts];
@@ -331,10 +598,9 @@ function renderDepts() {
   ).join('');
 }
 
-function selectDept(dept) { selDept = dept; selStaff = null; selStatus = null; goStep(2); }
+function selectDept(dept) { selDept = dept; selStaff = null; selStatus = null; updateSidebar(); goStep(2); }
 
 function renderNames() {
-  // 「会長/社長」の場合は会長・社長両方の社員を表示
   const members = selDept === '会長/社長'
     ? STAFF_MASTER.filter(s => s.dept === '会長' || s.dept === '社長')
     : STAFF_MASTER.filter(s => s.dept === selDept);
@@ -346,7 +612,13 @@ function renderNames() {
   ).join('');
 }
 
-function selectName(id) { selStaff = STAFF_MASTER.find(s => String(s.id) === String(id)); selStatus = null; goStep(3); }
+function selectName(id) {
+  selStaff = STAFF_MASTER.find(s => String(s.id) === String(id));
+  selStatus = null;
+  saveLastUser(selStaff);
+  updateSidebar();
+  goStep(3);
+}
 
 function renderStatus() {
   document.getElementById('step3Label').textContent = `${selStaff.name}さんの居場所を選んでください`;
@@ -364,7 +636,13 @@ function renderStatus() {
   badge.style.display = isNonDefault ? 'flex' : 'none';
   badge.textContent = isNonDefault ? `⚠ 通常の居場所（${defaultLabel}）と異なります` : '';
 
-  document.getElementById('statusGrid').innerHTML = STATUSES.map(st => {
+  const isChairman = selStaff.dept === '会長';
+  const displayStatuses = isChairman
+    ? [{ key:'honsha_office', label:'出勤', icon:'🏢' }]
+    : STATUSES;
+  if (isChairman) selStatus = 'honsha_office';
+
+  document.getElementById('statusGrid').innerHTML = displayStatuses.map(st => {
     const isDefault = st.key === selStaff.base;
     return `<button class="sel-btn status-btn ${selStatus===st.key?'sel-'+st.key:''}" onclick="selectStatus('${st.key}')">
       <div class="status-icon">${st.icon}</div>
@@ -374,7 +652,7 @@ function renderStatus() {
   }).join('');
   document.getElementById('submitBtn').disabled = !selStatus;
 
-  // メモ欄（外出/出張のみ）
+  // メモ欄
   let memoWrap = document.getElementById('memoWrap');
   if (!memoWrap) {
     memoWrap = document.createElement('div');
@@ -389,7 +667,7 @@ function renderStatus() {
   }
   memoWrap.style.display = (selStatus === 'gaishutsu' || selStatus === 'risseki') ? 'block' : 'none';
 
-  // 長期休暇欄（休みのみ）
+  // 期間欄
   let leaveWrap = document.getElementById('leaveWrap');
   if (!leaveWrap) {
     leaveWrap = document.createElement('div');
@@ -410,14 +688,9 @@ function renderStatus() {
     document.getElementById('submitBtn').before(leaveWrap);
   }
   leaveWrap.style.display = (selStatus === 'yasumi' || selStatus === 'gaishutsu' || selStatus === 'zaitaku') ? 'block' : 'none';
-  // 外出時のラベルを変更
   const leaveLabel = leaveWrap.querySelector('.section-label');
   if (leaveLabel) {
     leaveLabel.textContent = selStatus === 'gaishutsu' ? '外出/出張の期間（任意）' : selStatus === 'zaitaku' ? '在宅の期間（任意）' : '長期休暇の期間（任意）';
-  }
-  const leaveNote = leaveWrap.querySelector('div[style*="font-size:11px"]');
-  if (leaveNote) {
-    leaveNote.textContent = '期間を設定すると毎朝の自動リセットがスキップされます';
   }
 }
 
@@ -438,47 +711,37 @@ function goStep(n) {
 
 async function submit() {
   if (!selStaff || !selStatus) return;
-  const now = new Date();
-  const updatedStr = now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + '更新';
-  const memo = document.getElementById('memoInput') ? document.getElementById('memoInput').value.trim() : '';
-  const leaveStart = document.getElementById('leaveStart') ? document.getElementById('leaveStart').value : '';
-  const leaveEnd   = document.getElementById('leaveEnd')   ? document.getElementById('leaveEnd').value   : '';
-  document.getElementById('savingOverlay').classList.add('show');
-  try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({id:selStaff.id, name:selStaff.name, dept:selStaff.dept, status:selStatus, updated:updatedStr, memo, leaveStart, leaveEnd})
-    });
-    const json = await res.json();
-    if (!json.ok) throw new Error();
-    // 昼食注文への自動連携
-    await syncLunchNG(selStaff, selStatus, leaveStart, leaveEnd);
-    const s = STATUS_MAP[selStatus];
-    document.getElementById('step1').classList.add('hidden');
-    document.getElementById('step2').classList.add('hidden');
-    document.getElementById('step3').classList.add('hidden');
-    document.getElementById('stepIndicator').classList.add('hidden');
-    const lunchSynced = LUNCH_NG_STATUSES.includes(selStatus);
-    const lunchMsg = lunchSynced
-      ? `\n🍱 昼食注文も自動で「×食べない」に登録しました`
-      : '';
-    document.getElementById('resultSub').textContent = `${selStaff.name}さん（${selStaff.dept}）の居場所を登録しました${lunchMsg}`;
-    document.getElementById('resultBadge').style.cssText = `background:${s.bg};color:${s.fg};`;
-    document.getElementById('resultBadge').innerHTML = `<span class="result-dot" style="background:${s.dot}"></span>${s.label}`;
-    document.getElementById('resultScreen').style.display = 'block';
-    window.scrollTo(0,0);
-  } catch(e) {
-    alert('登録に失敗しました。もう一度お試しください。');
-  } finally {
-    document.getElementById('savingOverlay').classList.remove('show');
+  if (selStatus !== 'yasumi') {
+    const att = getAttendance(selStaff.id);
+    if (!att || !att.clockIn) {
+      setAttendance(selStaff.id, { clockIn: nowTimeStr(), clockOut: '' });
+    }
   }
+  saveLastUser(selStaff);
+  await submitToGAS();
 }
 
 function reset() {
   selDept=null; selStaff=null; selStatus=null;
   document.getElementById('resultScreen').style.display='none';
   document.getElementById('stepIndicator').classList.remove('hidden');
-  renderDepts(); goStep(1);
+  // 記憶ユーザーがあればサイドバーは維持、ステップ3に戻す
+  const last = getLastUser();
+  if (last && last.id) {
+    const found = STAFF_MASTER.find(s => String(s.id) === String(last.id));
+    if (found) {
+      selStaff = found;
+      selDept = found.dept;
+      if (found.dept === '会長' || found.dept === '社長') selDept = '会長/社長';
+      updateSidebar();
+      renderDepts();
+      goStep(3);
+      return;
+    }
+  }
+  updateSidebar();
+  renderDepts();
+  goStep(1);
 }
 
 init();
