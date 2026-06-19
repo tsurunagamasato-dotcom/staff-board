@@ -148,6 +148,19 @@
     transition:filter .1s;
   }
   .event-pill:hover{filter:brightness(1.15);}
+  /* 完了済みイベント */
+  .event-pill.completed{
+    filter:grayscale(1) opacity(.5);
+    text-decoration:line-through;
+  }
+  .event-pill.completed:hover{filter:grayscale(1) opacity(.7);}
+  .btn-complete{
+    background:var(--surface2);border:1px solid var(--border);
+    color:var(--text-dim);padding:6px 14px;border-radius:6px;
+    font-size:13px;cursor:pointer;transition:all .15s;
+  }
+  .btn-complete:hover{background:#3ecf8e22;border-color:#3ecf8e;color:#3ecf8e;}
+  .btn-complete.is-done{background:#3ecf8e22;border-color:#3ecf8e;color:#3ecf8e;font-weight:700;}
   .event-type-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
   .event-text{display:flex;flex-direction:column;flex:1;overflow:hidden;}
   .event-proj{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px;}
@@ -369,6 +382,7 @@
     <div class="modal-actions">
       <button class="del-btn" id="ev-delete" style="display:none;padding:8px 14px;" onclick="deleteEvent()">削除</button>
       <button class="btn" onclick="closeEventModal()">キャンセル</button>
+      <button class="btn-complete" id="ev-complete" onclick="toggleComplete()" style="display:none;">✓ 完了にする</button>
       <button class="btn btn-primary" onclick="saveEvent()">保存</button>
     </div>
   </div>
@@ -659,7 +673,7 @@ function buildEventPill(ev){
   wrap.className='tooltip-wrap';
 
   const el=document.createElement('div');
-  el.className='event-pill';
+  el.className='event-pill'+(ev.completed?' completed':'');
   el.style.borderLeftColor=color;
   el.style.background=color+'22';
   el.style.color=color;
@@ -1028,6 +1042,16 @@ function openEventModal(date, eventId){
     document.getElementById('ev-proj').value=ev.projId;
     document.getElementById('ev-type').value=ev.typeId;
     document.getElementById('ev-delete').style.display='';
+    // 完了ボタン表示・状態反映
+    const completeBtn = document.getElementById('ev-complete');
+    completeBtn.style.display = '';
+    if(ev.completed){
+      completeBtn.textContent = '✓ 完了済み（元に戻す）';
+      completeBtn.classList.add('is-done');
+    } else {
+      completeBtn.textContent = '✓ 完了にする';
+      completeBtn.classList.remove('is-done');
+    }
     if(ev.dateType==='period'){
       switchModalTab('period');
       const[y,m]=ev.period.split('-');
@@ -1042,6 +1066,7 @@ function openEventModal(date, eventId){
     document.getElementById('ev-date').value=date||'';
     document.getElementById('ev-note').value='';
     document.getElementById('ev-delete').style.display='none';
+    document.getElementById('ev-complete').style.display='none';
     switchModalTab('date');
   }
   document.getElementById('event-modal').classList.add('show');
@@ -1060,16 +1085,18 @@ async function saveEvent(){
     const y=document.getElementById('ev-period-year').value;
     const m=document.getElementById('ev-period-month').value;
     const periodType=document.getElementById('ev-period').value;
-    evData={dateType:'period', period:`${y}-${String(m).padStart(2,'0')}`, periodType, date:'', projId, typeId, note};
+    evData={dateType:'period', period:`${y}-${String(m).padStart(2,'0')}`, periodType, date:'', projId, typeId, note, completed:false};
   } else {
     const date=document.getElementById('ev-date').value;
     if(!date){alert('日付を選択してください');return;}
-    evData={dateType:'date', date, period:'', periodType:'', projId, typeId, note};
+    evData={dateType:'date', date, period:'', periodType:'', projId, typeId, note, completed:false};
   }
 
   if(editingEventId){
     const ev=state.events.find(e=>e.id===editingEventId);
+    const prevCompleted = ev.completed || false;
     Object.assign(ev, evData);
+    ev.completed = prevCompleted; // 完了状態は保存時に変えない
     saveState();closeEventModal();renderCalendar();
     await sendAction('updateEvent', ev);
   } else {
@@ -1078,6 +1105,23 @@ async function saveEvent(){
     saveState();closeEventModal();renderCalendar();
     await sendAction('addEvent', ev);
   }
+}
+
+async function toggleComplete(){
+  if(!editingEventId) return;
+  const ev = state.events.find(e=>e.id===editingEventId);
+  if(!ev) return;
+  ev.completed = !ev.completed;
+  const btn = document.getElementById('ev-complete');
+  if(ev.completed){
+    btn.textContent = '✓ 完了済み（元に戻す）';
+    btn.classList.add('is-done');
+  } else {
+    btn.textContent = '✓ 完了にする';
+    btn.classList.remove('is-done');
+  }
+  saveState(); renderCalendar();
+  await sendAction('updateEvent', ev);
 }
 
 async function deleteEvent(){
@@ -1196,12 +1240,16 @@ async function addType(){
 }
 async function deleteType(id){
   const used=state.events.filter(e=>e.typeId===id).length;
-  const msg=used?`この種類は${used}件の予定で使われています。種類と関連する予定をすべて削除しますか？`:'この種類を削除しますか？';
+  const msg=used
+    ? `この種類は${used}件の予定で使用中です。\n種類のみ削除し、予定はそのまま残しますか？`
+    : 'この種類を削除しますか？';
   if(!confirm(msg))return;
   state.types=state.types.filter(t=>t.id!==id);
-  state.events=state.events.filter(e=>e.typeId!==id);
+  // ★ イベントは削除しない。typeIdが一致するものをリセットするのみ
+  // （カレンダー上は「(種類なし)」として残る）
   state.selectedTypes=(state.selectedTypes||[]).filter(fid=>fid!==id);
   saveState();renderMaster();renderCalendar();
+  // GASにも種類削除のみ送信（イベントは消さない）
   await sendAction('deleteType', {id});
 }
 
@@ -1273,14 +1321,15 @@ async function autoLoadFromGAS(){
         for(const t of state.types){ await sendAction('addType', t); }
       }
       if(Array.isArray(d.events)) state.events=d.events.map(e=>({
-        id:       String(e.id),
-        dateType: e.dateType ? String(e.dateType) : 'date',
-        date:     normalizeDate(e.date),
-        period:   e.period   ? String(e.period)   : '',
-        periodType: e.periodType ? String(e.periodType) : '',
-        projId:   String(e.projId),
-        typeId:   String(e.typeId),
-        note:     e.note==null?'':String(e.note)
+        id:        String(e.id),
+        dateType:  e.dateType ? String(e.dateType) : 'date',
+        date:      normalizeDate(e.date),
+        period:    e.period   ? String(e.period)   : '',
+        periodType:e.periodType ? String(e.periodType) : '',
+        projId:    String(e.projId),
+        typeId:    String(e.typeId),
+        note:      e.note==null?'':String(e.note),
+        completed: e.completed===true || e.completed==='TRUE' || e.completed===1
       }));
       saveState();
       renderCalendar();renderMaster();
