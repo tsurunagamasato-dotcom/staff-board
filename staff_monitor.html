@@ -982,6 +982,7 @@ const STATUSES_REG = [
 
 let regStaff = null;
 let regStatus = null;
+let wasPausedBeforeModal = false;
 
 function openRegModal(id) {
   regStaff = STAFF_MASTER.find(m => m.id === id);
@@ -1015,6 +1016,8 @@ function openRegModal(id) {
   document.getElementById('regEnd').value = '';
   const memoBox = document.getElementById('regMemoBox');
   if (memoBox) { memoBox.style.display = 'none'; document.getElementById('regMemoInput').value = ''; }
+  // モーダル前の一時停止状態を記憶 → 閉じる時に復元
+  wasPausedBeforeModal = isPaused;
   if (!isPaused) togglePause();
 }
 
@@ -1039,7 +1042,8 @@ function selectRegStatus(key) {
 function closeRegModal() {
   document.getElementById('regOverlay').classList.add('hidden');
   regStaff = null; regStatus = null;
-  if (isPaused) togglePause();
+  // モーダル前の状態に復元（元々一時停止中なら一時停止のまま）
+  if (!wasPausedBeforeModal && isPaused) togglePause();
 }
 
 async function doRegister() {
