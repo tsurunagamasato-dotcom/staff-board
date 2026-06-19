@@ -1549,7 +1549,7 @@ function closeDeptHoursModal(){
   document.getElementById('dept-hours-modal').classList.remove('open');
   deptHoursTargetId=null;
 }
-function saveDeptHours(){
+async function saveDeptHours(){
   const proj=getProject(deptHoursTargetId);
   if(!proj)return;
   if(!proj.deptHours) proj.deptHours={};
@@ -1557,7 +1557,11 @@ function saveDeptHours(){
     const val=parseFloat(document.getElementById('dept-h-'+d).value)||0;
     proj.deptHours[d]=val;
   });
+  // totalPlanH を deptHours の合計から自動計算
+  proj.totalPlanH = Object.values(proj.deptHours).reduce((sum,v)=>sum+(Number(v)||0), 0);
   saveState();closeDeptHoursModal();renderProjTable();
+  // GASにも保存
+  await sendAction('updateProject', proj);
 }
 
 // カレンダーのスロットから部門工数を開く（スロットクリック→実績モーダル内リンク）
@@ -1566,11 +1570,16 @@ function openDeptHoursFromSlot(projId){
   openDeptHoursModal(projId);
 }
 
-function deleteProject(id){
+async function deleteProject(id){
   if(!confirm('案件を削除しますか？（配置済みのスロットも全て削除されます）'))return;
+  // 関連スロットをGASからも削除
+  const relatedSlots = state.slots.filter(s=>s.projId===id);
   state.projects=state.projects.filter(p=>p.id!==id);
   state.slots=state.slots.filter(s=>s.projId!==id);
-  saveState();renderMaster();
+  saveState();renderMaster();renderCalendar();
+  // GASに削除を送信
+  await sendAction('deleteProject', {id});
+  for(const s of relatedSlots){ await sendAction('deleteSlot', {id:s.id}); }
 }
 
 // =====================================================
