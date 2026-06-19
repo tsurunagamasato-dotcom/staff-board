@@ -487,7 +487,7 @@
         <button class="btn btn-primary btn-sm" onclick="addProject()">追加</button>
       </div>
       <table class="data-table" id="proj-table">
-        <thead><tr><th>案件名</th><th>予定H</th><th>消費H</th><th>残りH</th><th></th></tr></thead>
+        <thead><tr><th>案件名</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -1468,9 +1468,6 @@ function renderProjTable(){
     const tr=document.createElement('tr');
     tr.style.opacity=isEnded?'.6':'1';
     tr.innerHTML=`<td>${p.name}${isEnded?'<span class="proj-ended-badge">終了</span>':''}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;">${planStr}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;">${usedStr}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center;color:${remainColor};font-weight:600;">${remainStr}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-sm" style="font-size:10px;margin-right:4px;" onclick="openDeptHoursModal('${p.id}')">工数設定</button>
         <button class="btn btn-sm" style="font-size:10px;margin-right:4px;color:${isEnded?'#3ecf8e':'#f7b731'};border-color:${isEnded?'rgba(62,207,142,.4)':'rgba(247,183,49,.4)'};" onclick="toggleProjectEnded('${p.id}')">${isEnded?'再開':'終了'}</button>
