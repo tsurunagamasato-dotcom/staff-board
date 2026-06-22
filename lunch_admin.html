@@ -415,7 +415,7 @@ async function init() {
       && Array.isArray(empResult.value.employees) && empResult.value.employees.length) {
     ALL_STAFF = empResult.value.employees.map(e => ({
       id: String(e.empNo || e.id), empNo: String(e.empNo || ''), name: String(e.name), dept: String(e.dept),
-      category: e.category || '社員', location: e.place || '', active: e.active || '在籍', base: e.defaultPlace || 'honsha_office'
+      category: e.category || '社員', location: e.place || '', active: e.active || '在籍', base: e.defaultPlace || 'honsha_office', showLunch: String(e.showLunch ?? '1')
     }));
     localStorage.setItem(EMP_LS_KEY, JSON.stringify(empResult.value.employees));
     refreshActiveStaff();
@@ -845,7 +845,7 @@ function escStaff(str){return String(str==null?'':str).replace(/[&<>"]/g,c=>({'&
 
 function refreshActiveStaff() {
   if (!ALL_STAFF.length) return;
-  STAFF_MASTER = ALL_STAFF.filter(s => s.active !== '退職' && s.category !== '対象外')
+  STAFF_MASTER = ALL_STAFF.filter(s => s.active !== '退職' && s.showLunch !== '0')
     .map(s => ({ id: s.id, name: s.name, dept: s.dept, location: s.location || '', base: s.base || '' }));
   renderNGTable();
 }
@@ -867,7 +867,7 @@ async function loadStaffAdmin() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.length > 0) {
-          ALL_STAFF = parsed.map(e => ({ id:String(e.empNo||e.id), empNo:String(e.empNo||''), name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍', base:e.defaultPlace||'honsha_office' }));
+          ALL_STAFF = parsed.map(e => ({ id:String(e.empNo||e.id), empNo:String(e.empNo||''), name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍', base:e.defaultPlace||'honsha_office', showLunch:String(e.showLunch??'1') }));
           refreshActiveStaff();
           renderStaffMaster();
         }
@@ -876,7 +876,7 @@ async function loadStaffAdmin() {
       const res = await fetch(EMP_GAS_URL+'?action=getEmployees&t='+Date.now());
       const json = await res.json();
       if (json.ok && Array.isArray(json.employees)) {
-        ALL_STAFF = json.employees.map(e => ({ id:String(e.empNo||e.id), empNo:String(e.empNo||''), name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍', base:e.defaultPlace||'honsha_office' }));
+        ALL_STAFF = json.employees.map(e => ({ id:String(e.empNo||e.id), empNo:String(e.empNo||''), name:String(e.name), dept:String(e.dept), category:e.category||'社員', location:e.place||'', active:e.active||'在籍', base:e.defaultPlace||'honsha_office', showLunch:String(e.showLunch??'1') }));
         localStorage.setItem(EMP_LS_KEY, JSON.stringify(json.employees));
         refreshActiveStaff();
       }
