@@ -845,7 +845,7 @@ function escStaff(str){return String(str==null?'':str).replace(/[&<>"]/g,c=>({'&
 
 function refreshActiveStaff() {
   if (!ALL_STAFF.length) return;
-  STAFF_MASTER = ALL_STAFF.filter(s => s.active !== '退職')
+  STAFF_MASTER = ALL_STAFF.filter(s => s.active !== '退職' && s.category !== '対象外')
     .map(s => ({ id: s.id, name: s.name, dept: s.dept, location: s.location || '', base: s.base || '' }));
   renderNGTable();
 }
