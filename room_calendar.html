@@ -333,12 +333,12 @@ function renderCalendar() {
     rsvs.slice(0,3).forEach(r=>{
       const item = document.createElement('div');
       item.className=`rsv-item time-${getTimeOfDay(r.start)}`;
-      // 全会議室表示時は会議室名、会議室選択時は目的を表示
+      const isOutlook = r.id.startsWith('OL-');
       const label = selectedRoom
         ? `${r.start} ${r.purpose||r.name}`
         : `${r.start} ${ROOMS.find(x=>x.name===r.room)?.short||r.room}`;
-      item.textContent = label;
-      item.title = `${r.room} ${r.start}〜${r.end} ${r.name}「${r.purpose}」`;
+      item.textContent = (isOutlook ? '📧 ' : '') + label;
+      item.title = (isOutlook ? '[Outlook経由の予約] ' : '') + `${r.room} ${r.start}〜${r.end} ${r.name}「${r.purpose}」`;
       item.onclick=(e)=>{e.stopPropagation();showDetail(r.id);};
       cell.appendChild(item);
     });
@@ -397,9 +397,9 @@ function renderTimeline() {
         rsvList.forEach(r=>{
           const block=document.createElement('div');
           block.className=`tl-rsv-block time-${getTimeOfDay(r.start)}`;
-          // 全会議室：目的を表示、会議室選択：目的を表示
-          block.textContent = r.purpose || r.name;
-          block.title=`${r.room} ${r.start}〜${r.end} ${r.dept} ${r.name}「${r.purpose}」`;
+          const isOutlook = r.id.startsWith('OL-');
+          block.textContent = (isOutlook ? '📧 ' : '') + (r.purpose || r.name);
+          block.title = (isOutlook ? '[Outlook経由の予約] ' : '') + `${r.room} ${r.start}〜${r.end} ${r.dept} ${r.name}「${r.purpose}」`;
           block.onclick=()=>showDetail(r.id);
           inner.appendChild(block);
         });
@@ -528,7 +528,9 @@ async function submitReservation() {
 function showDetail(id) {
   detailRsv=reservations.find(r=>r.id===id);
   if(!detailRsv)return;
+  const isOutlook = detailRsv.id.startsWith('OL-');
   document.getElementById('detailContent').innerHTML=`
+    ${isOutlook ? '<div style="font-size:11px;color:#9090b0;background:rgba(255,255,255,.05);border-radius:8px;padding:7px 10px;margin-bottom:10px">📧 Outlook経由の予約です。取消はOutlookから行ってください。</div>' : ''}
     <div class="detail-item"><span class="detail-label">会議室</span><span class="detail-value">${detailRsv.room}</span></div>
     <div class="detail-item"><span class="detail-label">日付</span><span class="detail-value">${detailRsv.date}</span></div>
     <div class="detail-item"><span class="detail-label">時間</span><span class="detail-value">${detailRsv.start}〜${detailRsv.end}</span></div>
@@ -536,7 +538,9 @@ function showDetail(id) {
     <div class="detail-item"><span class="detail-label">氏名</span><span class="detail-value">${detailRsv.name}</span></div>
     <div class="detail-item"><span class="detail-label">目的</span><span class="detail-value">${detailRsv.purpose}</span></div>
   `;
-  document.getElementById('detailDeleteBtn').onclick=()=>cancelRsv(detailRsv.id,detailRsv.name);
+  const deleteBtn = document.getElementById('detailDeleteBtn');
+  deleteBtn.style.display = isOutlook ? 'none' : '';
+  deleteBtn.onclick=()=>cancelRsv(detailRsv.id,detailRsv.name);
   document.getElementById('detailOverlay').classList.remove('hidden');
 }
 function closeDetail(){ document.getElementById('detailOverlay').classList.add('hidden'); }
