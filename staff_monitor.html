@@ -640,7 +640,7 @@ function filterWithChairman(def, m) {
   return state[m.id] && def.filter(m);
 }
 
-function buildSlideHtml(def, idx, members) {
+function buildSlideHtml(def, idx, members, showBadge=false) {
   return `
     <div class="slide-header">
       <div class="slide-location">
@@ -663,7 +663,7 @@ function buildSlideHtml(def, idx, members) {
     </div>
     <div class="slide-body">
       ${members.length > 0
-        ? `<div class="staff-grid">${members.map(m => buildCardHtml(m, false)).join('')}</div>`
+        ? `<div class="staff-grid">${members.map(m => buildCardHtml(m, showBadge)).join('')}</div>`
         : `<div class="empty-msg">現在この場所にいる社員はいません</div>`}
     </div>`;
 }
@@ -773,7 +773,7 @@ function showSlide(idx, animate=true) {
     if (slideDataCache[i] && !slideDataCache[i].rendered) {
       const slide = document.getElementById('slide-' + i);
       if (slide) {
-        slide.innerHTML = buildSlideHtml(slideDataCache[i].def, i, slideDataCache[i].members);
+        slide.innerHTML = buildSlideHtml(slideDataCache[i].def, i, slideDataCache[i].members, viewMode === 'dept');
         slideDataCache[i].rendered = true;
         updateClock();
       }
