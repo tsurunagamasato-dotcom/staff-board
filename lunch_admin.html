@@ -320,6 +320,7 @@
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbx35ctoRO2obqw5Snq6CS-A5FPA9eS9aou2J_-jX9u1_7mlwywSmnF-Pbpp4gmhvz8A7w/exec';
+const STAFF_GAS_URL = 'https://script.google.com/macros/s/AKfycbwo73GwwjA1kVVOkq-XKIovxhTjaZSnM_GgMVpOUC_D-39NnvzjQENqABWL-7Tybk0RyQ/exec';
 
 const DEPT_ORDER = ['社長','役員','総務部','営業部','購買課','第一製造部','設計課','電気課','加工課','組付課'];
 const HONSHA_DEPTS = ['社長','役員','総務部','営業部','設計課','電気課'];
@@ -388,6 +389,7 @@ function getDefaultPlace(staff) {
 let permanentNG = {};
 let ordersData = [];
 let visitorData = [];
+let locationStatusMap = {}; // empNo → status（所在地）
 let toastTimer;
 
 function showToast(msg) {
@@ -430,8 +432,8 @@ async function init() {
     renderNGTable();
   }
 
-  // STAFF_MASTER確定後にloadOrders・loadMenuAdminを実行
-  await Promise.allSettled([loadOrders(), loadMenuAdmin()]);
+  // STAFF_MASTER確定後にloadOrders・loadMenuAdmin・所在地データを並行取得
+  await Promise.allSettled([loadOrders(), loadMenuAdmin(), loadLocationStatus()]);
 }
 
 function normalizeDeadline(val) {
@@ -488,6 +490,18 @@ function normalizeId(id) {
   return String(id).replace(/^E-/i, '');
 }
 
+// 所在地データ取得（在宅・休みの人を食べない扱いにするため）
+async function loadLocationStatus() {
+  try {
+    const res = await fetch(STAFF_GAS_URL + '?t=' + Date.now());
+    const json = await res.json();
+    if (json.ok && Array.isArray(json.data)) {
+      locationStatusMap = {};
+      json.data.forEach(row => { if (row.id) locationStatusMap[String(row.id)] = row.status || ''; });
+    }
+  } catch(e) { /* 所在地取得失敗時は無視してlocationStatusMapは空のまま */ }
+}
+
 function getEffectiveOrder(staff) {
   const staffId = normalizeId(staff.id);
   const staffName = String(staff.name).trim();
@@ -503,6 +517,9 @@ function getEffectiveOrder(staff) {
     return {order:found.order, place:found.place||getDefaultPlace(staff)};
   }
   if (permanentNG[staff.id] === true || permanentNG[staff.id] === 'true' || permanentNG[staffId] === true || permanentNG[staffId] === 'true') return {order:'nashi', place:getDefaultPlace(staff)};
+  // 所在地が「在宅」または「休み」の場合は食べないとして扱う
+  const locStatus = locationStatusMap[staffId] || '';
+  if (locStatus === '在宅' || locStatus === '休み') return {order:'nashi', place:getDefaultPlace(staff)};
   return {order:null, place:getDefaultPlace(staff)};
 }
 
