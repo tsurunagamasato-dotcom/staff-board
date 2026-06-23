@@ -263,6 +263,7 @@
         <option value="week">今週</option>
         <option value="nextweek">来週</option>
         <option value="month">今月（26日〜翌25日）</option>
+        <option value="nextmonth">来月（26日〜翌25日）</option>
       </select>
     </div>
     <div class="section-label">一括設定</div>
@@ -753,18 +754,26 @@ function getBulkDates() {
     const diff = day===0?-6:1-day;
     monday.setDate(today.getDate()+diff+offset);
     for (let i=0;i<5;i++) { const d=new Date(monday); d.setDate(monday.getDate()+i); if(!isWeekend(d)) dates.push(d); }
-  } else {
-    // 締め日：前月26日〜当月25日（管理画面と同じ）
-    const year = today.getFullYear(), month = today.getMonth(); // 0-indexed
+  } else if (period === 'month' || period === 'nextmonth') {
+    const year = today.getFullYear(), month = today.getMonth();
     let startDate, endDate;
-    if (today.getDate() >= 26) {
-      // 26日以降 → 今月26日〜翌月25日
-      startDate = new Date(year, month, 26);
-      endDate   = new Date(year, month + 1, 25);
+    if (period === 'month') {
+      if (today.getDate() >= 26) {
+        startDate = new Date(year, month, 26);
+        endDate   = new Date(year, month + 1, 25);
+      } else {
+        startDate = new Date(year, month - 1, 26);
+        endDate   = new Date(year, month, 25);
+      }
     } else {
-      // 1〜25日 → 前月26日〜今月25日
-      startDate = new Date(year, month - 1, 26);
-      endDate   = new Date(year, month, 25);
+      // 来月：今月サイクルの次のサイクル
+      if (today.getDate() >= 26) {
+        startDate = new Date(year, month + 1, 26);
+        endDate   = new Date(year, month + 2, 25);
+      } else {
+        startDate = new Date(year, month, 26);
+        endDate   = new Date(year, month + 1, 25);
+      }
     }
     const cur = new Date(startDate);
     while (cur <= endDate) {
