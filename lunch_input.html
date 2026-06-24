@@ -692,11 +692,11 @@ async function submitSingle() {
   btn.textContent = '登録中...';
   btn.style.background = '#888';
   try {
-    const res = await fetch(GAS_URL, {
+    const res = await fetchWithTimeout(GAS_URL, {
       method:'POST',
       headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({action:'saveOrder', date:selDate, id:selStaff.id, name:selStaff.name, dept:selStaff.dept, order:selOrder, place:selPlace||getDefaultPlace(selStaff), proxy:isProxy})
-    });
+    }, 35000);
     const json = await res.json();
     if (json.ok) {
       if (!monthOrders[selDate]) monthOrders[selDate] = {};
@@ -829,7 +829,7 @@ async function submitBulk() {
     action:'saveOrder', date, id:bulkSelStaff.id, name:bulkSelStaff.name, dept:bulkSelStaff.dept, order, place, proxy:false
   }));
   try {
-    const res = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveOrders',orders})});
+    const res = await fetchWithTimeout(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveOrders',orders})},35000);
     const json = await res.json();
     if (json.ok) {
       btn.textContent = '✓ 登録しました';
@@ -927,13 +927,13 @@ async function submitVisitor() {
     place:visitorPlace, count:v.count, proxy:false
   }));
   try {
-    const res = await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveOrders',orders})});
+    const res = await fetchWithTimeout(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveOrders',orders})},35000);
     const json = await res.json();
     if (json.ok) {
       showToast(`来訪者${visitorList.length}件を登録しました（${visitorDate}）`);
       visitorList=[]; renderVisitorList();
     }
-  } catch(e) { showToast('登録に失敗しました'); }
+  } catch(e) { showToast('通信エラー。再度お試しください'); }
 }
 
 // ===== HISTORY =====
@@ -1131,6 +1131,14 @@ async function loadTopics() {
       document.getElementById('topicsBanner').style.display = 'none';
     }
   } catch(e) {}
+}
+
+// GAS停止など異常時に画面が固まるのを防ぐ保険。GAS側ロック待ち(30秒)より長い35秒に設定
+function fetchWithTimeout(url, options, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms || 35000);
+  return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+    .finally(() => clearTimeout(timer));
 }
 
 init();
