@@ -101,6 +101,26 @@
   .att-badge.off     { background:#fdecea; color:#b71c1c; }
   .att-badge.none    { background:#f4f4f2; color:#999; }
 
+  /* 🎂 本日が誕生日の社員を目立たせる（出退勤の薄表示よりも優先） */
+  .staff-card.birthday-card {
+    background:linear-gradient(135deg,rgba(255,247,224,0.95),rgba(255,233,186,0.9)) !important;
+    box-shadow:0 0 0 2px #f0b429, 0 3px 14px rgba(240,180,41,0.45) !important;
+    border-color:#f0b429 !important;
+    opacity:1 !important; filter:none !important;
+  }
+  .staff-card.birthday-card::before { display:none !important; }
+  .staff-card.birthday-card .card-name { color:#a85d00; }
+  .bday-cake {
+    position:absolute; top:8px; right:10px; font-size:24px; line-height:1;
+    transform-origin:bottom center; animation:bdayBounce 1.6s ease-in-out infinite;
+  }
+  @keyframes bdayBounce { 0%,100%{transform:translateY(0) rotate(-6deg);} 50%{transform:translateY(-4px) rotate(6deg);} }
+  .bday-badge {
+    display:inline-flex; align-items:center; gap:3px; margin-top:4px;
+    padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700;
+    background:#fff3d6; color:#a85d00; border:1px solid #f0b429;
+  }
+
   .card-name {
     font-size:var(--card-name-size,22px); font-weight:700;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -381,7 +401,8 @@ function _applyEmployees(emps) {
   STAFF_MASTER = emps.filter(e => e.showLocation !== '0').map(e => ({
     id: e.empNo || e.id, name: String(e.name), dept: String(e.dept),
     base: e.defaultPlace || 'honsha_office', slide: e.slide || 'honsha1',
-    empNo: e.empNo || '', category: e.category || '社員', location: e.place || ''
+    empNo: e.empNo || '', category: e.category || '社員', location: e.place || '',
+    birthday: e.birthday || '', showBirthday: e.showBirthday
   }));
   STAFF_MASTER.forEach(s => {
     if (!state[s.id]) state[s.id] = { status: s.base, updated: '', memo: '', leaveStart: '', leaveEnd: '' };
@@ -599,6 +620,26 @@ async function fetchAll(silent=false) {
   } catch(e) { setSyncStatus('error','通信エラー'); }
 }
 
+// 本日が誕生日か判定（birthday形式: YYYY-MM-DD / 1900-MM-DD / M/D / Date文字列 に対応）
+function isBirthdayToday(bday) {
+  if (!bday) return false;
+  const s = String(bday).trim();
+  let mm, dd;
+  let mt = s.match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (mt) { mm = parseInt(mt[1]); dd = parseInt(mt[2]); }
+  else {
+    mt = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (mt) { mm = parseInt(mt[1]); dd = parseInt(mt[2]); }
+    else {
+      const d = new Date(s);
+      if (isNaN(d.getTime())) return false;
+      mm = d.getMonth() + 1; dd = d.getDate();
+    }
+  }
+  const now = new Date();
+  return (now.getMonth() + 1) === mm && now.getDate() === dd;
+}
+
 // ===== カード生成 =====
 function buildCardHtml(m, showBadge) {
   const st = state[m.id];
@@ -606,11 +647,13 @@ function buildCardHtml(m, showBadge) {
   const displayStatus = (rawStatus === 'taikin') ? m.base : rawStatus;
   const isNonDefault = displayStatus !== m.base && rawStatus !== 'taikin';
   const attClass = getAttendanceClass(m);
+  const isBday = (m.showBirthday !== '0') && isBirthdayToday(m.birthday);
 
   let classes = 'staff-card clickable';
   if (isNonDefault) classes += ' non-default';
   if (rawStatus === 'yasumi') classes += ' yasumi-card';
   classes += ' att-' + attClass;
+  if (isBday) classes += ' birthday-card';
 
   const dispSt = {...st, status: displayStatus};
 
@@ -624,8 +667,10 @@ function buildCardHtml(m, showBadge) {
   }
 
   return `<div class="${classes}" data-id="${m.id}" onclick="openRegModal('${m.id}')">
+    ${isBday ? '<span class="bday-cake">🎂</span>' : ''}
     <div class="card-name ${m.name.length > 12 ? 'long' : ''}">${m.name}</div>
     ${showBadge ? badgeHtml : `<div class="card-dept">${m.dept}</div>`}
+    ${isBday ? '<div class="bday-badge">🎂 お誕生日おめでとう！</div>' : ''}
     ${getAttendanceBadgeHtml(m)}
     ${(isNonDefault && rawStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:700;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
     ${(dispSt.leaveStart && isActiveToday(m.id, st.status)) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:700;margin-top:4px;">📅 ${dispSt.leaveStart===dispSt.leaveEnd ? formatDate(dispSt.leaveStart) : formatDate(dispSt.leaveStart)+'〜'+formatDate(dispSt.leaveEnd)}</div>` : ''}
@@ -923,7 +968,8 @@ async function init() {
         STAFF_MASTER = parsed.filter(e => e.showLocation !== '0').map(e => ({
           id: e.empNo || e.id, name: String(e.name), dept: String(e.dept),
           base: e.defaultPlace || 'honsha_office', slide: e.slide || 'honsha1',
-          empNo: e.empNo || '', category: e.category || '社員', location: e.place || ''
+          empNo: e.empNo || '', category: e.category || '社員', location: e.place || '',
+          birthday: e.birthday || '', showBirthday: e.showBirthday
         }));
         initState();
         if (deptParam) rebuildDeptSlides(deptParam);
