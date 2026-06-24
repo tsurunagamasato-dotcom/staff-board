@@ -349,6 +349,7 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
             <div id="selTitle">—</div>
             <div id="selDept">—</div>
           </div>
+          <button class="btn btn-sm btn-g" onclick="openEditItem()" style="flex-shrink:0">✏️ 編集</button>
         </div>
         <!-- タスク選択中バナー -->
         <div id="taskBanner" style="display:none">
@@ -394,6 +395,7 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
             </div>
             <div class="fg"><label class="fl">完了日</label><input class="fi" type="date" id="ieKanryo" style="width:160px"></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+              <button class="btn btn-r btn-sm" onclick="deleteTask(selTaskId)" style="margin-right:auto">🗑 削除</button>
               <button class="btn btn-g btn-sm" onclick="switchToItemMode()">キャンセル</button>
               <button class="btn btn-p" onclick="saveInlineTask()">✓ タスクを保存</button>
             </div>
@@ -428,6 +430,25 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
   </div>
 </div>
 
+<!-- 改善項目編集モーダル -->
+<div class="movl" id="editItemMo" style="display:none" onclick="closeIf(event,'editItemMo')">
+  <div class="modal">
+    <div class="mhdr"><span class="mtitle">改善項目を編集</span><button class="mclose" onclick="closeM('editItemMo')">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="eiItemId">
+      <div class="fg"><label class="fl">部署</label>
+        <select class="fi" id="eiDept"><option>営業</option><option>設計</option><option>加工</option><option>組付</option><option>電気</option><option>購買</option><option>共同</option><option>新規</option></select>
+      </div>
+      <div class="fg"><label class="fl">改善項目名</label><input class="fi" id="eiName"></div>
+      <div class="fg"><label class="fl">ゴール</label><input class="fi" id="eiGoal"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-g" onclick="closeM('editItemMo')">キャンセル</button>
+      <button class="btn btn-p" onclick="saveEditItem()">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- タスク編集モーダル -->
 <div class="movl" id="taskMo" style="display:none" onclick="closeIf(event,'taskMo')">
   <div class="modal">
@@ -453,6 +474,7 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
       <div class="fg"><label class="fl">備考</label><textarea class="fi fta" id="eMemo" rows="2"></textarea></div>
     </div>
     <div class="mfoot">
+      <button class="btn btn-r btn-sm" id="taskDelBtn" onclick="deleteTask(document.getElementById('eId').value)" style="margin-right:auto;display:none">🗑 削除</button>
       <button class="btn btn-g" onclick="closeM('taskMo')">キャンセル</button>
       <button class="btn btn-p" onclick="saveTask()">保存</button>
     </div>
@@ -818,6 +840,7 @@ function openEdit(tid){
   document.getElementById('eKanryo').value=t.kanryo_date||'';
   document.getElementById('eMemo').value=t.memo||'';
   document.querySelectorAll('.sbtn').forEach(b=>b.classList.toggle('on',b.dataset.s===(t.status||'未着手')));
+  document.getElementById('taskDelBtn').style.display='inline-flex';
   document.getElementById('taskMo').style.display='flex';
 }
 function openAdd(iid){
@@ -827,6 +850,7 @@ function openAdd(iid){
   ['eContent','eGoal','eTantou','eYotei','eKanryo','eMemo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eHanan').value=td();
   document.querySelectorAll('.sbtn').forEach(b=>b.classList.toggle('on',b.dataset.s==='未着手'));
+  document.getElementById('taskDelBtn').style.display='none';
   document.getElementById('taskMo').style.display='flex';
 }
 function selS(btn){document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
@@ -875,6 +899,50 @@ function saveNewItem(){
   closeM('addItemMo');
   clickItem(nid);
   toast(`📌「${name}」をアジェンダに追加しました`,'ok');
+}
+
+// ===== タスク削除 =====
+function deleteTask(tid){
+  if(!tid) return;
+  const t=tasks.find(x=>x.task_id===tid);
+  if(!t) return;
+  if(!confirm(`タスク「${t.task_content}」を削除します。\nこの操作は元に戻せません。よろしいですか？`)) return;
+  tasks=tasks.filter(x=>x.task_id!==tid);
+  saveAll();
+  gp('deleteTask',{task_id:tid});
+  closeM('taskMo');
+  if(selTaskId===tid) switchToItemMode();
+  renderLeft(); if(selId) renderExt(selId); renderAgenda(); renderDash();
+  toast('タスクを削除しました','ok');
+}
+
+// ===== 改善項目の編集（部署変更など） =====
+function openEditItem(){
+  if(!selId) return;
+  const it=items.find(i=>i.item_id===selId);
+  if(!it) return;
+  document.getElementById('eiItemId').value=it.item_id;
+  document.getElementById('eiDept').value=it.dept;
+  document.getElementById('eiName').value=it.item_name||'';
+  document.getElementById('eiGoal').value=it.goal||'';
+  document.getElementById('editItemMo').style.display='flex';
+}
+function saveEditItem(){
+  const id=document.getElementById('eiItemId').value;
+  const idx=items.findIndex(i=>i.item_id===id);
+  if(idx<0) return;
+  const dept=document.getElementById('eiDept').value;
+  const name=document.getElementById('eiName').value.trim();
+  const goal=document.getElementById('eiGoal').value.trim();
+  if(!name){ toast('項目名を入力してください','err'); return; }
+  items[idx].dept=dept; items[idx].item_name=name; items[idx].goal=goal;
+  saveAll();
+  gp('updateItem',{item_id:id,dept,item_name:name,goal});
+  document.getElementById('selTitle').textContent=name;
+  document.getElementById('selDept').textContent=`部署：${dept}　ゴール：${goal||'—'}`;
+  closeM('editItemMo');
+  renderLeft(); renderAgenda();
+  toast('改善項目を更新しました','ok');
 }
 
 // ===== ダッシュボード =====
