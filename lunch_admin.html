@@ -226,7 +226,7 @@
   </div>
   <div>
     <div class="header-title">昼食注文 管理画面</div>
-    <div class="header-sub">Nakashima Manufacturing</div>
+    <div class="header-sub">ナカシマ</div>
   </div>
   <div class="header-right">
     <button class="icon-btn primary" onclick="openExportModal()">📥 Excel出力</button>
@@ -240,6 +240,7 @@
     <button class="tab-btn" onclick="switchTab('settings')">設定</button>
     <button class="tab-btn" onclick="switchTab('menu')">メニュー管理</button>
     <button class="tab-btn" onclick="switchTab('topics')">お知らせ</button>
+    <button class="tab-btn" onclick="switchTab('tenbiiki')">天引き表</button>
   </div>
 
   <!-- 注文集計 -->
@@ -288,6 +289,33 @@
         <div style="font-size:11px;font-weight:700;color:#BA7517;margin-bottom:4px;">📢 お知らせ</div>
         <div id="topicPreviewText" style="font-size:14px;color:#3d2000;font-weight:500;line-height:1.6;"></div>
         <div id="topicPreviewExpiry" style="font-size:11px;color:#a09d99;margin-top:4px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 天引き表 -->
+  <div id="tenbiikiTab" class="hidden">
+    <div class="settings-card">
+      <div class="settings-title">💴 月次天引き表出力</div>
+      <div class="settings-row">
+        <div class="settings-label">対象月</div>
+        <input type="month" class="settings-input" id="tenbiikiMonth" onchange="renderMondayPriceTable()">
+      </div>
+      <div id="mondayPriceSection" class="hidden" style="margin-top:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">月曜日の価格設定（まれに¥450になる日を変更）</div>
+        <div id="mondayPriceTable" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+      </div>
+      <button class="icon-btn primary" onclick="exportTenbiikiCSV()" style="margin-top:8px;">📥 天引き表をCSV出力</button>
+      <div id="tenbiikiStatus" style="margin-top:10px;font-size:13px;color:var(--text-sub);"></div>
+    </div>
+    <div class="settings-card" style="margin-top:12px;">
+      <div class="settings-title" style="font-size:13px;">出力列の説明</div>
+      <div style="font-size:12px;color:var(--text-sub);line-height:1.8;">
+        <div>・<b>月曜日数</b>：¥600の月曜日に注文した日数</div>
+        <div>・<b>¥450日数</b>：火〜金 + ¥450変更月曜に注文した日数</div>
+        <div>・<b>合計（補助前）</b>：月曜数×600 + ¥450日数×450</div>
+        <div>・<b>補助額</b>：¥3,500（役員・パートは¥0）</div>
+        <div>・<b>実際天引き額</b>：合計−補助額（最小¥0）</div>
       </div>
     </div>
   </div>
@@ -428,7 +456,10 @@ async function init() {
     const json = settingsResult.value;
     const deadlineRaw = json.settings.deadline || '08:30';
     document.getElementById('deadlineInput').value = normalizeDeadline(deadlineRaw);
-    Object.keys(json.settings).forEach(k => { if(k.startsWith('ng_') && (json.settings[k] === true || json.settings[k] === 'TRUE' || json.settings[k] === 'true')) permanentNG[k.replace('ng_','')] = true; });
+    Object.keys(json.settings).forEach(k => {
+      if (k.startsWith('ng_') && (json.settings[k] === true || json.settings[k] === 'TRUE' || json.settings[k] === 'true')) permanentNG[k.replace('ng_','')] = true;
+      if (k.startsWith('mon_price_')) mondayPrices[k.replace('mon_price_','')] = Number(json.settings[k]) || 600;
+    });
     renderNGTable();
   }
 
@@ -1059,9 +1090,10 @@ async function loadMenuAdmin() {
 }
 
 function switchTab(tab) {
-  ['orders','settings','menu','topics'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu','topics'][i]===tab));
+  ['orders','settings','menu','topics','tenbiiki'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab));
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',['orders','settings','menu','topics','tenbiiki'][i]===tab));
   if (tab==='topics') loadTopicAdmin();
+  if (tab==='tenbiiki') initTenbiikiTab();
 }
 
 async function loadTopicAdmin() {
@@ -1144,6 +1176,165 @@ async function deleteTopic() {
       document.getElementById('topicPreview').style.display = 'none';
     }
   } catch(e) { showToast('削除に失敗しました'); }
+}
+
+// ===== 天引き表 =====
+let mondayPrices = {}; // 'YYYY-MM-DD' → 600 or 450
+
+function fmtDateLocal(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getTenbiikiPeriod(monthVal) {
+  const [y, mo] = monthVal.split('-').map(Number);
+  return {
+    start: new Date(y, mo-2, 26),
+    end:   new Date(y, mo-1, 25),
+    y, mo
+  };
+}
+
+function getMondaysInPeriod(start, end) {
+  const mondays = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    if (cur.getDay() === 1) mondays.push(new Date(cur));
+    cur.setDate(cur.getDate()+1);
+  }
+  return mondays;
+}
+
+function initTenbiikiTab() {
+  const m = document.getElementById('tenbiikiMonth').value;
+  if (!m) {
+    const today = new Date();
+    document.getElementById('tenbiikiMonth').value =
+      today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+  }
+  renderMondayPriceTable();
+}
+
+function renderMondayPriceTable() {
+  const monthVal = document.getElementById('tenbiikiMonth').value;
+  if (!monthVal) return;
+  const { start, end, y, mo } = getTenbiikiPeriod(monthVal);
+  const mondays = getMondaysInPeriod(start, end);
+  const days = ['日','月','火','水','木','金','土'];
+
+  document.getElementById('mondayPriceSection').classList.remove('hidden');
+  document.getElementById('mondayPriceTable').innerHTML = mondays.map(d => {
+    const ds = fmtDateLocal(d);
+    const price = mondayPrices[ds] || 600;
+    return `<div style="border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface);min-width:140px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">${(d.getMonth()+1)}/${d.getDate()}（${days[d.getDay()]}）</div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="setMondayPrice('${ds}',600)" style="flex:1;padding:5px;border-radius:7px;border:1.5px solid ${price===600?'var(--green)':'var(--border)'};background:${price===600?'var(--green-bg)':'#fff'};color:${price===600?'var(--green-fg)':'var(--text-sub)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">¥600</button>
+        <button onclick="setMondayPrice('${ds}',450)" style="flex:1;padding:5px;border-radius:7px;border:1.5px solid ${price===450?'var(--orange)':'var(--border)'};background:${price===450?'var(--orange-bg)':'#fff'};color:${price===450?'var(--orange-fg)':'var(--text-sub)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">¥450</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function setMondayPrice(dateStr, price) {
+  mondayPrices[dateStr] = price;
+  renderMondayPriceTable();
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST', headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({ action: 'saveSettings', key: 'mon_price_' + dateStr, value: String(price) })
+    });
+  } catch(e) { showToast('価格の保存に失敗しました'); }
+}
+
+async function exportTenbiikiCSV() {
+  const monthVal = document.getElementById('tenbiikiMonth').value;
+  if (!monthVal) { showToast('対象月を選択してください'); return; }
+
+  const { start, end, y, mo } = getTenbiikiPeriod(monthVal);
+  const startStr = fmtDateLocal(start);
+  const endStr   = fmtDateLocal(end);
+
+  const statusEl = document.getElementById('tenbiikiStatus');
+  statusEl.textContent = 'データ取得中...';
+
+  // 期間全注文を1回で取得
+  let allOrders = [];
+  try {
+    const res = await fetch(GAS_URL + `?action=getOrdersByRange&start=${startStr}&end=${endStr}&t=` + Date.now());
+    const json = await res.json();
+    if (json.ok) allOrders = json.orders;
+  } catch(e) { showToast('データ取得に失敗しました'); statusEl.textContent=''; return; }
+
+  // 日付→注文マップ（empId → order）
+  const ordersByDate = {};
+  allOrders.forEach(o => {
+    if (!ordersByDate[o.date]) ordersByDate[o.date] = {};
+    ordersByDate[o.date][String(o.id)] = o;
+  });
+
+  // 期間内の営業日リストと月曜フラグ
+  const SUBSIDY = 3500;
+  const BOM = '﻿';
+  const rows = [];
+
+  // ヘッダー
+  rows.push([`お弁当天引き表`]);
+  rows.push([`${y}年${mo}月度`, '', `${startStr}〜${endStr}`]);
+  rows.push([]);
+  rows.push(['', '社員番号', '氏名', '月曜日数(¥600)', '¥450日数', '合計（補助前）', '補助額', '実際天引き額']);
+
+  const activeStaff = ALL_STAFF.filter(s => s.active !== '退職');
+
+  DEPT_ORDER.forEach(dept => {
+    activeStaff.filter(s => s.dept === dept).forEach(s => {
+      let monAmount = 0, mon600Count = 0, cheap450Count = 0;
+
+      // 期間内の各日を走査
+      const cur = new Date(start);
+      while (cur <= end) {
+        const dow = cur.getDay();
+        if (dow !== 0 && dow !== 6) { // 平日のみ
+          const ds = fmtDateLocal(cur);
+          const rec = ordersByDate[ds] ? ordersByDate[ds][String(s.id)] : null;
+          const ordered = rec && rec.order !== 'nashi' && rec.order;
+          if (ordered) {
+            if (dow === 1) { // 月曜
+              const price = mondayPrices[ds] || 600;
+              monAmount += price;
+              if (price === 600) mon600Count++;
+              else cheap450Count++;
+            } else {
+              monAmount += 450;
+              cheap450Count++;
+            }
+          }
+        }
+        cur.setDate(cur.getDate()+1);
+      }
+
+      const subsidy = Math.min(SUBSIDY, monAmount);
+      const deduction = monAmount - subsidy;
+
+      rows.push(['', s.id, s.name, mon600Count, cheap450Count, monAmount, subsidy, deduction]);
+    });
+  });
+
+  // 合計行
+  const dataRows = rows.slice(4);
+  const sumTotal    = dataRows.reduce((a,r) => a + (r[5]||0), 0);
+  const sumSubsidy  = dataRows.reduce((a,r) => a + (r[6]||0), 0);
+  const sumDeduct   = dataRows.reduce((a,r) => a + (r[7]||0), 0);
+  rows.push(['', '', '合計', '', '', sumTotal, sumSubsidy, sumDeduct]);
+
+  const csv = BOM + rows.map(r => r.map(c => `"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `お弁当天引き表_${y}年${mo}月度.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  statusEl.textContent = '✅ 出力しました';
+  setTimeout(() => { statusEl.textContent = ''; }, 3000);
 }
 
 init();
