@@ -443,6 +443,7 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
       <div class="fg"><label class="fl">ゴール</label><input class="fi" id="eiGoal"></div>
     </div>
     <div class="mfoot">
+      <button class="btn btn-r btn-sm" onclick="deleteCurrentItem()" style="margin-right:auto">🗑 この項目を削除</button>
       <button class="btn btn-g" onclick="closeM('editItemMo')">キャンセル</button>
       <button class="btn btn-p" onclick="saveEditItem()">保存</button>
     </div>
@@ -943,6 +944,25 @@ function saveEditItem(){
   closeM('editItemMo');
   renderLeft(); renderAgenda();
   toast('改善項目を更新しました','ok');
+}
+function deleteCurrentItem(){
+  const id=document.getElementById('eiItemId').value||selId;
+  if(!id) return;
+  const it=items.find(i=>i.item_id===id);
+  if(!it) return;
+  const n=tasks.filter(t=>t.item_id===id).length;
+  if(!confirm(`改善項目「${it.item_name}」を削除します。\n紐づくタスク${n}件も一緒に削除されます。\nこの操作は元に戻せません。よろしいですか？`)) return;
+  items=items.filter(i=>i.item_id!==id);
+  tasks=tasks.filter(t=>t.item_id!==id);
+  agenda.delete(id); localStorage.setItem('ka',JSON.stringify([...agenda]));
+  saveAll();
+  gp('deleteItem',{item_id:id});
+  closeM('editItemMo');
+  selId=null;
+  document.getElementById('noSel').style.display='flex';
+  document.getElementById('rightContent').style.display='none';
+  renderLeft(); renderAgenda(); renderDash();
+  toast('改善項目を削除しました','ok');
 }
 
 // ===== ダッシュボード =====
