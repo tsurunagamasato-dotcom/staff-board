@@ -100,6 +100,8 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
 .iblock.sel{border-color:var(--pl);box-shadow:0 0 0 2px rgba(37,99,168,.15)}
 .iblock.agenda{border-color:var(--accent);background:linear-gradient(135deg,#fffbeb,#fff)}
 .iblock.agenda .inum{background:var(--accent)}
+.iblock.prevmt{border-color:#c084fc;background:linear-gradient(135deg,#f5f3ff,#fff)}
+.prevbadge{font-size:9px;font-weight:700;color:#fff;background:#9333ea;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap}
 .ihdr{display:flex;align-items:center;padding:8px 10px;cursor:pointer;gap:7px;transition:background .15s;user-select:none}
 .ihdr:hover{background:#f0f4ff}
 .iblock.sel .ihdr{background:#eff6ff}
@@ -329,6 +331,7 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
         <input id="fKey" placeholder="キーワード" oninput="renderLeft()">
         <button class="ftbtn" id="btnHide" onclick="toggleHide()">完了を隠す</button>
         <button class="ftbtn" id="btnKeiz" onclick="toggleKeiz()">完了(継続)</button>
+        <button class="ftbtn" id="btnPrev" onclick="togglePrev()">🔆 前回MT</button>
         <button class="btn btn-sm btn-a" onclick="openAddItem()" style="margin-left:auto">＋</button>
       </div>
       <!-- 改善項目リスト -->
@@ -527,6 +530,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fDept').appendChild(o);
   });
   updateFBtns();
+  computePrevMt();
   renderLeft();
   renderAgenda();
   renderDash();
@@ -548,7 +552,7 @@ async function syncData(){
   try {
     const r = await fetch(GAS+'?action=getAll');
     const d = await r.json();
-    if(d.success){ items=d.items; tasks=d.tasks; saveAll(); renderLeft(); renderDash(); setSt('ok'); toast('同期完了','ok'); }
+    if(d.success){ items=d.items; tasks=d.tasks; saveAll(); computePrevMt(); renderLeft(); renderDash(); setSt('ok'); toast('同期完了','ok'); }
     else{ setSt('off'); toast('同期エラー','err'); }
   } catch{ setSt('off'); toast('接続エラー','err'); }
 }
@@ -587,6 +591,24 @@ function updateFBtns(){
     : 'padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;background:#faf5ff;color:var(--s3);border:1px solid var(--s3)';
 }
 
+// ===== 前回MTハイライト =====
+let highlightPrev=true, prevMtDate='', prevItems=new Set();
+function computePrevMt(){
+  const re=/\[(\d{4}-\d{2}-\d{2})\]/g;
+  let mx='';
+  tasks.forEach(t=>{ if(!t.memo) return; let m; re.lastIndex=0; while((m=re.exec(t.memo))){ if(m[1]>mx) mx=m[1]; } });
+  prevMtDate=mx;
+  prevItems=new Set();
+  if(mx) tasks.forEach(t=>{ if(t.memo && t.memo.indexOf('['+mx+']')>=0) prevItems.add(t.item_id); });
+  updatePrevBtn();
+}
+function updatePrevBtn(){
+  const b=document.getElementById('btnPrev'); if(!b) return;
+  b.textContent='🔆 前回MT'+(prevMtDate?' '+prevMtDate:'');
+  b.style.cssText='padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;'+(highlightPrev?'background:#9333ea;color:#fff;border:none':'background:#faf5ff;color:#9333ea;border:1px solid #c084fc');
+}
+function togglePrev(){ highlightPrev=!highlightPrev; updatePrevBtn(); renderLeft(); }
+
 // ===== 左ペイン =====
 function renderLeft(){
   const fd=document.getElementById('fDept').value;
@@ -616,7 +638,7 @@ function renderLeft(){
     const at=tasks.filter(t=>t.item_id===item.item_id);
     const done=at.filter(t=>t.status==='完了'||t.status==='完了(継続)').length;
     const pct=at.length?Math.round(done/at.length*100):0;
-    const isSel=selId===item.item_id, isAg=agenda.has(item.item_id), isExp=isSel;
+    const isSel=selId===item.item_id, isAg=agenda.has(item.item_id), isExp=isSel, isPrev=highlightPrev&&prevItems.has(item.item_id);
     const trows=it.map(t=>{
       const dc=['未着手','実行中','完了','完了(継続)'].indexOf(t.status);
       const cls=['d0','d1','d2','d3','d0'][dc<0?4:dc];
@@ -629,11 +651,12 @@ function renderLeft(){
         ${t.yotei_date?`<span class="tdate ${ov?'ov':''}">${t.yotei_date}<\/span>`:''}
       <\/div>`;
     }).join('');
-    html+=`<div class="iblock ${isSel?'sel':''} ${isAg?'agenda':''} ${isExp?'exp':''}" id="ib-${item.item_id}">
+    html+=`<div class="iblock ${isSel?'sel':''} ${isAg?'agenda':''} ${isExp?'exp':''} ${isPrev?'prevmt':''}" id="ib-${item.item_id}">
       <div class="ihdr" onclick="clickItem('${item.item_id}')">
         <div class="agchk ${isAg?'on':''}" onclick="event.stopPropagation();toggleAg('${item.item_id}')">${isAg?'📌':''}<\/div>
         <div class="inum">${item.item_num}<\/div>
         <span class="dpill">${item.dept}<\/span>
+        ${isPrev?'<span class="prevbadge">前回MT<\/span>':''}
         <div class="itwrap">
           <div class="ititle">${esc(item.item_name)}<\/div>
           ${item.goal?`<div class="igoal">▶ ${esc(item.goal)}<\/div>`:''}
@@ -813,14 +836,18 @@ function clearMt(){
 }
 
 function saveMemo(){
-  const text=document.getElementById('mtText').value;
+  let text=document.getElementById('mtText').value;
   if(mtMode==='task' && selTaskId){
     const idx=tasks.findIndex(t=>t.task_id===selTaskId);
     if(idx<0) return;
+    const d=document.getElementById('mtDate').value;
+    // 会議日タグを自動付与（前回MTハイライトを毎回更新するため）
+    if(text.trim() && d && text.indexOf('['+d+']')<0) text='['+d+'] '+text;
     tasks[idx].memo=text;
+    document.getElementById('mtText').value=text;
     saveAll();
     gp('updateTask',{task_id:selTaskId,memo:text});
-    renderExt(selId);
+    computePrevMt(); renderExt(selId); renderLeft();
     toast('議事録を保存しました','ok');
   }
 }
