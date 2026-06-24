@@ -314,8 +314,8 @@
         <div>・<b>月曜日数</b>：¥600の月曜日に注文した日数</div>
         <div>・<b>¥450日数</b>：火〜金 + ¥450変更月曜に注文した日数</div>
         <div>・<b>合計（補助前）</b>：月曜数×600 + ¥450日数×450</div>
-        <div>・<b>補助額</b>：¥3,500</div>
-        <div>・<b>実際天引き額</b>：合計−補助額（最小¥0）</div>
+        <div>・<b>補助額</b>：¥3,500を上限に補助（合計が¥3,500未満なら全額）</div>
+        <div>・<b>実際天引き額</b>：合計−補助額（合計が¥3,500以下なら¥0）</div>
       </div>
     </div>
   </div>
@@ -614,15 +614,27 @@ function renderLocationSummary() {
 }
 
 function renderVisitorSummary() {
-  if (visitorData.length===0) { document.getElementById('visitorSummary').innerHTML=''; return; }
-  const rows = visitorData.map(v => {
+  // 削除済み（nashi）は表示しない
+  const activeVisitors = visitorData.filter(v => v.order && v.order !== 'nashi');
+  const rows = activeVisitors.map(v => {
     const count = v.count||1;
     const label = v.order==='futsuu'?'普通':'大盛';
     const place = v.place==='nezaki'?'根崎':'本社';
-    return `<div>${v.name}：${label} ${count}名（${place}）</div>`;
+    return `<div class="visitor-edit-row" data-id="${escapeAttr(String(v.id))}" data-name="${escapeAttr(v.name||'来訪者')}" data-order="${v.order}" data-place="${v.place||'honsha'}" data-count="${count}" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06);">
+      <span>${escapeAttr(v.name||'来訪者')}：${label} ${count}名（${place}）</span>
+      <span style="font-size:12px;color:var(--orange-fg);">✏️ 編集</span>
+    </div>`;
   }).join('');
+  const body = activeVisitors.length ? rows
+    : '<div style="color:var(--text-sub);font-size:13px;">来訪者の注文はまだありません</div>';
   document.getElementById('visitorSummary').innerHTML =
-    `<div class="visitor-summary"><div class="visitor-summary-title">👤 来訪者注文</div>${rows}</div>`;
+    `<div class="visitor-summary">
+       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+         <span class="visitor-summary-title" style="margin-bottom:0;">👤 来訪者注文</span>
+         <button class="icon-btn" onclick="openVisitorAdd()" style="padding:5px 12px;background:var(--orange);color:#fff;border-color:var(--orange);">＋ 来訪者を追加</button>
+       </div>
+       ${body}
+     </div>`;
 }
 
 function renderOrderTable() {
@@ -1312,6 +1324,7 @@ async function exportTenbiikiCSV() {
         cur.setDate(cur.getDate()+1);
       }
 
+      // ¥3,500を上限に補助。合計が上限以下なら全額補助→天引き¥0、超過分のみ天引き
       const subsidy = Math.min(SUBSIDY, monAmount);
       const deduction = monAmount - subsidy;
 
@@ -1321,9 +1334,9 @@ async function exportTenbiikiCSV() {
 
   // 合計行
   const dataRows = rows.slice(4);
-  const sumTotal    = dataRows.reduce((a,r) => a + (r[5]||0), 0);
-  const sumSubsidy  = dataRows.reduce((a,r) => a + (r[6]||0), 0);
-  const sumDeduct   = dataRows.reduce((a,r) => a + (r[7]||0), 0);
+  const sumTotal   = dataRows.reduce((a,r) => a + (r[5]||0), 0);
+  const sumSubsidy = dataRows.reduce((a,r) => a + (r[6]||0), 0);
+  const sumDeduct  = dataRows.reduce((a,r) => a + (r[7]||0), 0);
   rows.push(['', '', '合計', '', '', sumTotal, sumSubsidy, sumDeduct]);
 
   const csv = BOM + rows.map(r => r.map(c => `"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -1420,6 +1433,106 @@ document.addEventListener('click', function(e){
   if (e.target === overlay) epopClose();
 });
 // ===== 編集ポップアップ終 =====
+
+// ===== 来訪者 追加/編集ポップアップ =====
+var _vpop = {id:'', name:'', order:'futsuu', place:'honsha', count:1, isNew:true};
+
+function openVisitorAdd() {
+  var date = document.getElementById('targetDate').value;
+  if (!date) { showToast('日付を選択してください'); return; }
+  _vpop = {id:'', name:'', order:'futsuu', place:'honsha', count:1, isNew:true};
+  document.getElementById('visitorPopupTitle').textContent = '来訪者の昼食を追加';
+  document.getElementById('visitorPopupSub').textContent = date + ' に追加します';
+  document.getElementById('vpop-name').value = '';
+  document.getElementById('vpop-count').textContent = '1';
+  document.getElementById('vpop-delete').style.display = 'none';
+  vpopSelectOrder('futsuu'); vpopSelectPlace('honsha');
+  document.getElementById('visitorPopupOverlay').classList.remove('hidden');
+}
+
+function openVisitorEdit(id, name, order, place, count) {
+  var date = document.getElementById('targetDate').value;
+  _vpop = {id:id, name:name, order:order||'futsuu', place:place||'honsha', count:parseInt(count)||1, isNew:false};
+  document.getElementById('visitorPopupTitle').textContent = '来訪者注文を編集';
+  document.getElementById('visitorPopupSub').textContent = date + '　' + (name||'来訪者');
+  document.getElementById('vpop-name').value = name||'';
+  document.getElementById('vpop-count').textContent = String(_vpop.count);
+  document.getElementById('vpop-delete').style.display = '';
+  vpopSelectOrder(_vpop.order); vpopSelectPlace(_vpop.place);
+  document.getElementById('visitorPopupOverlay').classList.remove('hidden');
+}
+
+function vpopClose() { document.getElementById('visitorPopupOverlay').classList.add('hidden'); }
+
+function vpopCount(delta) {
+  _vpop.count = Math.max(1, (_vpop.count||1) + delta);
+  document.getElementById('vpop-count').textContent = String(_vpop.count);
+}
+
+function vpopSelectOrder(o) {
+  _vpop.order = o;
+  ['futsuu','oomori'].forEach(function(x){
+    document.getElementById('vpop-'+x).className = 'order-btn' + (o===x ? ' sel-'+x : '');
+  });
+}
+
+function vpopSelectPlace(p) {
+  _vpop.place = p;
+  document.getElementById('vpop-honsha').className = 'place-btn' + (p==='honsha' ? ' active' : '');
+  document.getElementById('vpop-nezaki').className = 'place-btn' + (p==='nezaki' ? ' active' : '');
+}
+
+async function vpopSave() {
+  var date = document.getElementById('targetDate').value;
+  if (!date) { showToast('日付を選択してください'); return; }
+  var name = document.getElementById('vpop-name').value.trim() || '来訪者';
+  if (!_vpop.order) { showToast('注文を選択してください'); return; }
+  // 新規は一意なIDを発行、編集は既存IDを維持（同IDで上書き）
+  var vid = _vpop.isNew ? ('visitor_' + Date.now()) : _vpop.id;
+  try {
+    var res = await fetch(GAS_URL, {
+      method: 'POST', headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'saveOrder', id:vid, name:name, dept:'来訪者',
+        date:date, order:_vpop.order, place:_vpop.place||'honsha', count:_vpop.count })
+    });
+    var json = await res.json();
+    if (json.ok) {
+      vpopClose();
+      showToast(_vpop.isNew ? '来訪者「'+name+'」を追加しました' : '来訪者注文を更新しました');
+      await loadOrders();
+    } else { showToast('保存に失敗しました'); }
+  } catch(e) { showToast('通信エラーが発生しました'); }
+}
+
+async function vpopDelete() {
+  if (_vpop.isNew || !_vpop.id) { vpopClose(); return; }
+  if (!confirm('この来訪者注文を削除しますか？')) return;
+  var date = document.getElementById('targetDate').value;
+  try {
+    // 削除はnashi(0名)で上書き → 集計・表示から除外される
+    var res = await fetch(GAS_URL, {
+      method: 'POST', headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'saveOrder', id:_vpop.id, name:_vpop.name||'来訪者', dept:'来訪者',
+        date:date, order:'nashi', place:_vpop.place||'honsha', count:0 })
+    });
+    var json = await res.json();
+    if (json.ok) { vpopClose(); showToast('削除しました'); await loadOrders(); }
+    else { showToast('削除に失敗しました'); }
+  } catch(e) { showToast('通信エラーが発生しました'); }
+}
+
+// 来訪者行クリックで編集ポップアップ
+document.addEventListener('click', function(e){
+  var row = e.target.closest ? e.target.closest('.visitor-edit-row') : null;
+  if (row && row.dataset && row.dataset.id) {
+    openVisitorEdit(row.dataset.id, row.dataset.name, row.dataset.order, row.dataset.place, row.dataset.count);
+  }
+});
+// オーバーレイ外側クリックで閉じる
+document.addEventListener('click', function(e){
+  if (e.target === document.getElementById('visitorPopupOverlay')) vpopClose();
+});
+// ===== 来訪者 追加/編集ポップアップ終 =====
 </script>
 
 <!-- 編集ポップアップ -->
@@ -1441,6 +1554,38 @@ document.addEventListener('click', function(e){
     <div class="edit-popup-footer">
       <button class="btn-cancel" onclick="epopClose()">キャンセル</button>
       <button class="btn-save" onclick="epopSave()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 来訪者 追加/編集ポップアップ -->
+<div class="edit-popup-overlay hidden" id="visitorPopupOverlay">
+  <div class="edit-popup">
+    <div class="edit-popup-title" id="visitorPopupTitle">来訪者の昼食を追加</div>
+    <div class="edit-popup-sub" id="visitorPopupSub"></div>
+    <div class="edit-popup-label">来訪者名（会社名など）</div>
+    <input type="text" id="vpop-name" class="settings-input" style="width:100%;margin-bottom:16px;" placeholder="例：〇〇商事 様">
+    <div class="edit-popup-label">数量</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <button type="button" onclick="vpopCount(-1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-size:18px;cursor:pointer;font-family:inherit;">−</button>
+      <span id="vpop-count" style="font-size:18px;font-weight:700;min-width:28px;text-align:center;">1</span>
+      <button type="button" onclick="vpopCount(1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-size:18px;cursor:pointer;font-family:inherit;">＋</button>
+      <span style="font-size:13px;color:var(--text-sub);">名</span>
+    </div>
+    <div class="edit-popup-label">注文</div>
+    <div class="order-btns">
+      <button class="order-btn" id="vpop-futsuu" onclick="vpopSelectOrder('futsuu')">○ 普通</button>
+      <button class="order-btn" id="vpop-oomori" onclick="vpopSelectOrder('oomori')">○ 大盛</button>
+    </div>
+    <div class="edit-popup-label">食べる場所</div>
+    <div class="place-btns">
+      <button class="place-btn" id="vpop-honsha" onclick="vpopSelectPlace('honsha')">🏢 本社</button>
+      <button class="place-btn" id="vpop-nezaki" onclick="vpopSelectPlace('nezaki')">🏭 根崎</button>
+    </div>
+    <div class="edit-popup-footer">
+      <button class="btn-cancel" id="vpop-delete" onclick="vpopDelete()" style="display:none;color:var(--red-fg);border-color:#f5c0bf;">削除</button>
+      <button class="btn-cancel" onclick="vpopClose()">キャンセル</button>
+      <button class="btn-save" onclick="vpopSave()">💾 保存</button>
     </div>
   </div>
 </div>

@@ -304,6 +304,14 @@
     <select class="name-select" id="histNameSelect" onchange="loadHistory()">
       <option value="">-- 氏名を選択 --</option>
     </select>
+    <div class="section-label" style="margin-top:4px;">期間</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <select id="histPeriod" onchange="loadHistory()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;background:var(--surface);outline:none;">
+        <option value="last">先月（26日〜翌25日）</option>
+        <option value="this" selected>今月（26日〜翌25日）</option>
+        <option value="next">来月（26日〜翌25日）</option>
+      </select>
+    </div>
     <div id="historyContent"></div>
   </div>
 
@@ -944,6 +952,17 @@ function onHistDeptChange() {
   document.getElementById('historyContent').innerHTML='';
 }
 
+// 締め期間（26日〜翌25日）を offset サイクル分ずらして返す（0=今月度, -1=先月度, +1=来月度）
+function getHistoryCyclePeriod(offset) {
+  const today = new Date();
+  const y = today.getFullYear(), m = today.getMonth();
+  // 今サイクルの開始月（26日始まり）：26日以降なら当月、25日以前なら前月
+  const startM = (today.getDate() >= 26) ? m : m - 1;
+  const start = new Date(y, startM + offset, 26);
+  const end   = new Date(y, startM + offset + 1, 25);
+  return { start, end };
+}
+
 async function loadHistory() {
   const id = document.getElementById('histNameSelect').value;
   if (!id) return;
@@ -952,27 +971,30 @@ async function loadHistory() {
   const container = document.getElementById('historyContent');
   container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-hint);font-size:13px;">読み込み中...</div>';
   try {
-    const today = new Date();
-    const year = today.getFullYear(), month = today.getMonth();
-    const last = new Date(year,month+1,0).getDate();
-    // 月内の営業日リストを作成
+    const periodVal = document.getElementById('histPeriod').value;
+    const offset = periodVal==='last' ? -1 : periodVal==='next' ? 1 : 0;
+    const { start, end } = getHistoryCyclePeriod(offset);
+    // 期間内（26日〜翌25日）の営業日リストを作成
     const workdays = [];
-    for (let i=1;i<=last;i++) {
-      const d = new Date(year,month,i);
-      if (!isWeekend(d)) workdays.push({date:fmtDate(d), day:d});
+    const cur = new Date(start);
+    while (cur <= end) {
+      if (!isWeekend(cur)) workdays.push({date:fmtDate(cur), day:new Date(cur)});
+      cur.setDate(cur.getDate()+1);
     }
-    // 月全体を1回のリクエストで取得（高速化）
-    const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
-    const res = await fetch(GAS_URL+`?action=getOrdersByMonth&month=${monthStr}&t=${Date.now()}`);
+    // 期間全体を1回のリクエストで取得（締め期間は2か月にまたがるため範囲取得を使用）
+    const startStr = fmtDate(start), endStr = fmtDate(end);
+    const res = await fetch(GAS_URL+`?action=getOrdersByRange&start=${startStr}&end=${endStr}&t=${Date.now()}`);
     const json = await res.json();
-    const allOrders = json.ok ? json.orders : [];
+    const allOrders = json.ok ? (json.orders || []) : [];
     const results = workdays.map(w => {
       const found = allOrders.find(o => o.date === w.date && String(o.id) === String(staff.id));
       return {date:w.date, day:w.day, order:found?found.order:null};
     });
     const days=['日','月','火','水','木','金','土'];
     const orderLabel = o => o==='futsuu'?'<span style="color:var(--green-fg);font-weight:700;">○ 普通</span>':o==='oomori'?'<span style="color:var(--blue-fg);font-weight:700;">○ 大盛</span>':o==='nashi'?'<span style="color:var(--text-hint);">× 食べない</span>':'<span style="color:var(--text-hint);">未回答</span>';
-    container.innerHTML = `<div style="font-size:12px;color:var(--text-sub);margin:8px 0 6px;">${staff.name}さんの今月の注文履歴</div>
+    const eatCount = results.filter(r=>r.order==='futsuu'||r.order==='oomori').length;
+    const rangeLabel = `${start.getMonth()+1}/${start.getDate()}〜${end.getMonth()+1}/${end.getDate()}`;
+    container.innerHTML = `<div style="font-size:12px;color:var(--text-sub);margin:8px 0 6px;">${staff.name}さんの注文履歴（${rangeLabel}）　食べる日数：<strong>${eatCount}日</strong></div>
       <table class="history-table">
         <thead><tr><th>日付</th><th>注文</th></tr></thead>
         <tbody>${results.map(r=>`<tr>
