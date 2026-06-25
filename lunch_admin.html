@@ -1251,11 +1251,14 @@ async function setMondayPrice(dateStr, price) {
   mondayPrices[dateStr] = price;
   renderMondayPriceTable();
   try {
-    await fetch(GAS_URL, {
+    const res = await fetch(GAS_URL, {
       method: 'POST', headers: {'Content-Type':'text/plain'},
       body: JSON.stringify({ action: 'saveSettings', key: 'mon_price_' + dateStr, value: String(price) })
     });
-  } catch(e) { showToast('価格の保存に失敗しました'); }
+    const json = await res.json();
+    if (json.ok) showToast('保存しました（' + dateStr + ' → ¥' + price + '）');
+    else showToast('保存に失敗しました');
+  } catch(e) { showToast('保存に失敗しました'); }
 }
 
 async function exportTenbiikiCSV() {
