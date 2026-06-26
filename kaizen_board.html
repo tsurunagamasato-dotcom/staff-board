@@ -108,6 +108,9 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
 .rvcnt{background:#9333ea;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px}
 .rvarr{margin-left:auto;color:#9333ea;transition:transform .2s;font-size:13px}
 .rvarr.open{transform:rotate(90deg)}
+.rvchips{display:flex;gap:5px;flex-wrap:wrap;padding:2px 0 8px}
+.rvchip{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid #c084fc;background:#fff;color:#7e22ce;cursor:pointer;white-space:nowrap}
+.rvchip.on{background:#9333ea;color:#fff;border-color:#9333ea}
 .rvitem{padding:7px 10px;border-top:1px dashed #e9d5ff;cursor:pointer}
 .rvitem:hover{background:#faf5ff}
 .rvname{font-size:12px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap}
@@ -618,19 +621,27 @@ function updateFBtns(){
 }
 
 // ===== 前回MTハイライト =====
-let highlightPrev=true, prevMtDate='', prevItems=new Set(), reviewOpen=true;
+let highlightPrev=true, prevMtDate='', prevItems=new Set(), reviewOpen=true, mtDates=[];
 function computePrevMt(){
   const re=/\[(\d{4}-\d{2}-\d{2})\]/g;
-  let mx='';
-  tasks.forEach(t=>{ if(!t.memo) return; let m; re.lastIndex=0; while((m=re.exec(t.memo))){ if(m[1]>mx) mx=m[1]; } });
-  prevMtDate=mx;
+  const set=new Set();
+  tasks.forEach(t=>{ if(!t.memo) return; let m; re.lastIndex=0; while((m=re.exec(t.memo))) set.add(m[1]); });
+  mtDates=[...set].sort().reverse();   // 新しい順
+  if(!prevMtDate || mtDates.indexOf(prevMtDate)<0) prevMtDate=mtDates[0]||''; // 既定は最新MT
+  applyReviewDate();
+}
+function applyReviewDate(){
   prevItems=new Set();
-  if(mx) tasks.forEach(t=>{ if(t.memo && t.memo.indexOf('['+mx+']')>=0) prevItems.add(t.item_id); });
+  if(prevMtDate) tasks.forEach(t=>{ if(t.memo && t.memo.indexOf('['+prevMtDate+']')>=0) prevItems.add(t.item_id); });
   updatePrevBtn();
+}
+function setReviewDate(d){
+  prevMtDate=d; applyReviewDate(); renderLeft();
+  if(mtMode==='task' && selTaskId) renderTaskMemo(selTaskId);
 }
 function updatePrevBtn(){
   const b=document.getElementById('btnPrev'); if(!b) return;
-  b.textContent='🔆 前回MT'+(prevMtDate?' '+prevMtDate:'');
+  b.textContent='🔆 振り返り'+(prevMtDate?' '+prevMtDate:'');
   b.style.cssText='padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;'+(highlightPrev?'background:#9333ea;color:#fff;border:none':'background:#faf5ff;color:#9333ea;border:1px solid #c084fc');
 }
 function togglePrev(){ highlightPrev=!highlightPrev; updatePrevBtn(); renderLeft(); }
@@ -706,16 +717,16 @@ function renderLeft(){
     <\/div>`;
   });
   let reviewHtml='';
-  if(highlightPrev && prevMtDate){
+  if(highlightPrev && mtDates.length){
     const pis=items.filter(it=>prevItems.has(it.item_id));
-    if(pis.length){
-      let body='';
-      pis.forEach(it=>{
-        const nts=tasks.filter(t=>t.item_id===it.item_id).map(t=>{const nt=prevNote(t.memo);return nt?`<div class="rvnote">・<b>${esc(t.task_content)}<\/b>：${esc(nt)}<\/div>`:'';}).join('');
-        body+=`<div class="rvitem" onclick="clickItem('${it.item_id}')"><div class="rvname"><span class="rvnum">${it.item_num}<\/span><span class="rvdept">${it.dept}<\/span>${esc(it.item_name)}<\/div>${nts||'<div class="rvempty">（この項目のタスクに前回メモなし）<\/div>'}<\/div>`;
-      });
-      reviewHtml=`<div class="rvpanel"><div class="rvhdr" onclick="toggleReview()"><span>🔆 前回MT ${prevMtDate} の振り返り<\/span><span class="rvcnt">${pis.length}<\/span><span class="rvarr ${reviewOpen?'open':''}">›<\/span><\/div><div class="rvbody" ${reviewOpen?'':'style="display:none"'}>${body}<\/div><\/div>`;
-    }
+    const chips=mtDates.map(d=>`<button class="rvchip ${d===prevMtDate?'on':''}" onclick="event.stopPropagation();setReviewDate('${d}')">${d}<\/button>`).join('');
+    let body='';
+    pis.forEach(it=>{
+      const nts=tasks.filter(t=>t.item_id===it.item_id).map(t=>{const nt=prevNote(t.memo);return nt?`<div class="rvnote">・<b>${esc(t.task_content)}<\/b>：${esc(nt)}<\/div>`:'';}).join('');
+      body+=`<div class="rvitem" onclick="clickItem('${it.item_id}')"><div class="rvname"><span class="rvnum">${it.item_num}<\/span><span class="rvdept">${it.dept}<\/span>${esc(it.item_name)}<\/div>${nts||'<div class="rvempty">（この項目のタスクにこの日のメモなし）<\/div>'}<\/div>`;
+    });
+    if(!pis.length) body='<div class="rvempty" style="padding:8px 10px">この日の議事録はありません<\/div>';
+    reviewHtml=`<div class="rvpanel"><div class="rvhdr" onclick="toggleReview()"><span>🔆 MT議事録の振り返り<\/span><span class="rvcnt">${pis.length}<\/span><span class="rvarr ${reviewOpen?'open':''}">›<\/span><\/div><div class="rvbody" ${reviewOpen?'':'style="display:none"'}><div class="rvchips">${chips}<\/div>${body}<\/div><\/div>`;
   }
   document.getElementById('leftScroll').innerHTML=reviewHtml+(html||'<div style="text-align:center;padding:30px;color:var(--sub);font-size:13px">該当なし<\/div>');
 }
