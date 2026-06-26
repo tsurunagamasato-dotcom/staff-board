@@ -589,9 +589,11 @@ async function gp(action,payload){
   if(!GAS) return {success:true};
   try{
     const params = new URLSearchParams({action, data: JSON.stringify(payload)});
-    return await (await fetch(GAS+'?'+params.toString())).json();
+    const r = await (await fetch(GAS+'?'+params.toString())).json();
+    if(r && r.success===false){ setSt('off'); toast('保存に失敗（未同期）。通信を確認して再度操作してください','err'); }
+    return r;
   }
-  catch{ return {success:false}; }
+  catch{ setSt('off'); toast('通信エラー（未同期）。再度操作してください','err'); return {success:false}; }
 }
 function setSt(s){
   const d=document.getElementById('sdot'), l=document.getElementById('slbl');
@@ -918,22 +920,32 @@ function renderTaskMemo(taskId){
   }).join('');
 }
 
-function saveMemo(){
-  if(mtMode==='task' && selTaskId){
-    const idx=tasks.findIndex(t=>t.task_id===selTaskId);
-    if(idx<0) return;
-    const note=document.getElementById('mtText').value.trim();
-    if(!note){ toast('今回の議事録が空です'); return; }
-    const d=document.getElementById('mtDate').value||td();
-    const entry='['+d+'] '+note;
-    const old=(tasks[idx].memo||'').trim();
-    tasks[idx].memo = old ? old+' / '+entry : entry;
-    saveAll();
-    gp('updateTask',{task_id:selTaskId,memo:tasks[idx].memo});
-    document.getElementById('mtText').value='';
-    computePrevMt(); renderTaskMemo(selTaskId); renderExt(selId); renderLeft();
-    toast('議事録を追記しました','ok');
+async function saveMemo(){
+  if(mtMode!=='task' || !selTaskId) return;
+  const note=document.getElementById('mtText').value.trim();
+  if(!note){ toast('今回の議事録が空です'); return; }
+  const d=document.getElementById('mtDate').value||td();
+  const entry='['+d+'] '+note;
+  // 競合対策：保存直前に最新データを取得してから追記（他者の入力を消さない）
+  if(GAS){
+    try{
+      const all=await (await fetch(GAS+'?action=getAll')).json();
+      if(all && all.success){ items=all.items; tasks=all.tasks; }
+      else { setSt('off'); toast('最新データの取得に失敗。保存を中止しました','err'); return; }
+    }catch{ setSt('off'); toast('通信エラー。保存を中止しました','err'); return; }
   }
+  const idx=tasks.findIndex(t=>t.task_id===selTaskId);
+  if(idx<0){ toast('対象タスクが見つかりません（他の人が削除した可能性）','err'); renderLeft(); return; }
+  const base=(tasks[idx].memo||'').trim();
+  const newMemo=base ? base+' / '+entry : entry;
+  const r=await gp('updateTask',{task_id:selTaskId,memo:newMemo});
+  if(r && r.success===false) return; // gp() が既にエラー通知
+  tasks[idx].memo=newMemo;
+  saveAll();
+  if(GAS) setSt('ok');
+  document.getElementById('mtText').value='';
+  computePrevMt(); renderTaskMemo(selTaskId); renderExt(selId); renderLeft();
+  toast('議事録を追記しました','ok');
 }
 
 
