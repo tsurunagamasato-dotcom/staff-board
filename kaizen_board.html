@@ -102,6 +102,20 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
 .iblock.agenda .inum{background:var(--accent)}
 .iblock.prevmt{border-color:#c084fc;background:linear-gradient(135deg,#f5f3ff,#fff)}
 .prevbadge{font-size:9px;font-weight:700;color:#fff;background:#9333ea;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+/* 前回MT振り返りパネル */
+.rvpanel{background:linear-gradient(135deg,#faf5ff,#fff);border:1.5px solid #c084fc;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.rvhdr{display:flex;align-items:center;gap:7px;padding:8px 10px;cursor:pointer;user-select:none;font-size:12px;font-weight:800;color:#7e22ce}
+.rvcnt{background:#9333ea;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px}
+.rvarr{margin-left:auto;color:#9333ea;transition:transform .2s;font-size:13px}
+.rvarr.open{transform:rotate(90deg)}
+.rvitem{padding:7px 10px;border-top:1px dashed #e9d5ff;cursor:pointer}
+.rvitem:hover{background:#faf5ff}
+.rvname{font-size:12px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap}
+.rvnum{background:#9333ea;color:#fff;font-size:10px;font-weight:700;min-width:20px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
+.rvdept{font-size:9px;color:#7e22ce;background:#f3e8ff;padding:1px 6px;border-radius:20px}
+.rvnote{font-size:11px;color:#555;line-height:1.5;padding:2px 0 2px 10px;white-space:pre-wrap}
+.rvnote b{color:var(--primary);font-weight:600}
+.rvempty{font-size:11px;color:var(--sub);padding:4px 0 2px 10px}
 .ihdr{display:flex;align-items:center;padding:8px 10px;cursor:pointer;gap:7px;transition:background .15s;user-select:none}
 .ihdr:hover{background:#f0f4ff}
 .iblock.sel .ihdr{background:#eff6ff}
@@ -592,7 +606,7 @@ function updateFBtns(){
 }
 
 // ===== 前回MTハイライト =====
-let highlightPrev=true, prevMtDate='', prevItems=new Set();
+let highlightPrev=true, prevMtDate='', prevItems=new Set(), reviewOpen=true;
 function computePrevMt(){
   const re=/\[(\d{4}-\d{2}-\d{2})\]/g;
   let mx='';
@@ -608,6 +622,13 @@ function updatePrevBtn(){
   b.style.cssText='padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;'+(highlightPrev?'background:#9333ea;color:#fff;border:none':'background:#faf5ff;color:#9333ea;border:1px solid #c084fc');
 }
 function togglePrev(){ highlightPrev=!highlightPrev; updatePrevBtn(); renderLeft(); }
+function toggleReview(){ reviewOpen=!reviewOpen; renderLeft(); }
+function prevNote(memo){
+  if(!memo||!prevMtDate) return '';
+  const re=new RegExp('\\['+prevMtDate+'\\]\\s*([\\s\\S]*?)(?=\\s*/\\s*\\[\\d{4}-\\d{2}-\\d{2}\\]|$)');
+  const m=memo.match(re);
+  return m?m[1].trim():'';
+}
 
 // ===== 左ペイン =====
 function renderLeft(){
@@ -672,7 +693,19 @@ function renderLeft(){
       <\/div>
     <\/div>`;
   });
-  document.getElementById('leftScroll').innerHTML=html||'<div style="text-align:center;padding:30px;color:var(--sub);font-size:13px">該当なし<\/div>';
+  let reviewHtml='';
+  if(highlightPrev && prevMtDate){
+    const pis=items.filter(it=>prevItems.has(it.item_id));
+    if(pis.length){
+      let body='';
+      pis.forEach(it=>{
+        const nts=tasks.filter(t=>t.item_id===it.item_id).map(t=>{const nt=prevNote(t.memo);return nt?`<div class="rvnote">・<b>${esc(t.task_content)}<\/b>：${esc(nt)}<\/div>`:'';}).join('');
+        body+=`<div class="rvitem" onclick="clickItem('${it.item_id}')"><div class="rvname"><span class="rvnum">${it.item_num}<\/span><span class="rvdept">${it.dept}<\/span>${esc(it.item_name)}<\/div>${nts||'<div class="rvempty">（この項目のタスクに前回メモなし）<\/div>'}<\/div>`;
+      });
+      reviewHtml=`<div class="rvpanel"><div class="rvhdr" onclick="toggleReview()"><span>🔆 前回MT ${prevMtDate} の振り返り<\/span><span class="rvcnt">${pis.length}<\/span><span class="rvarr ${reviewOpen?'open':''}">›<\/span><\/div><div class="rvbody" ${reviewOpen?'':'style="display:none"'}>${body}<\/div><\/div>`;
+    }
+  }
+  document.getElementById('leftScroll').innerHTML=reviewHtml+(html||'<div style="text-align:center;padding:30px;color:var(--sub);font-size:13px">該当なし<\/div>');
 }
 
 // ===== 改善項目クリック（トグル） =====
