@@ -641,7 +641,7 @@ function setReviewDate(d){
 }
 function updatePrevBtn(){
   const b=document.getElementById('btnPrev'); if(!b) return;
-  b.textContent='🔆 振り返り'+(prevMtDate?' '+prevMtDate:'');
+  b.textContent='🔆 振り返り';
   b.style.cssText='padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;'+(highlightPrev?'background:#9333ea;color:#fff;border:none':'background:#faf5ff;color:#9333ea;border:1px solid #c084fc');
 }
 function togglePrev(){ highlightPrev=!highlightPrev; updatePrevBtn(); renderLeft(); }
