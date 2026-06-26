@@ -116,6 +116,16 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
 .rvnote{font-size:11px;color:#555;line-height:1.5;padding:2px 0 2px 10px;white-space:pre-wrap}
 .rvnote b{color:var(--primary);font-weight:600}
 .rvempty{font-size:11px;color:var(--sub);padding:4px 0 2px 10px}
+/* タスク議事録の履歴表示 */
+#mtHistory{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.mh-title{font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.04em}
+.mh-entry{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 9px}
+.mh-entry.mh-prev{background:#faf5ff;border-color:#c084fc}
+.mh-date{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--sub);padding:1px 7px;border-radius:20px;margin-bottom:3px}
+.mh-entry.mh-prev .mh-date{background:#9333ea}
+.mh-text{font-size:12px;color:var(--text);line-height:1.5;white-space:pre-wrap}
+.mh-empty{font-size:11px;color:var(--sub);padding:2px 0}
+.mh-newlbl{font-size:10px;font-weight:700;color:var(--pl);margin-bottom:3px}
 .ihdr{display:flex;align-items:center;padding:8px 10px;cursor:pointer;gap:7px;transition:background .15s;user-select:none}
 .ihdr:hover{background:#f0f4ff}
 .iblock.sel .ihdr{background:#eff6ff}
@@ -388,6 +398,8 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
               <button class="btn btn-sm btn-g" onclick="clearMt()">クリア</button>
               <button class="btn btn-sm btn-p" onclick="saveMemo()" id="saveMemoBtn">💾 保存</button>
             </div>
+            <div id="mtHistory" style="display:none"></div>
+            <div class="mh-newlbl" id="mtNewLbl" style="display:none">✍️ 今回の議事録（会議日で記録）</div>
             <textarea class="mta" id="mtText" placeholder="議事録・メモをここに入力してください。&#10;&#10;例）&#10;・担当者を亀谷・當眞に変更&#10;・仕様書フォーマットを7/31までに作成&#10;→ 現状：宇野にて調整中"></textarea>
           </div>
           <!-- タスク編集（インライン） -->
@@ -799,6 +811,8 @@ function switchToItemMode(){
   document.getElementById('taskEditCard').style.display='none';
   document.getElementById('mtCardLabel').textContent='📝 改善項目の議事録';
   document.getElementById('mtText').value='';
+  document.getElementById('mtHistory').style.display='none';
+  document.getElementById('mtNewLbl').style.display='none';
   document.getElementById('mtText').className='mta';
   document.getElementById('mtText').placeholder='改善項目全体への議事録・メモを入力してください。';
   if(selId) renderExt(selId);
@@ -816,9 +830,11 @@ function clickTask(taskId){
   const sl=['未着手','実行中','完了','完了(継続)','未定'][dc<0?4:dc];
   document.getElementById('taskBannerSub').textContent=(t.tantou||'担当未設定')+'　'+sl+'　'+(t.yotei_date||'期限未設定');
   document.getElementById('mtCardLabel').textContent='📝 タスクの議事録・メモ';
-  document.getElementById('mtText').value=t.memo||'';
+  document.getElementById('mtText').value='';
   document.getElementById('mtText').className='mta task-mode';
-  document.getElementById('mtText').placeholder='このタスクの議事録・進捗メモを入力してください。';
+  document.getElementById('mtText').placeholder='今回の議事録を入力（💾保存で会議日とともに上の履歴へ追加されます）';
+  document.getElementById('mtNewLbl').style.display='block';
+  renderTaskMemo(taskId);
   // インライン編集フォームにセット
   document.getElementById('ieContent').value=t.task_content||'';
   document.getElementById('ieTantou').value=t.tantou||'';
@@ -868,20 +884,44 @@ function clearMt(){
   document.getElementById('mtText').value='';
 }
 
+// 議事録を会議日ごとのエントリに分解
+function parseMemo(memo){
+  if(!memo) return [];
+  const re=/\[(\d{4}-\d{2}-\d{2})\]\s*([\s\S]*?)(?=\s*\/\s*\[\d{4}-\d{2}-\d{2}\]|$)/g;
+  const out=[]; let m;
+  while((m=re.exec(memo))){ out.push({date:m[1], text:m[2].trim()}); }
+  if(!out.length && memo.trim()) out.push({date:'', text:memo.trim()});
+  return out;
+}
+// これまでの議事録（履歴）を表示
+function renderTaskMemo(taskId){
+  const box=document.getElementById('mtHistory');
+  if(!box) return;
+  const t=tasks.find(x=>x.task_id===taskId);
+  const entries=t?parseMemo(t.memo||''):[];
+  box.style.display='block';
+  if(!entries.length){ box.innerHTML='<div class="mh-empty">これまでの議事録はありません<\/div>'; return; }
+  box.innerHTML='<div class="mh-title">これまでの議事録<\/div>'+entries.map(e=>{
+    const isPrev=e.date&&e.date===prevMtDate;
+    return `<div class="mh-entry ${isPrev?'mh-prev':''}"><span class="mh-date">${e.date||'日付なし'}<\/span><div class="mh-text">${esc(e.text)}<\/div><\/div>`;
+  }).join('');
+}
+
 function saveMemo(){
-  let text=document.getElementById('mtText').value;
   if(mtMode==='task' && selTaskId){
     const idx=tasks.findIndex(t=>t.task_id===selTaskId);
     if(idx<0) return;
-    const d=document.getElementById('mtDate').value;
-    // 会議日タグを自動付与（前回MTハイライトを毎回更新するため）
-    if(text.trim() && d && text.indexOf('['+d+']')<0) text='['+d+'] '+text;
-    tasks[idx].memo=text;
-    document.getElementById('mtText').value=text;
+    const note=document.getElementById('mtText').value.trim();
+    if(!note){ toast('今回の議事録が空です'); return; }
+    const d=document.getElementById('mtDate').value||td();
+    const entry='['+d+'] '+note;
+    const old=(tasks[idx].memo||'').trim();
+    tasks[idx].memo = old ? old+' / '+entry : entry;
     saveAll();
-    gp('updateTask',{task_id:selTaskId,memo:text});
-    computePrevMt(); renderExt(selId); renderLeft();
-    toast('議事録を保存しました','ok');
+    gp('updateTask',{task_id:selTaskId,memo:tasks[idx].memo});
+    document.getElementById('mtText').value='';
+    computePrevMt(); renderTaskMemo(selTaskId); renderExt(selId); renderLeft();
+    toast('議事録を追記しました','ok');
   }
 }
 
