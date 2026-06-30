@@ -117,12 +117,6 @@
 
   #pdf-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
   #pdfwrap{opacity:0;display:none;}
-  @keyframes kenburns{
-    0%  {transform:scale(1.0) translate(0,0);}
-    50% {transform:scale(1.06) translate(-1%,-1%);}
-    100%{transform:scale(1.0) translate(0,0);}
-  }
-  #pdfwrap.kb{animation:kenburns 12s ease-in-out infinite;}
 
   #pdfcanvas{display:block;}
 
@@ -409,7 +403,6 @@ async function showPDF(file){
   wrap.style.transition = 'none';
   wrap.style.opacity = '0';
   wrap.style.display = 'none';
-  wrap.classList.remove('kb');
   empty.style.display = 'none';
 
   document.getElementById('vtitle').textContent = file.name;
@@ -449,7 +442,6 @@ async function showPDF(file){
       requestAnimationFrame(function(){
         wrap.style.transition = 'opacity 0.7s ease';
         wrap.style.opacity = '1';
-        if(playing && cfg.site !== 'all') wrap.classList.add('kb');
       });
     });
   } catch(e){
@@ -508,7 +500,6 @@ function startSlide(){
   document.getElementById('playbtn').textContent = '⏸ 停止';
   document.getElementById('slidebadge').className = 'badge playing';
   document.getElementById('slidebadge').innerHTML = '<span class="blink"></span>スライド中';
-  if(cfg.site !== 'all') document.getElementById('pdfwrap').classList.add('kb');
   resetProg();
   schedNext();
 }
@@ -518,7 +509,6 @@ function stopSlide(){
   document.getElementById('playbtn').textContent = '▶ 開始';
   document.getElementById('slidebadge').className = 'badge paused';
   document.getElementById('slidebadge').innerHTML = '<span class="blink"></span>停止中';
-  document.getElementById('pdfwrap').classList.remove('kb');
   const pf = document.getElementById('pfill');
   pf.style.transition='none'; pf.style.width='0%';
 }
