@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ナカシマ 実働率ビューア</title>
+<style>
+  :root{ --navy:#1f3864; --blue:#2e5496; --bg:#f4f6fa; --warn:#fff3e0; --bad:#fdecea; --late:#fdf0e3; }
+  *{box-sizing:border-box; font-family:"Yu Gothic UI","Meiryo",sans-serif;}
+  body{margin:0; background:var(--bg); color:#222;}
+  header{background:var(--navy); color:#fff; padding:14px 24px;}
+  header h1{margin:0; font-size:18px;}
+  header p{margin:4px 0 0; font-size:12px; opacity:.8;}
+  main{max-width:1200px; margin:0 auto; padding:20px;}
+  .card{background:#fff; border-radius:10px; padding:18px 20px; margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .card h2{margin:0 0 10px; font-size:15px; color:var(--navy); border-left:4px solid var(--blue); padding-left:8px;}
+  .drop{border:2px dashed #9db3d4; border-radius:8px; padding:18px; text-align:center; color:#567; cursor:pointer; transition:.15s;}
+  .drop.ok{border-color:#2e7d32; background:#f0f8f1; color:#2e7d32;}
+  .drop:hover{background:#eef3fb;}
+  .drop input{display:none;}
+  .meta{font-size:12px; color:#666; margin-top:6px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .cards{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px;}
+  .kpi{flex:1; min-width:140px; background:linear-gradient(135deg,#2e5496,#1f3864); color:#fff; border-radius:10px; padding:14px 16px;}
+  .kpi .v{font-size:24px; font-weight:700;}
+  .kpi .l{font-size:11px; opacity:.85;}
+  .kpi.alert{background:linear-gradient(135deg,#c0392b,#922b21);}
+  .kpi.lateK{background:linear-gradient(135deg,#d68910,#a8650b);}
+  .chips{margin:10px 0;}
+  .chip{display:inline-block; padding:5px 14px; margin:0 6px 6px 0; border-radius:16px; background:#e4eaf5; color:var(--navy); cursor:pointer; font-size:13px; user-select:none;}
+  .chip.on{background:var(--navy); color:#fff;}
+  table{border-collapse:collapse; width:100%; font-size:13px;}
+  th{background:var(--navy); color:#fff; padding:7px 8px; font-weight:600; white-space:nowrap;}
+  td{border-bottom:1px solid #e3e8f0; padding:6px 8px; vertical-align:top;}
+  tr:nth-child(even) td{background:#f7f9fc;}
+  tr.low td{background:var(--bad);}
+  tr.over td{background:var(--warn);}
+  td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .bar{height:10px; background:#dfe6f1; border-radius:5px; overflow:hidden; min-width:100px;}
+  .bar i{display:block; height:100%; background:linear-gradient(90deg,#5b8def,#2e5496);}
+  .bar.low i{background:#d9534f;} .bar.over i{background:#f0ad4e;}
+  button{background:var(--blue); color:#fff; border:none; border-radius:6px; padding:9px 18px; font-size:13px; cursor:pointer; margin-right:8px;}
+  button:hover{opacity:.9;}
+  button.ghost{background:#fff; color:var(--blue); border:1px solid var(--blue);}
+  .note{font-size:11.5px; color:#777; line-height:1.7;}
+  .err{color:#c00; font-size:12.5px; margin-top:6px;}
+  .map-row{display:flex; gap:8px; align-items:center; margin:4px 0; font-size:13px;}
+  select{padding:5px; border:1px solid #bbb; border-radius:5px; font-size:13px;}
+  .tag{font-size:11px; background:#eef; border-radius:4px; padding:1px 6px; color:var(--navy);}
+  .miss{display:inline-block; background:#c0392b; color:#fff; border-radius:10px; padding:1px 9px; font-size:12px; font-weight:700;}
+  .miss.zero{background:#2e7d32;}
+  .lateB{display:inline-block; background:#d68910; color:#fff; border-radius:10px; padding:1px 9px; font-size:12px; font-weight:700;}
+  .name-link{color:var(--blue); cursor:pointer; text-decoration:underline; text-underline-offset:2px; font-weight:600;}
+  .name-link:hover{color:var(--navy);}
+  .banner{border-radius:8px; padding:12px 16px; margin-bottom:10px; font-size:13.5px;}
+  .banner.red{background:var(--bad); border:1px solid #e5b3ae; color:#8c2f28;}
+  .banner.green{background:#eef7ee; border:1px solid #bfdec0; color:#2e7d32;}
+  .banner.orange{background:var(--late); border:1px solid #ecc99a; color:#8a5a0a;}
+  .banner.info{background:#eef; border:1px solid #ccd; color:#456;}
+  #result{display:none;}
+  /* ===== モーダル ===== */
+  #ovl{position:fixed; inset:0; background:rgba(20,30,50,.55); display:none; z-index:50;}
+  #modal{position:fixed; top:4vh; left:50%; transform:translateX(-50%); width:min(860px,94vw); max-height:92vh; overflow:auto;
+    background:#fff; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,.35); z-index:51; display:none;}
+  #modal .mh{position:sticky; top:0; background:var(--navy); color:#fff; padding:13px 18px; display:flex; justify-content:space-between; align-items:center;}
+  #modal .mh b{font-size:16px;}
+  #modal .mh span.x{cursor:pointer; font-size:20px; padding:0 6px;}
+  #modal .mb{padding:16px 18px;}
+  .msum{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;}
+  .mcard{background:#f2f5fb; border-radius:8px; padding:8px 14px; font-size:12px; color:#456;}
+  .mcard b{display:block; font-size:18px; color:var(--navy);}
+  .st{display:inline-block; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:700;}
+  .st.miss{background:#c0392b; color:#fff;}
+  .st.late{background:#d68910; color:#fff;}
+  .st.orph{background:#b8860b; color:#fff;}
+  .st.ok{background:#e2efe2; color:#2e7d32;}
+  .st.off{background:#eee; color:#999; font-weight:400;}
+  tr.d-miss td{background:var(--bad)!important;}
+  tr.d-late td{background:var(--late)!important;}
+  tr.d-orph td{background:#fcf8e3!important;}
+  @media print{ header,.card.inputs,#mapCard,button{display:none!important;} body{background:#fff;} .card{box-shadow:none;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>ナカシマ 実働率ビューア</h1>
+  <p>作業実績（QuickSightエクスポート）× 勤怠（KING OF TIME）→ 実働率・入力漏れ・終了押し忘れチェック。データはこのPC内だけで処理され、外部には送信されません。</p>
+</header>
+<main>
+
+<div class="card inputs">
+  <h2>STEP 1｜ファイルを読み込む</h2>
+  <div class="grid2">
+    <div>
+      <div class="drop" id="dropW" onclick="document.getElementById('fileW').click()">
+        <b>① 作業実績CSV</b><br>QuickSightの表を「CSVにエクスポート」したファイル<br>
+        <span style="font-size:11px">※「作業日」列→入力漏れチェック、「終了日時」列→22時超えチェックが有効になります</span>
+        <input type="file" id="fileW" accept=".csv">
+      </div>
+      <div class="meta" id="metaW">未読込</div>
+    </div>
+    <div>
+      <div class="drop" id="dropA" onclick="document.getElementById('fileA').click()">
+        <b>② 勤怠CSV</b><br>KING OF TIME のエクスポートファイル（Shift-JIS対応）<br>（クリックして選択 / ドラッグ＆ドロップ）
+        <input type="file" id="fileA" accept=".csv">
+      </div>
+      <div class="meta" id="metaA">未読込</div>
+      <div style="margin-top:8px; background:#eef3fb; border:1px solid #d3ddf0; border-radius:6px; padding:8px 10px;">
+        <b style="font-size:12px; color:var(--navy);">またはKOTから自動取得</b>
+        <span class="note">（夜間バッチが蓄積したデータをそのまま使う）</span><br>
+        <span style="font-size:12px;">期間</span>
+        <input type="date" id="attStart" style="font-size:12px;"> 〜
+        <input type="date" id="attEnd" style="font-size:12px;">
+        <button type="button" onclick="fetchAtt()" style="padding:5px 12px; margin-left:4px;">KOTから取得</button>
+      </div>
+    </div>
+  </div>
+  <div class="err" id="errBox"></div>
+</div>
+
+<div class="card" id="mapCard" style="display:none">
+  <h2>STEP 2｜氏名の突き合わせ確認</h2>
+  <div class="note">日本人は氏名の完全一致で自動結合します。外国人実習生など表記が異なる方は下で対応づけてください（よく使う対応は組み込み済み）。</div>
+  <div id="mapArea"></div>
+  <div style="margin-top:10px"><button onclick="calc()">実働率を計算する</button></div>
+</div>
+
+<div class="card" id="result">
+  <h2>STEP 3｜実働率・チェック結果　<span class="note">氏名をクリックすると日別の詳細が開きます</span></h2>
+  <div class="meta" id="periodInfo"></div>
+  <div id="banner"></div>
+  <div class="cards" id="kpis"></div>
+  <div class="chips" id="chips"></div>
+  <div style="overflow-x:auto"><table id="tbl"></table></div>
+  <div class="note" id="unmatchedNote" style="margin-top:8px"></div>
+  <div style="margin-top:14px">
+    <button onclick="exportCsv()">CSVエクスポート（Excelで開けます）</button>
+    <button class="ghost" onclick="window.print()">印刷 / PDF保存</button>
+  </div>
+  <div class="note" style="margin-top:10px">
+    実働率 = 作業時間(h) ÷ 在席時間(h)。100%超はオレンジ、85%未満は赤背景。<br>
+    <b>入力漏れ</b>＝出勤しているのに作業実績が無い日（「作業日」列が必要）。
+    <b>22時超え</b>＝終了時刻が22:00以降または深夜0〜5時の作業実績（「終了日時」列が必要）→ 作業終了ボタンの押し忘れの可能性。<br>
+    ※「実績作業時間」がミリ秒のCSVは自動で時間(h)に換算します（÷3,600,000）。
+  </div>
+</div>
+
+</main>
+
+<div id="ovl" onclick="closeModal()"></div>
+<div id="modal">
+  <div class="mh"><b id="mTitle"></b><span class="x" onclick="closeModal()">✕</span></div>
+  <div class="mb" id="mBody"></div>
+</div>
+
+<script>
+"use strict";
+/* ============ 勤怠 自動取得（KOT→GAS）設定 ============ */
+/* 勤怠実働GASをウェブアプリとしてデプロイした /exec URL をここに貼る */
+const ATT_GAS_URL = "https://script.google.com/macros/s/AKfycbyTRHFcrdMUWtO6mLftXy-h24F2GKQRRnmBDyhW81-rWpkGzIC71UcHRQpcvNf1uhi1/exec";
+
+/* ============ 組み込みの氏名対応（ERPローマ字 → 勤怠カタカナ） ============ */
+const BUILTIN_MAP = {
+  "NGUYEN VAN LANH":"ｸﾞｪﾝ ｳﾞｧﾝﾗﾝ",
+  "TRAN VAN THAN":"ﾁｬﾝ ﾊﾞﾝ ﾀﾝ",
+  "NGUYEN HOANG AN":"ｸﾞｴﾝ ﾎｱﾝｱﾝ",
+  "NGUYEN THANH NHANH":"ｸﾞｳｴﾝ ﾀﾝ ﾆﾔﾝ",
+  "TRAN CHI TAM":"チャン・チー タム",
+};
+function kaGroup(raw){
+  if(!raw) return "その他";
+  const s = String(raw).replace(/\s/g,"");
+  for(const k of ["設計","加工","組付","電気"]){ if(s.includes(k)) return k+"課"; }
+  return s.replace(/\(.*\)/,"") || "その他";
+}
+const norm = s => String(s||"").trim().replace(/　/g," ").replace(/\s+/g," ");
+const pad2 = n => ("0"+n).slice(-2);
+const MON={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+const YOBI=["日","月","火","水","木","金","土"];
+function normDate(s){
+  if(!s) return null; s=String(s).trim();
+  let m=s.match(/(\d{4})[\/\-年\.](\d{1,2})[\/\-月\.](\d{1,2})/);
+  if(m) return m[1]+"/"+pad2(m[2])+"/"+pad2(m[3]);
+  m=s.match(/(\d{1,2})月\s*(\d{1,2})[,日]?\s*(\d{4})/);
+  if(m) return m[3]+"/"+pad2(m[1])+"/"+pad2(m[2]);
+  m=s.match(/^([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s*(\d{4})/);
+  if(m && MON[m[1]]) return m[3]+"/"+pad2(MON[m[1]])+"/"+pad2(m[2]);
+  return null;
+}
+function lastTime(s){ // 文字列中の最後の H:MM を取得
+  const ms=[...String(s||"").matchAll(/(\d{1,2}):(\d{2})/g)];
+  if(!ms.length) return null;
+  const m=ms[ms.length-1];
+  return {h:parseInt(m[1],10), mi:parseInt(m[2],10), str:pad2(m[1])+":"+m[2]};
+}
+function dow(d){ const t=new Date(d.replace(/\//g,"-")+"T00:00:00"); return isNaN(t)?"":YOBI[t.getDay()]; }
+
+/* ============ CSV ユーティリティ ============ */
+function parseCsv(text){
+  const rows=[]; let row=[], cell="", q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=ch; }
+    else{
+      if(ch==='"') q=true;
+      else if(ch===','){ row.push(cell); cell=""; }
+      else if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=""; }
+      else if(ch!=='\r') cell+=ch;
+    }
+  }
+  if(cell!==""||row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r=>r.length>1 || (r[0]&&r[0].trim()));
+}
+function decodeAuto(buf){
+  const u8 = new Uint8Array(buf);
+  let txt = new TextDecoder("utf-8",{fatal:false}).decode(u8);
+  const bad = (txt.match(/�/g)||[]).length;
+  if(bad>0 || !/[一-龠ぁ-んァ-ヶ]/.test(txt.slice(0,2000))){
+    try{ const t2 = new TextDecoder("shift_jis").decode(u8);
+      if(/[一-龠ぁ-んァ-ヶ]/.test(t2.slice(0,2000))) txt = t2; }catch(e){}
+  }
+  return txt.replace(/^﻿/,"");
+}
+const findCol=(heads,cands)=>{ for(const c of cands){ const i=heads.findIndex(h=>h&&h.includes(c)); if(i>=0) return i;} return -1; };
+
+/* ============ 状態 ============ */
+let W=null, A=null, mapping={...BUILTIN_MAP}, curKa="全体", lastRows=[];
+
+/* ============ 作業実績CSV ============ */
+function loadWork(rows){
+  const heads=rows[0].map(h=>norm(h));
+  const iName=findCol(heads,["作業担当者名","担当者名","氏名","名前"]);
+  const iCode=findCol(heads,["作業担当者コード","担当者コード","社員コード","コード"]);
+  const iKa  =findCol(heads,["作業担当課名","担当課名","課名","課"]);
+  const iDate=findCol(heads,["作業日","日付"]);
+  const iEnd =findCol(heads,["終了日時","作業終了","終了時刻","終了時間","終了"]);
+  let iH = findCol(heads,["作業時間(h)","作業時間（h）","作業時間(H)","作業時間"]);
+  let iRaw = findCol(heads,["実績作業時間"]);
+  if(iName<0 || (iH<0&&iRaw<0)) throw "作業実績CSVに必要な列（担当者名・作業時間）が見つかりません。ヘッダー: "+heads.join(", ");
+  const useRaw = iH<0;
+  const people={};
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r]; if(!row[iName]) continue;
+    const name=norm(row[iName]); if(!name) continue;
+    const v=parseFloat(String(row[useRaw?iRaw:iH]||"").replace(/,/g,""));
+    if(!isFinite(v)) continue;
+    if(!people[name]) people[name]={name, code:iCode>=0?norm(row[iCode]):"", ka:iKa>=0?kaGroup(row[iKa]):"", sum:0, byDate:{}, late:[]};
+    const p=people[name];
+    p.sum+=v;
+    let d=null;
+    if(iDate>=0){ d=normDate(row[iDate]); if(d) p.byDate[d]=(p.byDate[d]||0)+v; }
+    if(iEnd>=0 && row[iEnd]){
+      const t=lastTime(row[iEnd]);
+      const ed=normDate(row[iEnd])||d;
+      if(t && (t.h>=22 || t.h<5)){ p.late.push({d:ed||"?", t:t.str, v}); }
+    }
+  }
+  const maxSum=Math.max(0,...Object.values(people).map(p=>p.sum));
+  const factor=(useRaw||maxSum>100000)? 1/3600000 : 1;
+  for(const k in people){
+    const p=people[k]; p.h=p.sum*factor;
+    for(const d in p.byDate) p.byDate[d]*=factor;
+    p.late.forEach(l=>l.v*=factor);
+    p.late.sort((a,b)=>a.d<b.d?-1:1);
+    p.lateDates=new Set(p.late.map(l=>l.d));
+  }
+  const hasDates = iDate>=0 && Object.values(people).some(p=>Object.keys(p.byDate).length>0);
+  const hasEnd = iEnd>=0;
+  return {people, msConverted:factor!==1, hasDates, hasEnd, count:Object.keys(people).length};
+}
+
+/* ============ 勤怠CSV ============ */
+function loadAtt(rows){
+  const heads=rows[0].map(h=>norm(h));
+  const iName=findCol(heads,["名前","氏名"]);
+  const iDate=findCol(heads,["日時","日付"]);
+  let iJ=heads.findIndex(h=>h==="実働"); if(iJ<0) iJ=findCol(heads,["実働"]);
+  const iSec=findCol(heads,["所属名","所属"]);
+  const iIn =findCol(heads,["出勤時刻"]);
+  const iOut=findCol(heads,["退勤時刻"]);
+  const iType=findCol(heads,["勤務日種別"]);
+  if(iName<0||iJ<0) throw "勤怠CSVに必要な列（名前・実働）が見つかりません。ヘッダー: "+heads.join(", ");
+  const people={}; let dmin=null,dmax=null;
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r]; if(!row[iName]) continue;
+    const name=norm(row[iName]); if(!name) continue;
+    if(!people[name]) people[name]={name, ka:iSec>=0?kaGroup(row[iSec]):"", z:0, days:0, byDate:{}, info:{}};
+    const d=iDate>=0? normDate(row[iDate]) : null;
+    if(d){ if(!dmin||d<dmin)dmin=d; if(!dmax||d>dmax)dmax=d;
+      people[name].info[d]={in:iIn>=0?String(row[iIn]||"").trim():"", out:iOut>=0?String(row[iOut]||"").trim():"", type:iType>=0?String(row[iType]||"").trim():""};
+    }
+    const v=String(row[iJ]||"").trim();
+    if(v){ const f=parseFloat(v);
+      if(isFinite(f)&&f>0){ people[name].z+=f; people[name].days++; if(d) people[name].byDate[d]=(people[name].byDate[d]||0)+f; } }
+  }
+  return {people, dmin, dmax, count:Object.keys(people).length};
+}
+
+/* ============ ファイル読込 ============ */
+function hook(dropId, fileId, kind){
+  const drop=document.getElementById(dropId), inp=document.getElementById(fileId);
+  const handle=f=>{
+    const rd=new FileReader();
+    rd.onload=()=>{ try{
+        const rows=parseCsv(decodeAuto(rd.result));
+        if(kind==="W"){ W=loadWork(rows);
+          document.getElementById("metaW").textContent=
+            `✔ ${W.count}名分を読込`+(W.msConverted?"（ミリ秒→時間に自動換算）":"")
+            +(W.hasDates?"／漏れチェック有効":"／作業日列なし")
+            +(W.hasEnd?"／22時チェック有効":"／終了日時列なし");
+          drop.classList.add("ok");
+        }else{ A=loadAtt(rows);
+          document.getElementById("metaA").textContent=`✔ ${A.count}名分を読込（期間 ${A.dmin||"?"}〜${A.dmax||"?"}）`;
+          drop.classList.add("ok");
+        }
+        document.getElementById("errBox").textContent="";
+        if(W&&A) buildMapping();
+      }catch(e){ document.getElementById("errBox").textContent="読込エラー: "+e; }
+    };
+    rd.readAsArrayBuffer(f);
+  };
+  inp.addEventListener("change",e=>{ if(e.target.files[0]) handle(e.target.files[0]); });
+  drop.addEventListener("dragover",e=>{e.preventDefault();});
+  drop.addEventListener("drop",e=>{e.preventDefault(); if(e.dataTransfer.files[0]) handle(e.dataTransfer.files[0]);});
+}
+hook("dropW","fileW","W"); hook("dropA","fileA","A");
+
+/* ============ 勤怠 自動取得（KOT→GAS） ============ */
+/* GASから取得したJSONを、勤怠CSVと同じ列並びの疑似行に変換して loadAtt() に流し込む */
+function attJsonToRows(list){
+  const head=["名前","日時","実働","所属","出勤時刻","退勤時刻","勤務日種別"];
+  const rows=[head];
+  for(const r of list){
+    rows.push([ r.name||"", r.date||"", (r.workHours==null?"":String(r.workHours)),
+      r.dept||"", r.clockIn||"", r.clockOut||"", r.workdayType||"" ]);
+  }
+  return rows;
+}
+async function fetchAtt(){
+  const errBox=document.getElementById("errBox");
+  const s=document.getElementById("attStart").value, e=document.getElementById("attEnd").value;
+  if(!s||!e){ errBox.textContent="勤怠の取得期間（開始・終了）を指定してください。"; return; }
+  if(!ATT_GAS_URL || ATT_GAS_URL.indexOf("PASTE")===0){
+    errBox.textContent="勤怠取得先(GAS)のURLが未設定です。HTML内の ATT_GAS_URL にデプロイURLを設定してください。"; return;
+  }
+  const metaA=document.getElementById("metaA");
+  metaA.textContent="KOTデータを取得中…";
+  try{
+    const url=`${ATT_GAS_URL}?action=getAttendance&start=${s}&end=${e}&t=`+Date.now();
+    const res=await fetch(url);
+    if(!res.ok) throw "HTTP "+res.status;
+    const j=await res.json();
+    if(!j.ok) throw (j.error||"取得失敗");
+    const rows=attJsonToRows(j.rows||[]);
+    if(rows.length<=1) throw "指定期間の勤怠データがありません（夜間バッチがまだ蓄積していない可能性）。";
+    A=loadAtt(rows);
+    metaA.textContent=`✔ ${A.count}名分をKOTから取得（期間 ${A.dmin||"?"}〜${A.dmax||"?"}）`;
+    document.getElementById("dropA").classList.add("ok");
+    errBox.textContent="";
+    if(W&&A) buildMapping();
+  }catch(err){
+    metaA.textContent="未読込";
+    errBox.textContent="KOT取得エラー: "+err;
+  }
+}
+/* 取得期間の初期値: 直近およそ1締め分（本日から35日前〜本日） */
+(function initAttDates(){
+  const end=new Date(), start=new Date(); start.setDate(start.getDate()-35);
+  const f=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
+  const es=document.getElementById("attEnd"), ss=document.getElementById("attStart");
+  if(es) es.value=f(end); if(ss) ss.value=f(start);
+})();
+
+/* ============ 氏名突合UI ============ */
+function buildMapping(){
+  const att=new Set(Object.keys(A.people));
+  const unmatched=[];
+  for(const n in W.people){ if(!att.has(mapping[n]||n)) unmatched.push(n); }
+  const area=document.getElementById("mapArea");
+  if(unmatched.length===0){ area.innerHTML='<div class="note" style="color:#2e7d32">✔ 全員自動で突合できました。</div>'; }
+  else{
+    const attNames=Object.keys(A.people).sort();
+    area.innerHTML = unmatched.map(n=>{
+      const opts=['<option value="">（対応なし＝集計対象外）</option>']
+        .concat(attNames.map(a=>`<option value="${a}">${a}</option>`)).join("");
+      return `<div class="map-row"><span class="tag">作業実績</span><b>${n}</b> → <span class="tag">勤怠</span><select data-erp="${n}" onchange="mapping[this.dataset.erp]=this.value">${opts}</select></div>`;
+    }).join("");
+  }
+  document.getElementById("mapCard").style.display="block";
+}
+
+/* ============ 計算 ============ */
+function calc(){
+  const rows=[]; const usedAtt=new Set();
+  for(const n in W.people){
+    const w=W.people[n];
+    let attName = mapping[n]!==undefined ? mapping[n] : n;
+    if(attName==="") attName=null;
+    if(attName && !A.people[attName]) attName = A.people[n]? n : null;
+    const a = attName? A.people[attName] : null;
+    if(a) usedAtt.add(attName);
+    let missDates=[], orphanDates=[];
+    if(W.hasDates && a){
+      for(const d in a.byDate){ if(!(w.byDate[d]>0)) missDates.push(d); }
+      for(const d in w.byDate){ if(w.byDate[d]>0 && !(a.byDate[d]>0)) orphanDates.push(d); }
+      missDates.sort(); orphanDates.sort();
+    }
+    rows.push({code:w.code, name:n, attName:a?attName:null, ka:w.ka||(a?a.ka:"")||"その他",
+      h:w.h, z:a?a.z:null, days:a?a.days:null, rate:a&&a.z>0? w.h/a.z:null,
+      miss:missDates, orphan:orphanDates, late:w.late||[]});
+  }
+  const attOnly=Object.keys(A.people).filter(n=>!usedAtt.has(n));
+  lastRows=rows; lastRows.attOnly=attOnly;
+  render(rows, attOnly);
+}
+
+/* ============ 表示 ============ */
+function fmtDates(ds){ return ds.map(d=>d.slice(5)).join("、"); }
+function render(rows, attOnly){
+  const kas=["全体",...[...new Set(rows.map(r=>r.ka))].sort()];
+  document.getElementById("chips").innerHTML=kas.map(k=>`<span class="chip ${k===curKa?'on':''}" onclick="curKa='${k}';render(lastRows,lastRows.attOnly)">${k}</span>`).join("");
+  const view=rows.filter(r=>curKa==="全体"||r.ka===curKa).sort((x,y)=>(y.rate??-1)-(x.rate??-1));
+  const m=view.filter(r=>r.rate!=null);
+  const tw=m.reduce((s,r)=>s+r.h,0), tz=m.reduce((s,r)=>s+r.z,0);
+  const missTotal=view.reduce((s,r)=>s+r.miss.length,0);
+  const missPeople=view.filter(r=>r.miss.length>0).length;
+  const lateTotal=view.reduce((s,r)=>s+r.late.length,0);
+  const latePeople=view.filter(r=>r.late.length>0).length;
+
+  let bn="";
+  if(!W.hasDates) bn+=`<div class="banner info">ℹ 作業実績CSVに「作業日」列が無いため、入力漏れチェックは無効です。</div>`;
+  else if(missTotal>0) bn+=`<div class="banner red">⚠ <b>作業実績の入力漏れの可能性：${missPeople}名・延べ${missTotal}日</b>　勤怠では出勤しているのに、その日の作業実績がありません。氏名をクリックして日別詳細を確認してください。</div>`;
+  else bn+=`<div class="banner green">✔ 入力漏れはありません。</div>`;
+  if(!W.hasEnd) bn+=`<div class="banner info">ℹ 「終了日時」列が無いため、22時超え（終了押し忘れ）チェックは無効です。エクスポートに終了日時を含めると有効になります。</div>`;
+  else if(lateTotal>0) bn+=`<div class="banner orange">⏰ <b>22時超えの作業実績：${latePeople}名・${lateTotal}件</b>　終了時刻が22時以降（または深夜0〜5時）です。作業終了ボタンの押し忘れの可能性があります。</div>`;
+  else bn+=`<div class="banner green">✔ 22時超えの作業実績はありません。</div>`;
+  document.getElementById("banner").innerHTML=bn;
+
+  document.getElementById("kpis").innerHTML=`
+    <div class="kpi"><div class="v">${tz>0?(tw/tz*100).toFixed(1)+"%":"-"}</div><div class="l">${curKa} 実働率（合計）</div></div>
+    <div class="kpi"><div class="v">${m.length? (m.reduce((s,r)=>s+r.rate,0)/m.length*100).toFixed(1)+"%":"-"}</div><div class="l">個人実働率の平均</div></div>
+    <div class="kpi ${missTotal>0?'alert':''}"><div class="v">${W.hasDates? missTotal+'<span style="font-size:14px">日</span>':'—'}</div><div class="l">入力漏れ（${W.hasDates? missPeople+"名":"無効"}）</div></div>
+    <div class="kpi ${lateTotal>0?'lateK':''}"><div class="v">${W.hasEnd? lateTotal+'<span style="font-size:14px">件</span>':'—'}</div><div class="l">22時超え（${W.hasEnd? latePeople+"名":"無効"}）</div></div>
+    <div class="kpi"><div class="v">${tw.toFixed(0)}<span style="font-size:14px">h</span></div><div class="l">作業計 / 在席 ${tz.toFixed(0)}h</div></div>`;
+  document.getElementById("periodInfo").textContent = A&&A.dmin? `勤怠期間: ${A.dmin} 〜 ${A.dmax}（25日締め）` : "";
+
+  let html=`<tr><th>コード</th><th>氏名</th><th>課</th><th>作業時間(h)</th><th>在席時間(h)</th><th>出勤日数</th><th>実働率</th><th style="min-width:110px">グラフ</th><th>入力漏れ</th><th>22時超え</th></tr>`;
+  view.forEach((r,idx)=>{
+    const cls = r.rate==null?"" : r.rate<0.85?"low" : r.rate>1.0?"over":"";
+    const pct = r.rate==null? "—" : (r.rate*100).toFixed(1)+"%";
+    const barw = r.rate==null?0 : Math.min(r.rate,1.1)/1.1*100;
+    let missCell="—", lateCell="—";
+    if(W.hasDates && r.attName) missCell = r.miss.length===0? `<span class="miss zero">0日</span>` : `<span class="miss">${r.miss.length}日</span>`;
+    if(W.hasEnd) lateCell = r.late.length===0? `<span class="miss zero">0件</span>` : `<span class="lateB">${r.late.length}件</span>`;
+    const gi=lastRows.indexOf(r);
+    html+=`<tr class="${cls}"><td>${r.code||""}</td>
+      <td><span class="name-link" onclick="showDetail(${gi})">${r.name}</span>${r.attName&&r.attName!==r.name?`<br><span class="note">勤怠: ${r.attName}</span>`:""}</td>
+      <td>${r.ka}</td><td class="num">${r.h.toFixed(1)}</td><td class="num">${r.z!=null?r.z.toFixed(1):"勤怠なし"}</td><td class="num">${r.days??"—"}</td>
+      <td class="num"><b>${pct}</b></td><td><div class="bar ${cls}"><i style="width:${barw}%"></i></div></td><td>${missCell}</td><td>${lateCell}</td></tr>`;
+  });
+  document.getElementById("tbl").innerHTML=html;
+  document.getElementById("unmatchedNote").textContent = attOnly&&attOnly.length? "勤怠のみで作業実績が無い人: "+attOnly.join("、") : "";
+  document.getElementById("result").style.display="block";
+}
+
+/* ============ 個人詳細モーダル ============ */
+function showDetail(i){
+  const r=lastRows[i]; if(!r) return;
+  const w=W.people[r.name];
+  const a=r.attName? A.people[r.attName] : null;
+  const missSet=new Set(r.miss), orphSet=new Set(r.orphan);
+  const lateByDate={};
+  (r.late||[]).forEach(l=>{ (lateByDate[l.d]=lateByDate[l.d]||[]).push(l); });
+  // 日付の和集合
+  const dates=[...new Set([...(a?Object.keys(a.byDate):[]),...(a?Object.keys(a.info):[]),...Object.keys(w.byDate)])].sort();
+  document.getElementById("mTitle").textContent=`${r.name}（${r.ka}）｜日別詳細`;
+  let sum=`<div class="msum">
+    <div class="mcard">実働率<b>${r.rate!=null?(r.rate*100).toFixed(1)+"%":"—"}</b></div>
+    <div class="mcard">作業時間<b>${r.h.toFixed(1)}h</b></div>
+    <div class="mcard">在席時間<b>${r.z!=null?r.z.toFixed(1)+"h":"—"}</b></div>
+    <div class="mcard">出勤日数<b>${r.days??"—"}</b></div>
+    <div class="mcard">入力漏れ<b style="color:${r.miss.length?'#c0392b':'#2e7d32'}">${W.hasDates?r.miss.length+"日":"—"}</b></div>
+    <div class="mcard">22時超え<b style="color:${r.late.length?'#d68910':'#2e7d32'}">${W.hasEnd?r.late.length+"件":"—"}</b></div>
+  </div>`;
+  let tb=`<table><tr><th>日付</th><th>曜日</th><th>勤務種別</th><th>出勤</th><th>退勤</th><th>在席(h)</th><th>作業(h)</th><th>差(h)</th><th>状態</th></tr>`;
+  for(const d of dates){
+    const z=a&&a.byDate[d]||0;
+    const wk=w.byDate[d]||0;
+    const info=a&&a.info[d]||{};
+    const isMiss=missSet.has(d), isOrph=orphSet.has(d), lates=lateByDate[d]||[];
+    if(z===0 && wk===0) continue;  // 休日（両方ゼロ）は省略
+    let st="", rowCls="";
+    if(isMiss){ st+=`<span class="st miss">入力漏れ</span> `; rowCls="d-miss"; }
+    if(lates.length){ st+=lates.map(l=>`<span class="st late">終了${l.t}</span>`).join(" ")+" "; rowCls=rowCls||"d-late"; }
+    if(isOrph){ st+=`<span class="st orph">勤怠なし作業</span> `; rowCls=rowCls||"d-orph"; }
+    if(!st) st=`<span class="st ok">OK</span>`;
+    const diff = (z>0&&wk>0)? (wk-z) : null;
+    tb+=`<tr class="${rowCls}"><td>${d.slice(5)}</td><td>${dow(d)}</td><td>${info.type||""}</td><td>${info.in||""}</td><td>${info.out||""}</td>
+      <td class="num">${z?z.toFixed(2):"—"}</td><td class="num">${wk?wk.toFixed(2):(isMiss?'<b style="color:#c0392b">0</b>':"—")}</td>
+      <td class="num">${diff!=null?(diff>0?"+":"")+diff.toFixed(2):""}</td><td>${st}</td></tr>`;
+  }
+  tb+=`</table>`;
+  let lateList="";
+  if(r.late.length){
+    lateList=`<div style="margin-top:10px"><b style="font-size:13px;color:#8a5a0a">⏰ 22時超えの作業実績（終了押し忘れの可能性）</b><table style="margin-top:4px"><tr><th>日付</th><th>終了時刻</th><th>計上時間(h)</th></tr>`+
+      r.late.map(l=>`<tr class="d-late"><td>${(l.d||"?").slice(5)}</td><td>${l.t}</td><td class="num">${l.v.toFixed(2)}</td></tr>`).join("")+`</table></div>`;
+  }
+  document.getElementById("mBody").innerHTML=sum+tb+lateList+
+    `<div class="note" style="margin-top:8px">赤=入力漏れ（出勤しているのに作業実績なし）／オレンジ=22時超え／黄=勤怠なし作業。差= 作業−在席。</div>`;
+  document.getElementById("ovl").style.display="block";
+  document.getElementById("modal").style.display="block";
+}
+function closeModal(){ document.getElementById("ovl").style.display="none"; document.getElementById("modal").style.display="none"; }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
+
+/* ============ エクスポート ============ */
+function exportCsv(){
+  const view=lastRows.filter(r=>curKa==="全体"||r.ka===curKa).sort((x,y)=>(y.rate??-1)-(x.rate??-1));
+  let csv="コード,氏名,勤怠側氏名,課,作業時間(h),在席時間(h),出勤日数,実働率,入力漏れ日数,入力漏れ日付,22時超え件数,22時超え明細,勤怠なし作業あり日付\n";
+  for(const r of view){
+    csv+=[r.code,r.name,r.attName||"",r.ka,r.h.toFixed(2),r.z!=null?r.z.toFixed(2):"",r.days??"",
+      r.rate!=null?(r.rate*100).toFixed(1)+"%":"",
+      r.miss.length||0, '"'+r.miss.join(" ")+'"',
+      r.late.length||0, '"'+r.late.map(l=>l.d+" "+l.t).join(" / ")+'"',
+      '"'+r.orphan.join(" ")+'"'].join(",")+"\n";
+  }
+  const blob=new Blob(["﻿"+csv],{type:"text/csv"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`実働率_${curKa}_${(A&&A.dmax||"").replace(/\//g,"")}.csv`; a.click();
+}
+</script>
+<!-- v3: 個人詳細モーダル + 22時超えチェック -->
+</body>
+</html>
