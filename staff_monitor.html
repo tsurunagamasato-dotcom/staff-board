@@ -424,19 +424,17 @@ function nowTimeStr() { const d = new Date(); return String(d.getHours()).padSta
 
 function initState() { state = {}; STAFF_MASTER.forEach(s => { state[s.id] = { status:s.base, updated:'', memo:'', leaveStart:'', leaveEnd:'' }; }); }
 
-// 本社事務所を選んだ人を部署で①②③に振り分ける（明示部署のみ。加工課・組付課などはnull→ラベルは「本社事務所」、スライドは①に集約）
-function honshaLabelSlide(dept){
-  if (['社長','役員','総務部','営業部'].includes(dept)) return 'honsha1';
-  if (['設計課','第一製造部'].includes(dept)) return 'honsha2';
-  if (['電気課','購買課'].includes(dept)) return 'honsha3';
-  return null;
+// 本社事務所を選んだ人を①②③に振り分ける。本人の座席(slide)に従う：
+// honsha2→本社②、honsha3→本社③、それ以外（根崎系nezaki/nezaki2・honsha1・空）は本社①。
+function honshaLabelSlide(m){
+  return (m.slide === 'honsha2' || m.slide === 'honsha3') ? m.slide : 'honsha1';
 }
 
 // スライド定義
 const SLIDE_DEFS = [
-  { label:'本社事務所①', subtitle:'社長・役員・総務部・営業部', color:'#1D9E75', bg:'linear-gradient(135deg,#c8ede3,#d8f4ec)', filter: m => { const s=getDisplayStatus(m); const hs=honshaLabelSlide(m.dept); return s==='honsha_office' && (hs==='honsha1' || hs===null); } },
-  { label:'本社事務所②', subtitle:'設計課・第一製造部', color:'#1D9E75', bg:'linear-gradient(135deg,#b8e8d8,#caeee3)', filter: m => { const s=getDisplayStatus(m); return s==='honsha_office' && honshaLabelSlide(m.dept)==='honsha2'; } },
-  { label:'本社事務所③', subtitle:'電気課・購買課', color:'#1D9E75', bg:'linear-gradient(135deg,#a8e0ce,#beeadb)', filter: m => { const s=getDisplayStatus(m); return s==='honsha_office' && honshaLabelSlide(m.dept)==='honsha3'; } },
+  { label:'本社事務所①', subtitle:'社長・役員・総務部・営業部・購買課・組付課・加工課', color:'#1D9E75', bg:'linear-gradient(135deg,#c8ede3,#d8f4ec)', filter: m => { const s=getDisplayStatus(m); return s==='honsha_office' && honshaLabelSlide(m)==='honsha1'; } },
+  { label:'本社事務所②', subtitle:'設計課・第一製造部', color:'#1D9E75', bg:'linear-gradient(135deg,#b8e8d8,#caeee3)', filter: m => { const s=getDisplayStatus(m); return s==='honsha_office' && honshaLabelSlide(m)==='honsha2'; } },
+  { label:'本社事務所③', subtitle:'電気課', color:'#1D9E75', bg:'linear-gradient(135deg,#a8e0ce,#beeadb)', filter: m => { const s=getDisplayStatus(m); return s==='honsha_office' && honshaLabelSlide(m)==='honsha3'; } },
   { label:'本社工場', subtitle:'', color:'#0e7fa8', bg:'linear-gradient(135deg,#c0e8f4,#d0f0fa)', filter: m => { const s=getDisplayStatus(m); return s==='honsha_factory'; } },
   { label:'根崎', subtitle:'加工課', color:'#185FA5', bg:'linear-gradient(135deg,#c4d8f0,#d4e6f8)', filter: m => { const s=getDisplayStatus(m); return s==='nezaki'; } },
   { label:'根崎第2', subtitle:'組付課・購買課', color:'#534AB7', bg:'linear-gradient(135deg,#d0cef4,#dddcfa)', filter: m => { const s=getDisplayStatus(m); return s==='nezaki2'; } },
@@ -670,7 +668,7 @@ function buildCardHtml(m, showBadge) {
     const badge = STATUS_BADGE_MAP[rawStatus] || STATUS_BADGE_MAP['honsha_office'];
     const slideLabel = { 'honsha1':'本社①','honsha2':'本社②','honsha3':'本社③' };
     let displayLabel = badge.label;
-    if (displayStatus === 'honsha_office') { const hs = honshaLabelSlide(m.dept); displayLabel = hs ? slideLabel[hs] : badge.label; }
+    if (displayStatus === 'honsha_office') { const hs = honshaLabelSlide(m); displayLabel = hs ? slideLabel[hs] : badge.label; }
     badgeHtml = `<span class="status-badge-sm" style="background:${badge.bg};color:${badge.fg};"><span style="width:5px;height:5px;border-radius:50%;background:${badge.dot};display:inline-block;"></span>${displayLabel}</span>`;
   }
 
