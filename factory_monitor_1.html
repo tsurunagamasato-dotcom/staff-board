@@ -571,7 +571,7 @@ function openHistFile(id){
 // MONITOR
 function enterMon(){
   document.body.classList.add('mon');
-  if(!playing && curFiles.length) startSlide();
+  if(!playing && curFiles.length && cfg.site === 'all') startSlide();
 }
 function exitMon(){ document.body.classList.remove('mon'); }
 document.addEventListener('keydown', function(e){
