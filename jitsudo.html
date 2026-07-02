@@ -97,6 +97,14 @@
         <input type="file" id="fileW" accept=".csv">
       </div>
       <div class="meta" id="metaW">未読込</div>
+      <div style="margin-top:8px; background:#eef3fb; border:1px solid #d3ddf0; border-radius:6px; padding:8px 10px;">
+        <b style="font-size:12px; color:var(--navy);">またはNAGRSから自動取得</b>
+        <span class="note">（夜間バッチが蓄積した作業実績を使う。QuickSight/CSV不要）</span><br>
+        <span style="font-size:12px;">期間</span>
+        <input type="date" id="workStart" style="font-size:12px;"> 〜
+        <input type="date" id="workEnd" style="font-size:12px;">
+        <button type="button" onclick="fetchWork()" style="padding:5px 12px; margin-left:4px;">NAGRSから取得</button>
+      </div>
     </div>
     <div>
       <div class="drop" id="dropA" onclick="document.getElementById('fileA').click()">
@@ -367,6 +375,59 @@ async function fetchAtt(){
   const end=new Date(), start=new Date(); start.setDate(start.getDate()-35);
   const f=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
   const es=document.getElementById("attEnd"), ss=document.getElementById("attStart");
+  if(es) es.value=f(end); if(ss) ss.value=f(start);
+})();
+
+/* ============ 作業実績 自動取得（NAGRS→GAS） ============ */
+/* GASの作業実績JSONを、作業実績CSVと同じ列並びの疑似行に変換して loadWork() に流す。
+   終了時刻は無いので「8:15 + 作業時間」を終了日時として合成し、22:00以降なら押し忘れ疑いとして既存チェックに乗せる。 */
+function workJsonToRows(list){
+  const head=["作業担当者名","作業担当課名","作業日","終了日時","作業時間(h)"];
+  const rows=[head];
+  const START_MIN=8*60+15; // 8:15
+  for(const r of list){
+    const hours=parseFloat(String(r.hours||"0"))||0;
+    let endMin=Math.round(START_MIN+hours*60);
+    let eh=Math.floor(endMin/60), em=endMin%60;
+    if(eh>23){ eh=23; em=59; } // 表示上のキャップ（22時超え判定は維持される）
+    const endStr=`${r.date||""} ${pad2(eh)}:${pad2(em)}`;
+    rows.push([ r.name||"", r.dept||"", r.date||"", endStr, String(hours) ]);
+  }
+  return rows;
+}
+async function fetchWork(){
+  const errBox=document.getElementById("errBox");
+  const s=document.getElementById("workStart").value, e=document.getElementById("workEnd").value;
+  if(!s||!e){ errBox.textContent="作業実績の取得期間（開始・終了）を指定してください。"; return; }
+  if(!ATT_GAS_URL || ATT_GAS_URL.indexOf("PASTE")===0){
+    errBox.textContent="取得先(GAS)のURLが未設定です。HTML内の ATT_GAS_URL を設定してください。"; return;
+  }
+  const metaW=document.getElementById("metaW");
+  metaW.textContent="NAGRS作業実績を取得中…";
+  try{
+    const url=`${ATT_GAS_URL}?action=getWork&start=${s}&end=${e}&t=`+Date.now();
+    const res=await fetch(url);
+    if(!res.ok) throw "HTTP "+res.status;
+    const j=await res.json();
+    if(!j.ok) throw (j.error||"取得失敗");
+    const rows=workJsonToRows(j.rows||[]);
+    if(rows.length<=1) throw "指定期間の作業実績がありません（夜間バッチがまだ蓄積していない可能性）。";
+    W=loadWork(rows);
+    metaW.textContent=`✔ ${W.count}名分をNAGRSから取得`
+      +(W.hasDates?"／漏れチェック有効":"")+(W.hasEnd?"／22時チェック有効":"");
+    document.getElementById("dropW").classList.add("ok");
+    errBox.textContent="";
+    if(W&&A) buildMapping();
+  }catch(err){
+    metaW.textContent="未読込";
+    errBox.textContent="NAGRS取得エラー: "+err;
+  }
+}
+/* 作業実績 取得期間の初期値（勤怠と揃える: 本日から35日前〜本日） */
+(function initWorkDates(){
+  const end=new Date(), start=new Date(); start.setDate(start.getDate()-35);
+  const f=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
+  const es=document.getElementById("workEnd"), ss=document.getElementById("workStart");
   if(es) es.value=f(end); if(ss) ss.value=f(start);
 })();
 
