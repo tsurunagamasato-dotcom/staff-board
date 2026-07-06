@@ -746,7 +746,7 @@ function rebuildSlides() {
 
   slideDataCache = slideKeys.map(defIdx => {
     let def = SLIDE_DEFS[defIdx];
-    if (placeFilter && plusDept) def = { ...def, label: def.label + '＋' + plusDept, subtitle: '' };
+    if (placeFilter && plusDept) def = { ...def, label: def.label + '設置モニタ用', subtitle: '' };
     return { def, members: slideMembers(SLIDE_DEFS[defIdx]), rendered: false };
   });
 
@@ -1011,7 +1011,7 @@ async function init() {
     document.title = deptParam + ' — 所在地ボード';
   } else if (placeFilter) {
     document.querySelectorAll('.mode-btn').forEach(el => el.style.display = 'none');
-    document.title = PLACE_LABEL[placeFilter] + (plusDept ? '＋' + plusDept : '') + ' — 所在地ボード';
+    document.title = PLACE_LABEL[placeFilter] + (plusDept ? '設置モニタ用' : '') + ' — 所在地ボード';
   }
 
   document.getElementById('loadingOverlay').style.display = 'none';
