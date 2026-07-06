@@ -729,7 +729,8 @@ function slideMembers(def) {
   let members = STAFF_MASTER.filter(m => filterWithChairman(def, m));
   if (placeFilter && plusDept) {
     const ids = new Set(members.map(m => m.id));
-    const extra = STAFF_MASTER.filter(m => m.dept === plusDept && !ids.has(m.id));
+    // その居場所を座席(slide)とする人 ＋ plus部署の人を全員追加（今どこにいても各自の現在地バッジで表示）
+    const extra = STAFF_MASTER.filter(m => (honshaLabelSlide(m) === placeFilter || m.dept === plusDept) && !ids.has(m.id));
     members = members.concat(extra);
   }
   return members;
