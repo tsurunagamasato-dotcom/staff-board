@@ -446,13 +446,13 @@ const SLIDE_DEFS = [
 
 // 出退勤状態判定
 function getDisplayStatus(m) {
-  const st = state[m.id]; if (!st) return m.base;
+  const st = state[m.id]; if (!st || !st.status) return m.base;  // 未登録(status空)はデフォルト居場所
   const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
   return (activeStatus === 'taikin') ? m.base : activeStatus;
 }
 
 function getAttendanceClass(m) {
-  const st = state[m.id]; if (!st) return 'none';
+  const st = state[m.id]; if (!st || !st.status) return 'none';  // 未登録(status空)は未打刻扱い
   const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
   if (activeStatus === 'taikin') return 'left';
   if (activeStatus === 'yasumi') return 'off';
@@ -763,7 +763,7 @@ function rebuildSlides() {
     slide.style.color = '#1a1a1a';
 
     if (idx === currentIndex || idx === (currentIndex + 1) % slideKeys.length) {
-      slide.innerHTML = buildSlideHtml(data.def, idx, data.members);
+      slide.innerHTML = buildSlideHtml(data.def, idx, data.members, !!(placeFilter && plusDept));
       data.rendered = true;
     }
     wrap.appendChild(slide);
@@ -818,7 +818,7 @@ function updateSlidesInPlace() {
         const body = slide.querySelector('.slide-body');
         if (body) {
           body.innerHTML = newMembers.length > 0
-            ? `<div class="staff-grid">${newMembers.map(m => buildCardHtml(m, false)).join('')}</div>`
+            ? `<div class="staff-grid">${newMembers.map(m => buildCardHtml(m, !!(placeFilter && plusDept))).join('')}</div>`
             : `<div class="empty-msg">現在この場所にいる社員はいません</div>`;
         }
       }
@@ -842,7 +842,7 @@ function showSlide(idx, animate=true) {
     if (slideDataCache[i] && !slideDataCache[i].rendered) {
       const slide = document.getElementById('slide-' + i);
       if (slide) {
-        slide.innerHTML = buildSlideHtml(slideDataCache[i].def, i, slideDataCache[i].members, viewMode === 'dept');
+        slide.innerHTML = buildSlideHtml(slideDataCache[i].def, i, slideDataCache[i].members, viewMode === 'dept' || !!(placeFilter && plusDept));
         slideDataCache[i].rendered = true;
         updateClock();
       }
