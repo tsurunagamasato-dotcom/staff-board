@@ -518,6 +518,9 @@ const STATUS_BADGE_MAP = {
   taikin:{ label:'退勤済み',bg:'#f1efe8',fg:'#666666',dot:'#888780' },
 };
 
+// URLの ?place=xxx で特定の居場所スライドだけ単独表示するためのラベル対応
+const PLACE_LABEL = { honsha1:'本社事務所①', honsha2:'本社事務所②', honsha3:'本社事務所③', honsha_factory:'本社工場', nezaki:'根崎', nezaki2:'根崎第2' };
+let placeFilter = null;
 let viewMode = 'location';
 let currentIndex = 0;
 let slideInterval = 8000;
@@ -722,6 +725,7 @@ function buildSlideHtml(def, idx, members, showBadge=false) {
 // ===== 最適化②: 遅延レンダリング付きrebuildSlides =====
 function rebuildSlides() {
   slideKeys = SLIDE_DEFS.map((_,idx) => idx).filter(idx => {
+    if (placeFilter) return SLIDE_DEFS[idx].label === PLACE_LABEL[placeFilter];
     const members = STAFF_MASTER.filter(m => filterWithChairman(SLIDE_DEFS[idx], m));
     if (idx <= 2) return true;
     return members.length > 0;
@@ -965,6 +969,8 @@ function rebuildDeptSlides(filterDept) {
 async function init() {
   const urlParams = new URLSearchParams(location.search);
   const deptParam = urlParams.get('dept');
+  const placeParam = urlParams.get('place');
+  if (placeParam && PLACE_LABEL[placeParam]) placeFilter = placeParam;
 
   try {
     const cached = localStorage.getItem(EMP_LS_KEY);
@@ -987,6 +993,9 @@ async function init() {
   if (deptParam) {
     document.querySelectorAll('.mode-btn').forEach(el => el.style.display = 'none');
     document.title = deptParam + ' — 所在地ボード';
+  } else if (placeFilter) {
+    document.querySelectorAll('.mode-btn').forEach(el => el.style.display = 'none');
+    document.title = PLACE_LABEL[placeFilter] + ' — 所在地ボード';
   }
 
   document.getElementById('loadingOverlay').style.display = 'none';
