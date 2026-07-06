@@ -724,12 +724,12 @@ function buildSlideHtml(def, idx, members, showBadge=false) {
 }
 
 // placeFilter単独ビューに plusDept（部署）を合成したメンバーを算出。
-// 本社事務所にいる該当部署の人（座席がどこでも）を、そのスライドに追加する。
+// 該当部署の人を全員（今どこにいても）そのスライドに追加する。各自のカードには本人の現在地バッジが出る。
 function slideMembers(def) {
   let members = STAFF_MASTER.filter(m => filterWithChairman(def, m));
   if (placeFilter && plusDept) {
     const ids = new Set(members.map(m => m.id));
-    const extra = STAFF_MASTER.filter(m => m.dept === plusDept && getDisplayStatus(m) === 'honsha_office' && !ids.has(m.id));
+    const extra = STAFF_MASTER.filter(m => m.dept === plusDept && !ids.has(m.id));
     members = members.concat(extra);
   }
   return members;
