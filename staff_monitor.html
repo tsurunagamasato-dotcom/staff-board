@@ -521,6 +521,7 @@ const STATUS_BADGE_MAP = {
 // URLの ?place=xxx で特定の居場所スライドだけ単独表示するためのラベル対応
 const PLACE_LABEL = { honsha1:'本社事務所①', honsha2:'本社事務所②', honsha3:'本社事務所③', honsha_factory:'本社工場', nezaki:'根崎', nezaki2:'根崎第2' };
 let placeFilter = null;
+let plusDept = null;  // ?plus= で居場所単独ビューに特定部署を合成（例: 本社②＋設計課）
 let viewMode = 'location';
 let currentIndex = 0;
 let slideInterval = 8000;
@@ -722,6 +723,18 @@ function buildSlideHtml(def, idx, members, showBadge=false) {
     </div>`;
 }
 
+// placeFilter単独ビューに plusDept（部署）を合成したメンバーを算出。
+// 本社事務所にいる該当部署の人（座席がどこでも）を、そのスライドに追加する。
+function slideMembers(def) {
+  let members = STAFF_MASTER.filter(m => filterWithChairman(def, m));
+  if (placeFilter && plusDept) {
+    const ids = new Set(members.map(m => m.id));
+    const extra = STAFF_MASTER.filter(m => m.dept === plusDept && getDisplayStatus(m) === 'honsha_office' && !ids.has(m.id));
+    members = members.concat(extra);
+  }
+  return members;
+}
+
 // ===== 最適化②: 遅延レンダリング付きrebuildSlides =====
 function rebuildSlides() {
   slideKeys = SLIDE_DEFS.map((_,idx) => idx).filter(idx => {
@@ -731,11 +744,11 @@ function rebuildSlides() {
     return members.length > 0;
   });
 
-  slideDataCache = slideKeys.map(defIdx => ({
-    def: SLIDE_DEFS[defIdx],
-    members: STAFF_MASTER.filter(m => filterWithChairman(SLIDE_DEFS[defIdx], m)),
-    rendered: false
-  }));
+  slideDataCache = slideKeys.map(defIdx => {
+    let def = SLIDE_DEFS[defIdx];
+    if (placeFilter && plusDept) def = { ...def, label: def.label + '＋' + plusDept, subtitle: '' };
+    return { def, members: slideMembers(SLIDE_DEFS[defIdx]), rendered: false };
+  });
 
   const wrap = document.getElementById('slideWrap');
   wrap.innerHTML = '';
@@ -772,6 +785,7 @@ function updateSlidesInPlace() {
   if (slideDataCache.length === 0) { rebuildSlides(); return; }
 
   const newSlideKeys = SLIDE_DEFS.map((_,idx) => idx).filter(idx => {
+    if (placeFilter) return SLIDE_DEFS[idx].label === PLACE_LABEL[placeFilter];
     const members = STAFF_MASTER.filter(m => filterWithChairman(SLIDE_DEFS[idx], m));
     if (idx <= 2) return true;
     return members.length > 0;
@@ -786,7 +800,7 @@ function updateSlidesInPlace() {
   // スライドごとにメンバーを再計算し、変更があったスライドだけ更新
   slideKeys.forEach((defIdx, idx) => {
     const def = SLIDE_DEFS[defIdx];
-    const newMembers = STAFF_MASTER.filter(m => filterWithChairman(def, m));
+    const newMembers = slideMembers(def);
     const oldData = slideDataCache[idx];
 
     // メンバー数やハッシュが変わったか判定
@@ -971,6 +985,8 @@ async function init() {
   const deptParam = urlParams.get('dept');
   const placeParam = urlParams.get('place');
   if (placeParam && PLACE_LABEL[placeParam]) placeFilter = placeParam;
+  const plusParam = urlParams.get('plus');
+  if (placeFilter && plusParam) plusDept = plusParam;
 
   try {
     const cached = localStorage.getItem(EMP_LS_KEY);
@@ -995,7 +1011,7 @@ async function init() {
     document.title = deptParam + ' — 所在地ボード';
   } else if (placeFilter) {
     document.querySelectorAll('.mode-btn').forEach(el => el.style.display = 'none');
-    document.title = PLACE_LABEL[placeFilter] + ' — 所在地ボード';
+    document.title = PLACE_LABEL[placeFilter] + (plusDept ? '＋' + plusDept : '') + ' — 所在地ボード';
   }
 
   document.getElementById('loadingOverlay').style.display = 'none';
