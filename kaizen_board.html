@@ -434,6 +434,7 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
               <div class="fg"><label class="fl">予定日</label><input class="fi" type="date" id="ieYotei"></div>
             </div>
             <div class="fg"><label class="fl">完了日</label><input class="fi" type="date" id="ieKanryo" style="width:160px"></div>
+            <div class="fg"><label class="fl">💬 メモ・コメント</label><textarea class="fi fta" id="ieComment" rows="2" placeholder="このタスクへの自由メモ・コメント（会議日に関係なくいつでも記入）"></textarea></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
               <button class="btn btn-r btn-sm" onclick="deleteTask(selTaskId)" style="margin-right:auto">🗑 削除</button>
               <button class="btn btn-g btn-sm" onclick="switchToItemMode(true)">キャンセル</button>
@@ -779,6 +780,7 @@ function renderExt(id){
       <div class="tdot ${cls}"><\/div>
       <div class="ttxt ${dn?'done':''}" style="font-size:13px">${esc(t.task_content)}<\/div>
       ${hm?'<span style="font-size:12px;color:var(--accent)" title="議事録あり">📝<\/span>':''}
+      ${(t.comment&&t.comment.trim())?'<span style="font-size:12px" title="メモ・コメントあり">💬<\/span>':''}
       ${t.tantou?`<span class="ttantou">${esc(t.tantou)}<\/span>`:''}
       ${t.yotei_date?`<span class="tdate ${ov?'ov':''}">${t.yotei_date}<\/span>`:''}
     <\/div>`;
@@ -873,6 +875,7 @@ function clickTask(taskId){
   document.getElementById('ieHanan').value=t.hanan_date||'';
   document.getElementById('ieYotei').value=t.yotei_date||'';
   document.getElementById('ieKanryo').value=t.kanryo_date||'';
+  document.getElementById('ieComment').value=t.comment||'';
   document.querySelectorAll('#taskEditCard .sbtn').forEach(b=>b.classList.toggle('on',b.dataset.s===(t.status||'未着手')));
   document.getElementById('taskEditCard').style.display='block';
   renderExt(selId);
@@ -897,12 +900,13 @@ function saveInlineTask(){
   tasks[idx].hanan_date=document.getElementById('ieHanan').value;
   tasks[idx].yotei_date=document.getElementById('ieYotei').value;
   tasks[idx].kanryo_date=document.getElementById('ieKanryo').value;
+  tasks[idx].comment=document.getElementById('ieComment').value;
   if((status==='完了'||status==='完了(継続)')&&wasNotDone&&!tasks[idx].kanryo_date){
     tasks[idx].kanryo_date=td();
     document.getElementById('ieKanryo').value=td();
   }
   saveAll();
-  gp('updateTask',{task_id:selTaskId,task_content:tasks[idx].task_content,tantou:tasks[idx].tantou,goal:tasks[idx].goal,status,hanan_date:tasks[idx].hanan_date,yotei_date:tasks[idx].yotei_date,kanryo_date:tasks[idx].kanryo_date});
+  gp('updateTask',{task_id:selTaskId,task_content:tasks[idx].task_content,tantou:tasks[idx].tantou,goal:tasks[idx].goal,status,hanan_date:tasks[idx].hanan_date,yotei_date:tasks[idx].yotei_date,kanryo_date:tasks[idx].kanryo_date,comment:tasks[idx].comment});
   const dc2=['未着手','実行中','完了','完了(継続)'].indexOf(status);
   const sl2=['未着手','実行中','完了','完了(継続)','未定'][dc2<0?4:dc2];
   document.getElementById('taskBannerSub').textContent=(tasks[idx].tantou||'担当未設定')+'　'+sl2+'　'+(tasks[idx].yotei_date||'期限未設定');
