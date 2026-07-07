@@ -440,18 +440,30 @@ const SLIDE_DEFS = [
   { label:'根崎第2', subtitle:'組付課・購買課', color:'#534AB7', bg:'linear-gradient(135deg,#d0cef4,#dddcfa)', filter: m => { const s=getDisplayStatus(m); return s==='nezaki2'; } },
   { label:'外出/出張', subtitle:'', color:'#BA7517', bg:'linear-gradient(135deg,#f8e4c0,#faeece)', filter: m => isActiveToday(m.id, 'gaishutsu') },
   { label:'在宅', subtitle:'', color:'#639922', bg:'linear-gradient(135deg,#d4edb8,#e0f4c8)', filter: m => isActiveToday(m.id, 'zaitaku') },
-  { label:'休み', subtitle:'', color:'#888780', bg:'linear-gradient(135deg,#e4e2da,#eceae2)', filter: m => isActiveToday(m.id, 'yasumi') },
+  { label:'休み', subtitle:'', color:'#888780', bg:'linear-gradient(135deg,#e4e2da,#eceae2)', filter: m => isActiveToday(m.id, 'yasumi') || isFixedHolidayOff(m) },
   { label:'離席/会議等', subtitle:'', color:'#c0392b', bg:'linear-gradient(135deg,#fdecea,#fce8e6)', filter: m => isActiveToday(m.id, 'risseki') },
 ];
 
 // 出退勤状態判定
+// 固定休み: empNo→休みの曜日(日0..土6)。その曜日にKOT/手動のstatusが無ければ自動で「休み」。
+// status有り（KOT出勤や手動登録）なら固定休みを無視して出勤扱い（繁忙期対応）。
+const FIXED_HOLIDAY = { '11':[3], '12':[2,4], '59':[3] };  // 中島修=水 / 塩澤=火木 / 青山=水
+function isFixedHolidayOff(m) {
+  const days = FIXED_HOLIDAY[String(m.empNo || m.id)];
+  if (!days || !days.includes(new Date().getDay())) return false;
+  const st = state[m.id];
+  return !st || !st.status;
+}
+
 function getDisplayStatus(m) {
+  if (isFixedHolidayOff(m)) return 'yasumi';
   const st = state[m.id]; if (!st || !st.status) return m.base;  // 未登録(status空)はデフォルト居場所
   const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
   return (activeStatus === 'taikin') ? m.base : activeStatus;
 }
 
 function getAttendanceClass(m) {
+  if (isFixedHolidayOff(m)) return 'off';
   const st = state[m.id]; if (!st || !st.status) return 'none';  // 未登録(status空)は未打刻扱い
   const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
   if (activeStatus === 'taikin') return 'left';
