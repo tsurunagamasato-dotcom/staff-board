@@ -466,7 +466,9 @@ function isFixedHolidayOff(m) {
   const days = FIXED_HOLIDAY[String(m.empNo || m.id)];
   if (!days || !days.includes(new Date().getDay())) return false;
   const st = state[m.id];
-  return !st || !st.status;
+  // updated(登録時刻)が無ければKOT/手動の記録なし＝固定休み有効。updatedが有れば出勤等として無視。
+  // ※initStateでstatusにはbase(デフォルト居場所)が入るためstatusでは未登録判定できない。updatedで判定する。
+  return !st || !st.updated;
 }
 
 function getDisplayStatus(m) {
