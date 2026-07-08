@@ -310,6 +310,20 @@ function fmtDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
+// GASの断続的な404/500/タイムアウトを吸収するため最大3回・1.5秒間隔で再試行
+async function fetchWithRetry(url, opts) {
+  for (let i = 1; i <= 3; i++) {
+    try {
+      const res = await fetch(url, opts);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res;
+    } catch (e) {
+      if (i === 3) throw e;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+}
+
 async function syncLunchNG(staff, status, leaveStart, leaveEnd) {
   if (status === 'gaishutsu') return;
   if (!LUNCH_NG_STATUSES.includes(status)) return;
@@ -336,7 +350,7 @@ async function syncLunchNG(staff, status, leaveStart, leaveEnd) {
     action:'saveOrder', date, id:staff.id, name:staff.name, dept:staff.dept, order:'nashi', place:'', proxy:false
   }));
   try {
-    await fetch(LUNCH_GAS_URL, { method:'POST', body:JSON.stringify({action:'saveOrders',orders}) });
+    await fetchWithRetry(LUNCH_GAS_URL, { method:'POST', body:JSON.stringify({action:'saveOrders',orders}) });
   } catch(e) { console.log('昼食連携エラー:', e); }
 }
 
@@ -371,7 +385,7 @@ async function loadStaffMaster() {
       const parsed = JSON.parse(cached);
       if (parsed.length > 0) _applyEmployees(parsed);
     }
-    const res = await fetch(EMP_GAS_URL + '?action=getEmployees&t=' + Date.now());
+    const res = await fetchWithRetry(EMP_GAS_URL + '?action=getEmployees&t=' + Date.now());
     const json = await res.json();
     if (json.ok && json.employees && json.employees.length > 0) {
       const active = json.employees.filter(e => e.active !== '退職');
@@ -512,7 +526,7 @@ async function submitToGAS() {
 
   document.getElementById('savingOverlay').classList.add('show');
   try {
-    const res = await fetch(GAS_URL, {
+    const res = await fetchWithRetry(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({id:selStaff.id, name:selStaff.name, dept:selStaff.dept, status:selStatus, updated:updatedStr, memo, leaveStart, leaveEnd})
     });
