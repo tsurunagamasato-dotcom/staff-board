@@ -681,7 +681,7 @@ function isBirthdayToday(bday) {
 // ===== カード生成 =====
 function buildCardHtml(m, showBadge) {
   const st = state[m.id];
-  const rawStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
+  const rawStatus = isFixedHolidayOff(m) ? 'yasumi' : (isActiveToday(m.id, st.status) ? st.status : m.base);
   const displayStatus = (rawStatus === 'taikin') ? m.base : rawStatus;
   const isNonDefault = displayStatus !== m.base && rawStatus !== 'taikin';
   const attClass = getAttendanceClass(m);
