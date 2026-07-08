@@ -383,11 +383,25 @@ let STAFF_MASTER = [];
 const EMP_GAS_URL = 'https://script.google.com/macros/s/AKfycbwFE4wAC6cdFT8H2JmwW2XONgJz0j1rCI4xE2C9x1tKdMaib5aRgUKXE2N3hkQ034hu/exec';
 const EMP_LS_KEY = 'employee_master_cache';
 
+// GASの断続的な404/500/タイムアウトを吸収するため最大3回・1.5秒間隔で再試行
+async function fetchWithRetry(url, opts) {
+  for (let i = 1; i <= 3; i++) {
+    try {
+      const res = await fetch(url, opts);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res;
+    } catch (e) {
+      if (i === 3) throw e;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+}
+
 async function loadStaffMaster() {
   try {
     const cached = localStorage.getItem(EMP_LS_KEY);
     if (cached) { const p = JSON.parse(cached); if (p.length > 0) _applyEmployees(p); }
-    const res = await fetch(EMP_GAS_URL + '?action=getEmployees&t=' + Date.now());
+    const res = await fetchWithRetry(EMP_GAS_URL + '?action=getEmployees&t=' + Date.now());
     const json = await res.json();
     if (json.ok && json.employees && json.employees.length > 0) {
       const active = json.employees.filter(e => e.active !== '退職');
@@ -606,7 +620,7 @@ function formatDate(dateStr) {
 async function fetchAll(silent=false) {
   if (!silent) setSyncStatus('syncing','取得中...');
   try {
-    const res = await fetch(GAS_URL + '?t=' + Date.now());
+    const res = await fetchWithRetry(GAS_URL + '?t=' + Date.now());
     const json = await res.json();
     if (!json.ok) throw new Error();
 
@@ -1148,7 +1162,7 @@ async function doRegister() {
   const payload = { id:regStaff.id, name:regStaff.name, dept:regStaff.dept, status:regStatus, updated, memo, leaveStart, leaveEnd };
 
   try {
-    const res = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
+    const res = await fetchWithRetry(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
     const json = await res.json();
     if (json.ok) {
       state[regStaff.id] = { status:regStatus, updated, memo:memo||'', leaveStart, leaveEnd };
