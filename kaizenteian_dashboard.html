@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>改善提案管理ダッシュボード</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#3B6FF0;
+    --navy-deep:#2952CC;
+    --slate:#5B6B9C;
+    --gold:#FFB020;
+    --gold-soft:#FFD777;
+    --bg:#F4F8FF;
+    --card:#FFFFFF;
+    --line:#E3EAF9;
+    --ink:#212A3D;
+    --ink-soft:#6B7A99;
+    --green:#16A34A;
+    --red:#EF4444;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Noto Sans JP',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .topbar{
+    background:var(--navy);
+    color:#fff;
+    padding:22px 32px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .topbar .brand{
+    font-family:'Shippori Mincho',serif;
+    font-size:22px;
+    letter-spacing:.04em;
+  }
+  .topbar .brand span{color:var(--gold-soft); font-size:13px; display:block; font-family:'Noto Sans JP',sans-serif; letter-spacing:.12em; margin-bottom:4px;}
+  .tabs{display:flex; gap:6px;}
+  .tab-btn{
+    background:transparent;
+    border:1px solid rgba(255,255,255,.25);
+    color:#dfe3ee;
+    padding:9px 18px;
+    border-radius:999px;
+    font-size:13px;
+    cursor:pointer;
+    font-family:'Noto Sans JP',sans-serif;
+    transition:.15s;
+  }
+  .tab-btn.active{background:var(--gold); border-color:var(--gold); color:var(--navy-deep); font-weight:600;}
+  .tab-btn:hover:not(.active){border-color:var(--gold-soft); color:#fff;}
+
+  main{max-width:1180px; margin:0 auto; padding:28px 24px 60px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .period-row{
+    display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap;
+  }
+  .period-row label{font-size:13px; color:var(--ink-soft);}
+  select{
+    font-family:'Noto Sans JP',sans-serif;
+    padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:#fff; font-size:14px; color:var(--ink);
+  }
+
+  .dept-filter-row{
+    display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;
+  }
+  .dept-chip{
+    font-family:'Noto Sans JP',sans-serif;
+    padding:9px 18px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--slate);
+    font-size:13.5px; font-weight:500; cursor:pointer; transition:.15s; white-space:nowrap;
+  }
+  .dept-chip:hover{border-color:var(--gold-soft); color:var(--navy);}
+  .dept-chip.active{background:var(--navy); border-color:var(--navy); color:#fff; font-weight:600;}
+  .dept-chip .chip-count{font-size:11px; opacity:.7; margin-left:4px;}
+
+  .kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:26px;}
+  @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+  .kpi{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px;
+    position:relative; overflow:hidden;
+  }
+  .kpi::before{content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--gold);}
+  .kpi .label{font-size:12px; color:var(--ink-soft); margin-bottom:6px; letter-spacing:.03em;}
+  .kpi .value{font-family:'Shippori Mincho',serif; font-size:30px; color:var(--navy);}
+  .kpi .value small{font-size:14px; font-family:'Noto Sans JP',sans-serif; color:var(--ink-soft); margin-left:3px;}
+  .kpi .delta{font-size:12px; margin-top:6px; color:var(--green);}
+  .kpi .delta.down{color:var(--red);}
+
+  .grid-2{display:grid; grid-template-columns:1.5fr 1fr; gap:18px; margin-bottom:22px;}
+  @media (max-width:900px){.grid-2{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 22px;
+  }
+  .card h3{
+    font-family:'Shippori Mincho',serif; font-size:16px; margin:0 0 14px; color:var(--navy);
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h3::before{content:''; width:8px; height:8px; background:var(--gold); display:inline-block; border-radius:2px; transform:rotate(45deg);}
+  .dept-rank-note{font-size:12px; color:var(--ink-soft); margin:-6px 0 14px; line-height:1.6;}
+  .proposal-link{color:var(--navy); text-decoration:none; font-weight:500; display:inline-flex; align-items:center; gap:7px;}
+  .proposal-link:hover{text-decoration:underline;}
+  .proposal-link .pdf-icon{
+    font-size:9.5px; font-weight:700; color:#fff; background:var(--red); padding:1px 5px; border-radius:4px; letter-spacing:.03em; flex-shrink:0;
+  }
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{
+    text-align:left; padding:9px 8px; color:var(--ink-soft); font-weight:600; border-bottom:2px solid var(--line); font-size:12px; letter-spacing:.02em;
+  }
+  td{padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .rank{
+    display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%;
+    background:var(--bg); color:var(--ink-soft); font-size:11px; font-weight:700; margin-right:8px;
+  }
+  .rank.top1{background:var(--gold); color:#5A3D00;}
+  .rank.top2{background:#DCE4FF; color:var(--navy-deep);}
+  .rank.top3{background:#FFDCA8; color:#7A4E00;}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:600;
+    border:1px solid transparent;
+  }
+  .badge-dot{width:7px; height:7px; border-radius:50%;}
+  .badge.tk{background:#FFF6DC; color:#B8790A; border-color:#FFE1A3;}
+  .badge.tk .badge-dot{background:#FFB020;}
+  .badge.g1{background:#EAF0FF; color:#3355C4; border-color:#C9D9FF;}
+  .badge.g1 .badge-dot{background:#5B84F0;}
+  .badge.g2{background:#FFEFE0; color:#C45A15; border-color:#FFD3AE;}
+  .badge.g2 .badge-dot{background:#FF8A3D;}
+  .badge.g34{background:#E4FBEE; color:#0F9D58; border-color:#B8F0D2;}
+  .badge.g34 .badge-dot{background:#2ECC71;}
+  .badge.g58{background:#EEF1FC; color:#5468B0; border-color:#D6DCF5;}
+  .badge.g58 .badge-dot{background:#8B9FE8;}
+  .badge.none{background:#F2F4FA; color:#8892AC; border-color:#E3E7F5;}
+  .badge.none .badge-dot{background:#B3BCD6;}
+
+  .chart-wrap{position:relative; height:280px;}
+  .chart-wrap.small{height:220px;}
+
+  /* Upload view */
+  .upload-zone{
+    border:2px dashed #C9CDD8; border-radius:14px; padding:44px 24px; text-align:center; background:#FCFBF8;
+    cursor:pointer; transition:.15s;
+  }
+  .upload-zone:hover, .upload-zone.drag{border-color:var(--gold); background:#FFFBEF;}
+  .upload-zone .icon{font-size:34px; margin-bottom:10px;}
+  .upload-zone .main-txt{font-size:15px; font-weight:600; color:var(--navy); margin-bottom:4px;}
+  .upload-zone .sub-txt{font-size:12.5px; color:var(--ink-soft);}
+  #fileInput{display:none;}
+
+  .ocr-steps{display:flex; gap:10px; margin:20px 0; flex-wrap:wrap;}
+  .step{
+    flex:1; min-width:150px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px;
+    display:flex; gap:12px; align-items:flex-start; opacity:.45; transition:.2s;
+  }
+  .step.active{opacity:1; border-color:var(--gold-soft); background:#FFFDF7;}
+  .step.done{opacity:1;}
+  .step-num{
+    width:24px; height:24px; border-radius:50%; background:var(--navy); color:#fff; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .step.done .step-num{background:var(--green);}
+  .step-title{font-size:13px; font-weight:600; color:var(--navy); margin-bottom:2px;}
+  .step-desc{font-size:11.5px; color:var(--ink-soft); line-height:1.5;}
+
+  .ocr-result-table input, .ocr-result-table select, .ocr-result-table textarea{
+    width:100%; border:1px solid transparent; background:transparent; padding:5px 6px; border-radius:6px; font-size:13px; font-family:'Noto Sans JP',sans-serif; resize:vertical;
+  }
+  .ocr-result-table textarea{min-height:44px;}
+  .ocr-result-table input:hover, .ocr-result-table select:hover, .ocr-result-table textarea:hover{background:#F6F4EF;}
+  .ocr-result-table input:focus, .ocr-result-table select:focus, .ocr-result-table textarea:focus{background:#fff; border-color:var(--gold-soft); outline:none;}
+  .conf-flag{font-size:10.5px; padding:2px 7px; border-radius:999px; background:#FFE9D6; color:#C4590F; font-weight:600; white-space:nowrap;}
+  .conf-flag.ok{background:#DCFAE6; color:#0F9D58;}
+
+  .btn{
+    padding:10px 22px; border-radius:8px; border:none; font-size:13.5px; font-weight:600; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+  }
+  .btn-primary{background:var(--navy); color:#fff;}
+  .btn-primary:hover{background:var(--navy-deep);}
+  .btn-primary:disabled{background:#B9BECB; cursor:not-allowed;}
+  .btn-ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--slate); color:var(--ink);}
+  .action-row{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap;}
+
+  .note-banner{
+    background:#FFF9EC; border:1px solid #F0DFA8; color:#7A5C10; font-size:12.5px; padding:12px 16px; border-radius:10px; margin-bottom:18px; line-height:1.6;
+  }
+  .note-banner b{color:#5C4400;}
+  .note-banner.err{background:#FCEEEA; border-color:#EBB9A8; color:#7A2E10;}
+
+  .preview-row{display:flex; gap:16px; margin-top:18px; align-items:flex-start; flex-wrap:wrap;}
+  .preview-row canvas{max-width:280px; border:1px solid var(--line); border-radius:8px;}
+  .preview-meta{font-size:12px; color:var(--ink-soft); line-height:1.7;}
+
+  footer{text-align:center; padding:30px; font-size:11.5px; color:var(--ink-soft);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span>NAKASHIMA GENERAL AFFAIRS</span>改善提案管理ダッシュボード</div>
+  <div class="tabs">
+    <button class="tab-btn active" data-view="dashboard">ダッシュボード</button>
+    <button class="tab-btn" data-view="upload">PDFアップロード（OCR登録）</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- ============ DASHBOARD VIEW ============ -->
+  <div class="view active" id="view-dashboard">
+
+    <div class="note-banner" id="dashboardNote">
+      ※ 現在表示中のデータは<b>サンプルデータ</b>です。下部の <code>CONFIG.GAS_URL</code> にデプロイ済みGAS Web AppのURLを設定すると、実データに切り替わります。
+    </div>
+
+    <div class="period-row">
+      <label>評価期間</label>
+      <select id="periodSelect">
+        <option value="all">全期間（累計）</option>
+        <option value="44s" selected>44下期（2026.5〜2026.10）</option>
+        <option value="44j">44上期（2025.11〜2026.4）</option>
+        <option value="43s">43下期（2025.5〜2025.10）</option>
+        <option value="43j">43上期（2024.11〜2025.4）</option>
+        <option value="42s">42下期（2024.5〜2024.10）</option>
+      </select>
+    </div>
+
+    <div class="dept-filter-row" id="deptFilterRow">
+      <!-- JSで生成：全部署＋各部署のチップボタン -->
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="label">提出件数</div>
+        <div class="value" id="kpiCount">38<small>件</small></div>
+        <div class="delta">前期比 +6件</div>
+      </div>
+      <div class="kpi">
+        <div class="label">報奨金合計</div>
+        <div class="value" id="kpiAmount">¥86,500</div>
+        <div class="delta">前期比 +¥12,000</div>
+      </div>
+      <div class="kpi">
+        <div class="label">平均報奨金／件</div>
+        <div class="value" id="kpiAvg">¥2,276</div>
+        <div class="delta down">前期比 −¥140</div>
+      </div>
+      <div class="kpi">
+        <div class="label">提出者数</div>
+        <div class="value" id="kpiPeople">22<small>名</small></div>
+        <div class="delta">前期比 +3名</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>部署別 提出件数・報奨金</h3>
+        <div class="chart-wrap"><canvas id="deptChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>等級分布</h3>
+        <div class="chart-wrap small"><canvas id="gradeChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:22px;">
+      <h3>個人別ランキング</h3>
+      <table>
+        <thead>
+          <tr><th>順位</th><th>氏名</th><th>部署</th><th>提出件数</th><th>報奨金合計</th><th>直近の等級</th></tr>
+        </thead>
+        <tbody id="personTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-bottom:22px;">
+      <h3>部署対抗ランキング（一人当たり平均評価点数）</h3>
+      <div class="dept-rank-note">提出者数で割った一人当たり平均のため、少人数の部署でも上位に入れます。合計件数だけに偏らない評価です。</div>
+      <table>
+        <thead>
+          <tr><th>順位</th><th>部署</th><th>一人当たり平均評価点数</th><th>提出者数</th><th>評価点数合計</th></tr>
+        </thead>
+        <tbody id="deptRankBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-bottom:22px;">
+      <h3>評価期間別 推移</h3>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h3>改善提案 案件名一覧（職位別表彰の候補選定用）</h3>
+      <div class="dept-rank-note">社長賞・部長賞・課長賞の候補選びにご利用ください。気になる案件名があれば、台帳で詳細をご確認いただけます。</div>
+      <table>
+        <thead>
+          <tr><th>部署</th><th>氏名</th><th>案件名</th><th>提出日</th><th>等級</th></tr>
+        </thead>
+        <tbody id="proposalListBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ============ UPLOAD / OCR VIEW ============ -->
+  <div class="view" id="view-upload">
+
+    <div class="note-banner" id="uploadNote">
+      <b>処理の流れ：</b> ①PDFをブラウザ内でページ画像に変換（PDF.js） → ②固定レイアウトに基づき項目ごとに画像を切り出し → ③印刷文字はCloud Vision APIでOCR、チェック欄・丸囲みは画像解析で判定 → ④内容を確認・修正 → ⑤Boxへ原本保存＋台帳へ登録。
+    </div>
+
+    <div class="ocr-steps" id="ocrSteps">
+      <div class="step" data-step="1"><div class="step-num">1</div><div><div class="step-title">アップロード</div><div class="step-desc">改善提案書PDFをドラッグ&ドロップ</div></div></div>
+      <div class="step" data-step="2"><div class="step-num">2</div><div><div class="step-title">画像切り出し＋OCR</div><div class="step-desc">項目を自動抽出し、下表に表示</div></div></div>
+      <div class="step" data-step="3"><div class="step-num">3</div><div><div class="step-title">確認・修正</div><div class="step-desc">誤読箇所を手動で補正</div></div></div>
+      <div class="step" data-step="4"><div class="step-num">4</div><div><div class="step-title">登録</div><div class="step-desc">Box保存＋台帳スプレッドシートへ書込</div></div></div>
+    </div>
+
+    <div class="upload-zone" id="uploadZone">
+      <div class="icon">📄</div>
+      <div class="main-txt">クリックまたはドラッグ＆ドロップでPDFを追加</div>
+      <div class="sub-txt">複数ファイルの一括アップロードに対応（1ファイル最大10MB）／様式固定の改善提案書PDF専用</div>
+      <input type="file" id="fileInput" accept="application/pdf" multiple>
+    </div>
+
+    <div id="previewArea"></div>
+
+    <div class="card" style="margin-top:22px;">
+      <h3>OCR読取結果（確認・修正してから登録）</h3>
+      <table class="ocr-result-table">
+        <thead>
+          <tr><th>ファイル</th><th>部署</th><th>氏名</th><th>提出日</th><th>内容</th><th>評価点数/等級</th><th>報奨金額</th><th>実施状況</th><th></th></tr>
+        </thead>
+        <tbody id="ocrResultBody">
+          <tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:24px 0;">PDFをアップロードすると、ここに読取結果が表示されます</td></tr>
+        </tbody>
+      </table>
+      <div class="action-row">
+        <span id="registerStatus" style="font-size:12.5px; color:var(--ink-soft);"></span>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-ghost" id="clearBtn">クリア</button>
+          <button class="btn btn-primary" id="registerBtn" disabled>台帳へ登録する</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>改善提案管理台帳 WEBアプリ　総務部管理</footer>
+
+<script>
+/* ==========================================================================
+   設定：デプロイ後にGAS Web AppのURLをここに設定してください
+   例）https://script.google.com/macros/s/XXXXXXXXXXXXXXXXXXXX/exec
+   未設定の間はダッシュボードはサンプルデータ、OCRはブラウザ内解析のみ動作します
+   ========================================================================== */
+const CONFIG = {
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw1TzESvQEu_m7qnFtdZq7V_ehRAYFEvE6gKy9TD0fwKxA4VT2ACzo6J72r_OxjtBVQAg/exec' // デプロイURL
+};
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ==========================================================================
+   改善提案書 固定レイアウト テンプレート（ページ画像に対する割合座標）
+   ※ 様式のバージョンが変わった場合はここを調整してください
+   ========================================================================== */
+const FIELD_TEMPLATE = {
+  dept:     { label:'部署',   type:'text',   rect:[0.190, 0.148, 0.310, 0.170] },
+  name:     { label:'氏名',   type:'text',   rect:[0.360, 0.148, 0.530, 0.170] },
+  date:     { label:'提出日', type:'text',   rect:[0.565, 0.148, 0.700, 0.170] },
+  title:    { label:'案件名', type:'text',   rect:[0.100, 0.170, 0.720, 0.185] },
+  content:  { label:'内容(現状+改善案)', type:'text', rect:[0.050, 0.215, 0.950, 0.355] },
+  effect:   { label:'効果',   type:'text',   rect:[0.050, 0.605, 0.950, 0.775] },
+  score:    { label:'評価点数', type:'text', rect:[0.398, 0.808, 0.538, 0.850] },
+  reward:   { label:'報奨金額', type:'text', rect:[0.543, 0.808, 0.704, 0.850] },
+  statusYes:{ label:'済',    type:'ink',    rect:[0.700, 0.815, 0.795, 0.855] },
+  statusNo: { label:'未',    type:'ink',    rect:[0.800, 0.815, 0.845, 0.855] },
+  comment:  { label:'コメント', type:'text', rect:[0.030, 0.860, 0.970, 0.995] }
+};
+// 実際の改善提案書PDF（2026/5/19提出分）で検証済みのチェックボックス座標
+const GRADE_CELLS = [
+  { label:'特級', rect:[0.2131,0.8199,0.2215,0.8264] }, { label:'1級', rect:[0.2752,0.8199,0.2845,0.8264] }, { label:'2級', rect:[0.3373,0.8199,0.3466,0.8264] },
+  { label:'3級', rect:[0.2131,0.8336,0.2215,0.8395] }, { label:'4級', rect:[0.2752,0.8336,0.2845,0.8395] }, { label:'5級', rect:[0.3373,0.8336,0.3466,0.8395] },
+  { label:'6級', rect:[0.2131,0.8467,0.2215,0.8532] }, { label:'7級', rect:[0.2752,0.8467,0.2845,0.8532] }, { label:'8級', rect:[0.3373,0.8467,0.3466,0.8532] }
+];
+
+// ---- tab switching ----
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+  });
+});
+
+/* ==========================================================================
+   OCRアップロード フロー
+   ========================================================================== */
+const zone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const ocrResultBody = document.getElementById('ocrResultBody');
+const previewArea = document.getElementById('previewArea');
+const registerBtn = document.getElementById('registerBtn');
+const registerStatus = document.getElementById('registerStatus');
+
+let entries = []; // 登録待ちのデータ配列
+
+zone.addEventListener('click', ()=>fileInput.click());
+['dragover','dragenter'].forEach(ev=>zone.addEventListener(ev, e=>{e.preventDefault(); zone.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>zone.addEventListener(ev, e=>{
+  e.preventDefault(); zone.classList.remove('drag');
+  if(ev==='drop' && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+}));
+fileInput.addEventListener('change', e=>handleFiles(e.target.files));
+
+function setStep(n, state){
+  const el = document.querySelector(`.step[data-step="${n}"]`);
+  if(!el) return;
+  el.classList.remove('active','done');
+  if(state) el.classList.add(state);
+}
+
+async function handleFiles(fileList){
+  setStep(1,'done'); setStep(2,'active');
+  ocrResultBody.innerHTML = '';
+  previewArea.innerHTML = '';
+  entries = [];
+
+  for(const file of fileList){
+    if(file.type !== 'application/pdf'){ continue; }
+    const arrayBuf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuf}).promise;
+    const page = await pdf.getPage(1);
+    const scale = 2.2;
+    const viewport = page.getViewport({scale});
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+
+    // プレビュー表示（縮小）
+    const previewCanvas = canvas.cloneNode();
+    previewCanvas.getContext('2d').drawImage(canvas, 0, 0);
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-row';
+    wrap.innerHTML = `<div><canvas></canvas><div class="preview-meta">${file.name}</div></div>`;
+    wrap.querySelector('canvas').width = 260;
+    wrap.querySelector('canvas').height = 260 * canvas.height/canvas.width;
+    wrap.querySelector('canvas').getContext('2d').drawImage(canvas, 0,0, wrap.querySelector('canvas').width, wrap.querySelector('canvas').height);
+    previewArea.appendChild(wrap);
+
+    const entry = await extractFieldsFromCanvas(canvas, file.name);
+    entries.push(entry);
+    renderResultRow(entry);
+  }
+
+  setStep(2,'done'); setStep(3,'active');
+  registerBtn.disabled = entries.length === 0;
+}
+
+function cropToDataUrl(sourceCanvas, rectFrac){
+  const [x0,y0,x1,y1] = rectFrac;
+  const w = sourceCanvas.width, h = sourceCanvas.height;
+  const sx = Math.round(x0*w), sy = Math.round(y0*h);
+  const sw = Math.round((x1-x0)*w), sh = Math.round((y1-y0)*h);
+  const c = document.createElement('canvas');
+  c.width = sw; c.height = sh;
+  c.getContext('2d').drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  return { dataUrl: c.toDataURL('image/png'), canvas:c };
+}
+
+// チェック/丸囲み判定：矩形内の暗いピクセル比率を返す
+function inkRatio(canvas){
+  const ctx = canvas.getContext('2d');
+  const { data } = ctx.getImageData(0,0,canvas.width,canvas.height);
+  let dark = 0;
+  for(let i=0;i<data.length;i+=4){
+    const lum = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+    if(lum < 150) dark++;
+  }
+  return dark / (data.length/4);
+}
+
+async function ocrViaGas(dataUrl){
+  if(!CONFIG.GAS_URL){
+    return { text:'(GAS未接続)', ok:false };
+  }
+  try{
+    const res = await fetch(CONFIG.GAS_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'ocr', image: dataUrl })
+    });
+    const json = await res.json();
+    if(!json.ok) return { text:'(OCRエラー)', ok:false };
+    return { text: json.result.text || '', ok:true };
+  }catch(err){
+    return { text:'(通信エラー)', ok:false };
+  }
+}
+
+// OCRで読み取った氏名を employee_master と照合（empNo/一致度/候補を取得）
+async function resolveEmployeeViaGas(name){
+  if(!CONFIG.GAS_URL || !name) return { empNo:'', matchType:'none' };
+  try{
+    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'resolveEmployee', name }) });
+    const json = await res.json();
+    return json.ok ? json.result : { empNo:'', matchType:'none' };
+  }catch(err){ return { empNo:'', matchType:'none' }; }
+}
+
+async function extractFieldsFromCanvas(canvas, filename){
+  const dept = cropToDataUrl(canvas, FIELD_TEMPLATE.dept.rect);
+  const name = cropToDataUrl(canvas, FIELD_TEMPLATE.name.rect);
+  const date = cropToDataUrl(canvas, FIELD_TEMPLATE.date.rect);
+  const title = cropToDataUrl(canvas, FIELD_TEMPLATE.title.rect);
+  const score = cropToDataUrl(canvas, FIELD_TEMPLATE.score.rect);
+  const reward = cropToDataUrl(canvas, FIELD_TEMPLATE.reward.rect);
+  const comment = cropToDataUrl(canvas, FIELD_TEMPLATE.comment.rect);
+
+  const [deptText, nameText, dateText, titleText, scoreText, rewardText, commentText] = await Promise.all([
+    ocrViaGas(dept.dataUrl), ocrViaGas(name.dataUrl), ocrViaGas(date.dataUrl),
+    ocrViaGas(title.dataUrl), ocrViaGas(score.dataUrl), ocrViaGas(reward.dataUrl), ocrViaGas(comment.dataUrl)
+  ]);
+
+  // 等級チェックボックス：印刷された□の枠線だけで各マスに一定のインクが乗るため、
+  // 絶対しきい値ではなく「他マスと比べて明らかに濃いか」の相対比較で判定する
+  // （枠線のみ＝未チェック、枠内に手書きの✓や塗りつぶし＝チェック済み、という前提）
+  const gradeRatios = GRADE_CELLS.map(cell=>{
+    const { canvas:c } = cropToDataUrl(canvas, cell.rect);
+    return { label: cell.label, ratio: inkRatio(c) };
+  });
+  const sortedRatios = gradeRatios.map(g=>g.ratio).sort((a,b)=>a-b);
+  const median = sortedRatios[Math.floor(sortedRatios.length/2)];
+  const top = gradeRatios.reduce((a,b)=> b.ratio > a.ratio ? b : a);
+  // 最大マスが中央値の2倍以上、かつ絶対差0.06以上あるときだけ「チェックあり」と判定
+  const gradeChecked = (top.ratio > median * 2.0 && top.ratio - median > 0.06) ? top.label : '';
+
+  // 済／未：周囲のインク密度（手書きの丸）が多い方を選択
+  const yesInk = inkRatio(cropToDataUrl(canvas, FIELD_TEMPLATE.statusYes.rect).canvas);
+  const noInk = inkRatio(cropToDataUrl(canvas, FIELD_TEMPLATE.statusNo.rect).canvas);
+  const status = Math.abs(yesInk-noInk) < 0.02 ? '要確認' : (yesInk > noInk ? '済' : '未');
+
+  // 氏名を社員マスタ(employee_master)と照合してempNoを解決
+  const emp = await resolveEmployeeViaGas(nameText.text);
+
+  return {
+    filename,
+    dept: deptText.text, deptOk: deptText.ok,
+    name: nameText.text, nameOk: nameText.ok,
+    empNo: emp.empNo || '', empMatch: emp.matchType || 'none',
+    empCandidates: emp.candidates || [], empDept: emp.dept || '',
+    date: dateText.text, dateOk: dateText.ok,
+    title: titleText.text,
+    score: scoreText.text,
+    reward: rewardText.text,
+    comment: commentText.text,
+    gradeChecked,
+    status,
+    boxFileId:null, boxSharedLink:null
+  };
+}
+
+function confFlag(ok){
+  return ok ? '<span class="conf-flag ok">OK</span>' : '<span class="conf-flag">要確認</span>';
+}
+
+// 社員マスタ照合結果のバッジ
+function empBadge(entry){
+  if(entry.empMatch === 'exact')   return `<span class="conf-flag ok">OK・${entry.empNo}</span>`;
+  if(entry.empMatch === 'partial') return `<span class="conf-flag">候補あり・要確認</span>`;
+  return `<span class="conf-flag" style="background:#FFE0E0;color:#B91C1C;">未登録?</span>`;
+}
+
+// 氏名セル：入力欄＋照合バッジ。完全一致でなければ候補プルダウンで選び直せる
+function nameCellHtml(entry){
+  let html = `<input value="${entry.name}" data-k="name">${empBadge(entry)}`;
+  if(entry.empMatch !== 'exact' && entry.empCandidates && entry.empCandidates.length){
+    const opts = ['<option value="">-- 候補から選択 --</option>']
+      .concat(entry.empCandidates.map(c =>
+        `<option value="${c.empNo}" data-name="${c.name}" data-dept="${c.dept}">${c.name}（${c.dept}）</option>`)).join('');
+    html += `<select data-empselect style="margin-top:4px;width:100%;">${opts}</select>`;
+  }
+  return html;
+}
+
+function renderResultRow(entry){
+  if(ocrResultBody.children.length===1 && ocrResultBody.children[0].children.length===1){
+    ocrResultBody.innerHTML = '';
+  }
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${entry.filename}</td>
+    <td><input value="${entry.dept}" data-k="dept">${confFlag(entry.deptOk)}</td>
+    <td>${nameCellHtml(entry)}</td>
+    <td><input value="${entry.date}" data-k="date">${confFlag(entry.dateOk)}</td>
+    <td><textarea data-k="title">${entry.title}</textarea></td>
+    <td><input value="${entry.score}" data-k="score" style="margin-bottom:4px;"><input value="${entry.gradeChecked}" data-k="gradeChecked" placeholder="等級(空欄可)"></td>
+    <td><input value="${entry.reward}" data-k="reward"></td>
+    <td><select data-k="status"><option ${entry.status==='済'?'selected':''}>済</option><option ${entry.status==='未'?'selected':''}>未</option><option ${entry.status==='要確認'?'selected':''}>要確認</option></select></td>
+    <td><span class="conf-flag">手書き要確認</span></td>`;
+  ocrResultBody.appendChild(tr);
+  tr.querySelectorAll('[data-k]').forEach(input=>{
+    input.addEventListener('input', ()=>{ entry[input.dataset.k] = input.value; });
+  });
+  // 候補プルダウンで社員を選び直したら、empNo・氏名・部署を確定させる
+  const empSel = tr.querySelector('[data-empselect]');
+  if(empSel) empSel.addEventListener('change', ()=>{
+    const opt = empSel.selectedOptions[0];
+    if(opt && opt.value){
+      entry.empNo = opt.value;
+      entry.name = opt.dataset.name;
+      entry.empDept = opt.dataset.dept;
+      entry.empMatch = 'exact';
+      const nameInput = tr.querySelector('[data-k="name"]');
+      if(nameInput) nameInput.value = opt.dataset.name;
+    }
+  });
+}
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  entries = [];
+  ocrResultBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:24px 0;">PDFをアップロードすると、ここに読取結果が表示されます</td></tr>';
+  previewArea.innerHTML = '';
+  registerBtn.disabled = true;
+  [1,2,3,4].forEach(n=>setStep(n,''));
+  registerStatus.textContent = '';
+});
+
+registerBtn.addEventListener('click', async ()=>{
+  if(!CONFIG.GAS_URL){
+    registerStatus.textContent = 'GAS_URL が未設定のため登録できません（デプロイ後にCONFIGへURLを設定してください）';
+    return;
+  }
+  setStep(3,'done'); setStep(4,'active');
+  registerBtn.disabled = true;
+  registerStatus.textContent = '登録中…';
+
+  for(const entry of entries){
+    try{
+      const res = await fetch(CONFIG.GAS_URL, {
+        method:'POST',
+        body: JSON.stringify({ action:'register', entry })
+      });
+      const json = await res.json();
+      if(!json.ok) throw new Error(json.error);
+    }catch(err){
+      registerStatus.textContent = `${entry.filename} の登録に失敗しました：${err.message}`;
+      registerBtn.disabled = false;
+      return;
+    }
+  }
+  setStep(4,'done');
+  registerStatus.textContent = `${entries.length}件を台帳へ登録しました`;
+});
+
+/* ==========================================================================
+   ダッシュボード（サンプルデータ／CONFIG.GAS_URL設定後は実データに切替）
+   ========================================================================== */
+const deptData = {
+  labels: ['総務部','営業部','設計課','電気課','組付課','加工課','購買課'],
+  count:  [3, 1, 6, 4, 5, 12, 5],
+  amount: [3500, 1000, 8500, 6000, 7500, 14500, 6500]
+};
+const personData = [
+  {name:'加藤 誠', dept:'加工課', count:5, amount:9500, grade:'2級', tier:'g2', score:75},
+  {name:'高橋 美咲', dept:'設計課', count:4, amount:7000, grade:'3級', tier:'g34', score:44},
+  {name:'中村 大輔', dept:'組付課', count:4, amount:6000, grade:'4級', tier:'g34', score:32},
+  {name:'伊藤 健', dept:'電気課', count:3, amount:4500, grade:'5級', tier:'g58', score:21},
+  {name:'渡辺 舞', dept:'購買課', count:3, amount:4000, grade:'6級', tier:'g58', score:18},
+  {name:'山本 直樹', dept:'加工課', count:2, amount:3000, grade:'7級', tier:'g58', score:10},
+  {name:'小林 陽子', dept:'総務部', count:2, amount:2500, grade:'7級', tier:'g58', score:10},
+];
+const trendData = {
+  labels: ['42下期','43上期','43下期','44上期','44下期'],
+  count:  [24, 29, 31, 32, 38],
+  amount: [58000, 66000, 70000, 74500, 86500]
+};
+const GRADE_TIER_LABELS = { tk:'特級/1級', g2:'2級', g34:'3〜4級', g58:'5〜8級' };
+const GRADE_TIER_COLORS = { tk:'#FFB020', g2:'#FF8A3D', g34:'#2ECC71', g58:'#8B9FE8' };
+
+// 案件名一覧（職位別表彰の候補選定用）※個々の提案1件＝1行のサンプルデータ
+// pdfUrl は Box アップロード後に発行される共有リンク（Code.gs の uploadPdfToBox_ が返す boxSharedLink と同じ形式）
+const proposalList = [
+  {dept:'加工課', name:'川口 信夫', title:'ナカシマベトナム加工部品の輸出用ラベル改善', date:'2026/05/19', grade:'（評価点数3・要確認）', pdfUrl:'https://app.box.com/file/1900000001'},
+  {dept:'加工課', name:'加藤 誠', title:'治具の位置決め方法変更による段取り時間短縮', date:'2026/06/02', grade:'2級', pdfUrl:'https://app.box.com/file/1900000002'},
+  {dept:'加工課', name:'山本 直樹', title:'切粉回収ボックスの配置見直しによる清掃時間削減', date:'2026/05/28', grade:'7級', pdfUrl:'https://app.box.com/file/1900000003'},
+  {dept:'設計課', name:'高橋 美咲', title:'図面チェックリストのデジタル化', date:'2026/06/05', grade:'3級', pdfUrl:'https://app.box.com/file/1900000004'},
+  {dept:'組付課', name:'中村 大輔', title:'部品トレーの色分けによる組付ミス防止', date:'2026/06/01', grade:'4級', pdfUrl:'https://app.box.com/file/1900000005'},
+  {dept:'電気課', name:'伊藤 健', title:'配線チェック工程の写真記録によるダブルチェック体制', date:'2026/05/22', grade:'5級', pdfUrl:'https://app.box.com/file/1900000006'},
+  {dept:'購買課', name:'渡辺 舞', title:'発注書テンプレートの項目統一', date:'2026/07/12', grade:'6級', pdfUrl:'https://app.box.com/file/1900000007'},
+  {dept:'総務部', name:'小林 陽子', title:'来客対応フローの見直しによる待ち時間短縮', date:'2026/06/18', grade:'7級', pdfUrl:'https://app.box.com/file/1900000008'},
+];
+
+const gradeBadgeHtml = tier => {
+  const map = {g2:['2級','g2'], g34:['3〜4級','g34'], g58:['5〜8級','g58'], tk:['特級/1級','tk'], none:['級なし','none']};
+  const [label,cls] = map[tier] || map.none;
+  return `<span class="badge ${cls}"><span class="badge-dot"></span>${label}</span>`;
+};
+
+// ---- 部署チップ行を生成 ----
+let activeDept = 'all';
+const deptFilterRow = document.getElementById('deptFilterRow');
+function renderDeptChips(){
+  const chips = ['all', ...deptData.labels];
+  deptFilterRow.innerHTML = chips.map(d=>{
+    const label = d==='all' ? '全部署' : d;
+    const idx = d==='all' ? -1 : deptData.labels.indexOf(d);
+    const count = d==='all' ? deptData.count.reduce((a,b)=>a+b,0) : deptData.count[idx];
+    return `<button class="dept-chip${d===activeDept?' active':''}" data-dept="${d}">${label}<span class="chip-count">${count}件</span></button>`;
+  }).join('');
+  deptFilterRow.querySelectorAll('.dept-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      activeDept = btn.dataset.dept;
+      renderDeptChips();
+      updateDashboard();
+    });
+  });
+}
+
+// ---- Chartインスタンス（後で.update()するため変数に保持）----
+const deptChart = new Chart(document.getElementById('deptChart'), {
+  type:'bar',
+  data:{ labels: deptData.labels, datasets:[
+    {label:'提出件数', data: deptData.count, backgroundColor:'#3B6FF0', borderRadius:4, yAxisID:'y'},
+    {label:'報奨金額(円)', data: deptData.amount, backgroundColor:'#FFB020', borderRadius:4, yAxisID:'y1'}
+  ]},
+  options:{ responsive:true, maintainAspectRatio:false,
+    onClick:(evt, elements)=>{
+      if(elements.length){
+        activeDept = deptData.labels[elements[0].index];
+        renderDeptChips(); updateDashboard();
+      }
+    },
+    scales:{ y:{position:'left', title:{display:true,text:'件数'}, grid:{color:'#EFEDE6'}}, y1:{position:'right', title:{display:true,text:'円'}, grid:{display:false}} },
+    plugins:{legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}}} }
+});
+const gradeChart = new Chart(document.getElementById('gradeChart'), {
+  type:'doughnut',
+  data:{ labels:[], datasets:[{data:[], backgroundColor:[], borderWidth:0}] },
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}}} }
+});
+new Chart(document.getElementById('trendChart'), {
+  type:'line',
+  data:{ labels: trendData.labels, datasets:[
+    {label:'提出件数', data: trendData.count, borderColor:'#3B6FF0', backgroundColor:'#3B6FF0', tension:.3, yAxisID:'y'},
+    {label:'報奨金合計(円)', data: trendData.amount, borderColor:'#FFB020', backgroundColor:'#FFB020', tension:.3, yAxisID:'y1'}
+  ]},
+  options:{ responsive:true, maintainAspectRatio:false,
+    scales:{ y:{position:'left', title:{display:true,text:'件数'}, grid:{color:'#EFEDE6'}}, y1:{position:'right', title:{display:true,text:'円'}, grid:{display:false}} },
+    plugins:{legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}}} }
+});
+
+function updateDashboard(){
+  const isAll = activeDept === 'all';
+  const idx = isAll ? -1 : deptData.labels.indexOf(activeDept);
+
+  const count = isAll ? deptData.count.reduce((a,b)=>a+b,0) : deptData.count[idx];
+  const amount = isAll ? deptData.amount.reduce((a,b)=>a+b,0) : deptData.amount[idx];
+  const avg = count ? Math.round(amount/count) : 0;
+  const filteredPeople = isAll ? personData : personData.filter(p=>p.dept===activeDept);
+
+  document.getElementById('kpiCount').innerHTML = `${count}<small>件</small>`;
+  document.getElementById('kpiAmount').textContent = `¥${amount.toLocaleString()}`;
+  document.getElementById('kpiAvg').textContent = `¥${avg.toLocaleString()}`;
+  document.getElementById('kpiPeople').innerHTML = `${filteredPeople.length}<small>名</small>`;
+
+  // 部署別棒グラフ：選択中の部署だけ濃色、他は淡色にして「今どこを見ているか」を示す
+  deptChart.data.datasets[0].backgroundColor = deptData.labels.map(l => isAll || l===activeDept ? '#3B6FF0' : '#D7E3FF');
+  deptChart.data.datasets[1].backgroundColor = deptData.labels.map(l => isAll || l===activeDept ? '#FFB020' : '#FFE7BC');
+  deptChart.update();
+
+  // 等級分布：フィルタ後の個人データから集計
+  const tierCount = { tk:0, g2:0, g34:0, g58:0 };
+  filteredPeople.forEach(p => { if(tierCount[p.tier] !== undefined) tierCount[p.tier]++; });
+  const tiers = Object.keys(tierCount).filter(t => tierCount[t] > 0);
+  gradeChart.data.labels = tiers.map(t => GRADE_TIER_LABELS[t]);
+  gradeChart.data.datasets[0].data = tiers.map(t => tierCount[t]);
+  gradeChart.data.datasets[0].backgroundColor = tiers.map(t => GRADE_TIER_COLORS[t]);
+  gradeChart.update();
+
+  // 個人別ランキング
+  const tbody = document.getElementById('personTableBody');
+  tbody.innerHTML = '';
+  [...filteredPeople].sort((a,b)=>b.amount-a.amount).forEach((p,i)=>{
+    const rankCls = i===0?'top1':i===1?'top2':i===2?'top3':'';
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td><span class="rank ${rankCls}">${i+1}</span></td>
+        <td>${p.name}</td><td>${p.dept}</td><td>${p.count}件</td>
+        <td>¥${p.amount.toLocaleString()}</td><td>${gradeBadgeHtml(p.tier)}</td>
+      </tr>`);
+  });
+  if(filteredPeople.length === 0){
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--ink-soft); padding:18px 0;">該当する提出者がいません</td></tr>';
+  }
+
+  // 案件名一覧（表彰候補選定用）：部署チップと連動して絞り込み
+  const filteredProposals = isAll ? proposalList : proposalList.filter(p=>p.dept===activeDept);
+  const proposalBody = document.getElementById('proposalListBody');
+  proposalBody.innerHTML = filteredProposals.map(p => `
+    <tr>
+      <td>${p.dept}</td><td>${p.name}</td>
+      <td>${p.pdfUrl ? `<a class="proposal-link" href="${p.pdfUrl}" target="_blank" rel="noopener">${p.title}<span class="pdf-icon">PDF</span></a>` : p.title}</td>
+      <td>${p.date}</td><td>${p.grade}</td>
+    </tr>`).join('');
+  if(filteredProposals.length === 0){
+    proposalBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-soft); padding:18px 0;">該当する案件がありません</td></tr>';
+  }
+}
+
+// 部署対抗ランキング（一人当たり平均評価点数）：部署チップの影響を受けず常に全部署で比較
+function renderDeptRanking(){
+  const byDept = {};
+  personData.forEach(p=>{
+    if(!byDept[p.dept]) byDept[p.dept] = { totalScore:0, submitters:0 };
+    byDept[p.dept].totalScore += (p.score || 0);
+    byDept[p.dept].submitters += 1;
+  });
+  const ranking = deptData.labels.map(dept => {
+    const d = byDept[dept];
+    const totalScore = d ? d.totalScore : 0;
+    const submitters = d ? d.submitters : 0;
+    const avgScore = submitters ? totalScore / submitters : 0;
+    return { dept, totalScore, submitters, avgScore };
+  }).sort((a,b)=> b.avgScore - a.avgScore);
+
+  const tbody = document.getElementById('deptRankBody');
+  tbody.innerHTML = ranking.map((r,i)=>{
+    const rankCls = i===0?'top1':i===1?'top2':i===2?'top3':'';
+    const avgTxt = r.submitters ? r.avgScore.toFixed(1) + ' pt' : '―';
+    return `
+      <tr>
+        <td><span class="rank ${rankCls}">${i+1}</span></td>
+        <td>${r.dept}</td>
+        <td>${avgTxt}</td>
+        <td>${r.submitters}名</td>
+        <td>${r.totalScore} pt</td>
+      </tr>`;
+  }).join('');
+}
+
+renderDeptChips();
+renderDeptRanking();
+updateDashboard();
+
+if(!CONFIG.GAS_URL){
+  document.getElementById('dashboardNote').classList.add('err');
+}
+</script>
+
+</body>
+</html>
