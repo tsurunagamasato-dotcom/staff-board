@@ -862,9 +862,62 @@ renderDeptChips();
 renderDeptRanking();
 updateDashboard();
 
-if(!CONFIG.GAS_URL){
-  document.getElementById('dashboardNote').classList.add('err');
+// 等級文字列 → 等級分布ティア
+function gradeToTier(grade){
+  const g = String(grade||'');
+  if(/特級|1級/.test(g)) return 'tk';
+  if(/2級/.test(g)) return 'g2';
+  if(/[34]級/.test(g)) return 'g34';
+  if(/[5-8]級/.test(g)) return 'g58';
+  return 'none';
 }
+
+// GAS(empNo統一台帳)から実データを取得してダッシュボードを差し替える
+async function loadDashboard(){
+  if(!CONFIG.GAS_URL) return;
+  try {
+    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'getDashboard', period:'all', dept:'all' }) });
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.error || '取得失敗');
+    const d = json.result;
+
+    // 部署別
+    const depts = Object.keys(d.byDept);
+    deptData.labels = depts;
+    deptData.count  = depts.map(k => d.byDept[k].count);
+    deptData.amount = depts.map(k => d.byDept[k].amount);
+
+    // 個人別（empNoキー。scoreは台帳に無いので0）
+    personData.length = 0;
+    Object.values(d.byPerson).forEach(p => {
+      personData.push({ name:p.name, dept:p.dept, count:p.count, amount:p.amount, grade:p.grade, tier:gradeToTier(p.grade), score:0 });
+    });
+
+    // 案件一覧
+    proposalList.length = 0;
+    d.proposals.forEach(p => proposalList.push({ dept:p.dept, name:p.name, title:p.title, date:p.date, grade:p.grade, pdfUrl:p.pdfUrl }));
+
+    // チャート・テーブル再描画
+    deptChart.data.labels = deptData.labels;
+    deptChart.data.datasets[0].data = deptData.count;
+    deptChart.data.datasets[1].data = deptData.amount;
+    activeDept = 'all';
+    renderDeptChips();
+    renderDeptRanking();
+    updateDashboard();
+
+    const note = document.getElementById('dashboardNote');
+    note.classList.remove('err');
+    note.innerHTML = '実データ（改善提案管理台帳）を表示中：全' + d.totalCount + '件 / 報奨金合計 ¥' + Number(d.totalAmount).toLocaleString();
+  } catch(e){
+    console.log('ダッシュボード実データ取得失敗:', e);
+    document.getElementById('dashboardNote').classList.add('err');
+    document.getElementById('dashboardNote').innerHTML = '実データ取得に失敗しました（' + e.message + '）。サンプル表示中。';
+  }
+}
+
+if(CONFIG.GAS_URL){ loadDashboard(); }
+else { document.getElementById('dashboardNote').classList.add('err'); }
 </script>
 
 </body>
