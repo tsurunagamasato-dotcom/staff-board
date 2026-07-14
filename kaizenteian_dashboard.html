@@ -291,11 +291,11 @@
     </div>
 
     <div class="card" style="margin-bottom:22px;">
-      <h3>部署対抗ランキング（一人当たり平均評価点数）</h3>
-      <div class="dept-rank-note">提出者数で割った一人当たり平均のため、少人数の部署でも上位に入れます。合計件数だけに偏らない評価です。</div>
+      <h3>部署対抗ランキング（一人当たり平均提出枚数）</h3>
+      <div class="dept-rank-note">提出枚数合計を部署の在籍人数で割った一人当たり平均のため、少人数の部署でも上位に入れます。提出への参加度を評価します。</div>
       <table>
         <thead>
-          <tr><th>順位</th><th>部署</th><th>一人当たり平均評価点数</th><th>提出者数</th><th>評価点数合計</th></tr>
+          <tr><th>順位</th><th>部署</th><th>一人当たり平均提出枚数</th><th>部署人数</th><th>提出枚数合計</th></tr>
         </thead>
         <tbody id="deptRankBody"></tbody>
       </table>
@@ -730,6 +730,9 @@ const deptData = {
   count:  [3, 1, 6, 4, 5, 12, 5],
   amount: [3500, 1000, 8500, 6000, 7500, 14500, 6500]
 };
+// 部署対抗ランキング用（実データ取得時に設定）。提出枚数合計と部署在籍人数。
+let deptHeadcount = { '総務部':8, '営業部':6, '設計課':10, '電気課':7, '組付課':9, '加工課':15, '購買課':6 };
+let deptSubmissions = { '総務部':3, '営業部':1, '設計課':6, '電気課':4, '組付課':5, '加工課':12, '購買課':5 };
 const personData = [
   {name:'加藤 誠', dept:'加工課', count:5, amount:9500, grade:'2級', tier:'g2', score:75},
   {name:'高橋 美咲', dept:'設計課', count:4, amount:7000, grade:'3級', tier:'g34', score:44},
@@ -877,33 +880,29 @@ function updateDashboard(){
   }
 }
 
-// 部署対抗ランキング（一人当たり平均評価点数）：部署チップの影響を受けず常に全部署で比較
+// 部署対抗ランキング（一人当たり平均提出枚数）：部署チップの影響を受けず常に全部署で比較
+// 平均提出枚数 = 提出枚数合計 ÷ 部署の在籍人数（社員マスタ基準）
 function renderDeptRanking(){
-  const byDept = {};
-  personData.forEach(p=>{
-    if(!byDept[p.dept]) byDept[p.dept] = { totalScore:0, submitters:0 };
-    byDept[p.dept].totalScore += (p.score || 0);
-    byDept[p.dept].submitters += 1;
-  });
-  const ranking = deptData.labels.map(dept => {
-    const d = byDept[dept];
-    const totalScore = d ? d.totalScore : 0;
-    const submitters = d ? d.submitters : 0;
-    const avgScore = submitters ? totalScore / submitters : 0;
-    return { dept, totalScore, submitters, avgScore };
-  }).sort((a,b)=> b.avgScore - a.avgScore);
+  const depts = Object.keys(deptHeadcount);
+  const ranking = depts.map(dept => {
+    const submissions = deptSubmissions[dept] || 0;
+    const headcount = deptHeadcount[dept] || 0;
+    const avg = headcount ? submissions / headcount : 0;
+    return { dept, submissions, headcount, avg };
+  }).filter(r => r.headcount > 0)
+    .sort((a,b)=> b.avg - a.avg);
 
   const tbody = document.getElementById('deptRankBody');
   tbody.innerHTML = ranking.map((r,i)=>{
     const rankCls = i===0?'top1':i===1?'top2':i===2?'top3':'';
-    const avgTxt = r.submitters ? r.avgScore.toFixed(1) + ' pt' : '―';
+    const avgTxt = r.avg.toFixed(2) + ' 枚';
     return `
       <tr>
         <td><span class="rank ${rankCls}">${i+1}</span></td>
         <td>${r.dept}</td>
         <td>${avgTxt}</td>
-        <td>${r.submitters}名</td>
-        <td>${r.totalScore} pt</td>
+        <td>${r.headcount}名</td>
+        <td>${r.submissions} 枚</td>
       </tr>`;
   }).join('');
 }
@@ -938,10 +937,15 @@ async function loadDashboard(period){
     deptData.count  = depts.map(k => d.byDept[k].count);
     deptData.amount = depts.map(k => d.byDept[k].amount);
 
-    // 個人別（empNoキー。scoreは台帳に無いので0）
+    // 部署対抗ランキング用：提出枚数合計と在籍人数
+    deptHeadcount = d.deptHeadcount || {};
+    deptSubmissions = {};
+    depts.forEach(k => { deptSubmissions[k] = d.byDept[k].count; });
+
+    // 個人別（empNoキー。評価点数は等級換算表からGAS側で逆引き集計済み）
     personData.length = 0;
     Object.values(d.byPerson).forEach(p => {
-      personData.push({ name:p.name, dept:p.dept, count:p.count, amount:p.amount, grade:p.grade, tier:gradeToTier(p.grade), score:0 });
+      personData.push({ name:p.name, dept:p.dept, count:p.count, amount:p.amount, grade:p.grade, tier:gradeToTier(p.grade), score:(p.score||0) });
     });
 
     // 案件一覧
@@ -976,7 +980,7 @@ async function loadDashboard(period){
     const label = period === 'all' ? '全期間' : period;
     const note = document.getElementById('dashboardNote');
     note.classList.remove('err');
-    note.innerHTML = '実データ（改善提案管理台帳）｜' + label + '：' + d.totalCount + '件 / 報奨金合計 ¥' + Number(d.totalAmount).toLocaleString();
+    note.innerHTML = '実データ（改善提案管理台帳）｜' + label + '：' + d.totalCount + '件 / 報奨金合計 ¥' + Number(d.totalAmount).toLocaleString() + ' / 評価点数合計 ' + Number(d.totalScore || 0).toLocaleString() + 'pt';
   } catch(e){
     console.log('ダッシュボード実データ取得失敗:', e);
     document.getElementById('dashboardNote').classList.add('err');
