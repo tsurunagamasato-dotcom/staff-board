@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>改善提案管理ダッシュボード</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -217,7 +217,7 @@
   <div class="brand"><span>NAKASHIMA GENERAL AFFAIRS</span>改善提案管理ダッシュボード</div>
   <div class="tabs">
     <button class="tab-btn active" data-view="dashboard">ダッシュボード</button>
-    <button class="tab-btn" data-view="upload">PDFアップロード（OCR登録）</button>
+    <button class="tab-btn" data-view="upload">Excelアップロード（登録）</button>
   </div>
 </div>
 
@@ -323,33 +323,33 @@
   <div class="view" id="view-upload">
 
     <div class="note-banner" id="uploadNote">
-      <b>処理の流れ：</b> ①PDFをブラウザ内でページ画像に変換（PDF.js） → ②固定レイアウトに基づき項目ごとに画像を切り出し → ③印刷文字はCloud Vision APIでOCR、チェック欄・丸囲みは画像解析で判定 → ④内容を確認・修正 → ⑤Boxへ原本保存＋台帳へ登録。
+      <b>処理の流れ：</b> ①改善提案書Excel（様式固定）をアップロード → ②固定セルから項目を自動抽出（氏名・部署・提案日・案件名・等級・評価点数・報奨金など） → ③氏名を社員マスタと照合しempNoを付与 → ④内容を確認・修正 → ⑤台帳へ登録（評価期間は提出日から自動判定）。
     </div>
 
     <div class="ocr-steps" id="ocrSteps">
-      <div class="step" data-step="1"><div class="step-num">1</div><div><div class="step-title">アップロード</div><div class="step-desc">改善提案書PDFをドラッグ&ドロップ</div></div></div>
-      <div class="step" data-step="2"><div class="step-num">2</div><div><div class="step-title">画像切り出し＋OCR</div><div class="step-desc">項目を自動抽出し、下表に表示</div></div></div>
+      <div class="step" data-step="1"><div class="step-num">1</div><div><div class="step-title">アップロード</div><div class="step-desc">改善提案書Excelをドラッグ&ドロップ</div></div></div>
+      <div class="step" data-step="2"><div class="step-num">2</div><div><div class="step-title">項目抽出</div><div class="step-desc">固定セルから自動抽出し、下表に表示</div></div></div>
       <div class="step" data-step="3"><div class="step-num">3</div><div><div class="step-title">確認・修正</div><div class="step-desc">誤読箇所を手動で補正</div></div></div>
       <div class="step" data-step="4"><div class="step-num">4</div><div><div class="step-title">登録</div><div class="step-desc">Box保存＋台帳スプレッドシートへ書込</div></div></div>
     </div>
 
     <div class="upload-zone" id="uploadZone">
       <div class="icon">📄</div>
-      <div class="main-txt">クリックまたはドラッグ＆ドロップでPDFを追加</div>
-      <div class="sub-txt">複数ファイルの一括アップロードに対応（1ファイル最大10MB）／様式固定の改善提案書PDF専用</div>
-      <input type="file" id="fileInput" accept="application/pdf" multiple>
+      <div class="main-txt">クリックまたはドラッグ＆ドロップでExcelを追加</div>
+      <div class="sub-txt">様式固定の改善提案書Excel（.xlsx）専用／複数ファイルの一括アップロードに対応</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
     </div>
 
     <div id="previewArea"></div>
 
     <div class="card" style="margin-top:22px;">
-      <h3>OCR読取結果（確認・修正してから登録）</h3>
+      <h3>Excel読取結果（確認・修正してから登録）</h3>
       <table class="ocr-result-table">
         <thead>
           <tr><th>ファイル</th><th>部署</th><th>氏名</th><th>提出日</th><th>内容</th><th>評価点数/等級</th><th>報奨金額</th><th>実施状況</th><th></th></tr>
         </thead>
         <tbody id="ocrResultBody">
-          <tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:24px 0;">PDFをアップロードすると、ここに読取結果が表示されます</td></tr>
+          <tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:24px 0;">Excelをアップロードすると、ここに読取結果が表示されます</td></tr>
         </tbody>
       </table>
       <div class="action-row">
@@ -377,7 +377,7 @@ const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbw1TzESvQEu_m7qnFtdZq7V_ehRAYFEvE6gKy9TD0fwKxA4VT2ACzo6J72r_OxjtBVQAg/exec' // デプロイURL
 };
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// PDF.jsは廃止し、Excel取り込み（SheetJS）に一本化
 
 /* ==========================================================================
    改善提案書 固定レイアウト テンプレート（ページ画像に対する割合座標）
@@ -447,34 +447,69 @@ async function handleFiles(fileList){
   entries = [];
 
   for(const file of fileList){
-    if(file.type !== 'application/pdf'){ continue; }
-    const arrayBuf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({data: arrayBuf}).promise;
-    const page = await pdf.getPage(1);
-    const scale = 2.2;
-    const viewport = page.getViewport({scale});
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width; canvas.height = viewport.height;
-    await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
-
-    // プレビュー表示（縮小）
-    const previewCanvas = canvas.cloneNode();
-    previewCanvas.getContext('2d').drawImage(canvas, 0, 0);
-    const wrap = document.createElement('div');
-    wrap.className = 'preview-row';
-    wrap.innerHTML = `<div><canvas></canvas><div class="preview-meta">${file.name}</div></div>`;
-    wrap.querySelector('canvas').width = 260;
-    wrap.querySelector('canvas').height = 260 * canvas.height/canvas.width;
-    wrap.querySelector('canvas').getContext('2d').drawImage(canvas, 0,0, wrap.querySelector('canvas').width, wrap.querySelector('canvas').height);
-    previewArea.appendChild(wrap);
-
-    const entry = await extractFieldsFromCanvas(canvas, file.name);
-    entries.push(entry);
-    renderResultRow(entry);
+    if(!/\.xlsx?$/i.test(file.name)){ continue; } // Excelのみ
+    try {
+      const entry = await extractFromExcel(file);
+      entries.push(entry);
+      renderResultRow(entry);
+      const wrap = document.createElement('div');
+      wrap.className = 'preview-row';
+      wrap.innerHTML = `<div class="preview-meta">📄 ${file.name}</div>`;
+      previewArea.appendChild(wrap);
+    } catch(e){
+      console.log('Excel解析エラー:', file.name, e);
+      const wrap = document.createElement('div');
+      wrap.className = 'preview-row';
+      wrap.innerHTML = `<div class="preview-meta" style="color:#B91C1C;">⚠ ${file.name}：解析失敗（フォーマット確認）</div>`;
+      previewArea.appendChild(wrap);
+    }
   }
 
   setStep(2,'done'); setStep(3,'active');
   registerBtn.disabled = entries.length === 0;
+}
+
+// 改善提案書Excel（フォーマット固定・シート「改善提案書式」）から項目を抽出
+async function extractFromExcel(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array' });
+  const ws = wb.Sheets['改善提案書式'] || wb.Sheets[wb.SheetNames[0]];
+  const cell = (addr) => { const c = ws[addr]; return c ? String(c.w != null ? c.w : c.v).trim() : ''; };
+
+  const dept  = cell('D6');
+  const name  = cell('L6');
+  const date  = cell('V6').replace(/[.．]/g, '/');        // 2026.7.6 → 2026/7/6
+  const title = cell('D8');
+
+  // 内容（現状・改善案・効果）：D13〜E65の非空行を結合
+  const body = [];
+  for(let r=13; r<=65; r++){ const t = cell('D'+r) || cell('E'+r); if(t) body.push(t); }
+  const content = body.join('\n');
+
+  // 等級：☑が付いたマスを採用（□は未チェック）
+  const gradeMap = { F76:'特級', I76:'1級', L76:'2級', F77:'3級', I77:'4級', L77:'5級', F78:'6級', I78:'7級', L78:'8級' };
+  let gradeChecked = '';
+  for(const addr in gradeMap){ if(/[☑■✓✔☒]/.test(cell(addr))){ gradeChecked = gradeMap[addr]; break; } }
+
+  const score   = cell('R76').replace(/[^\d]/g,''); // 評価点数
+  const reward  = cell('Y76').replace(/[^\d]/g,''); // 報奨金額
+  const comment = cell('B80');
+
+  const emp = await resolveEmployeeViaGas(name); // empNo照合
+
+  return {
+    filename: file.name,
+    dept, deptOk:true,
+    name, nameOk:true,
+    empNo: emp.empNo||'', empMatch: emp.matchType||'none', empCandidates: emp.candidates||[], empDept: emp.dept||'',
+    date, dateOk:true,
+    title,
+    content,
+    score, reward, gradeChecked,
+    comment,
+    status:'',   // 実施状況は○印判定不可のため手入力
+    boxFileId:null, boxSharedLink:null
+  };
 }
 
 function cropToDataUrl(sourceCanvas, rectFrac){
@@ -638,7 +673,7 @@ function renderResultRow(entry){
 
 document.getElementById('clearBtn').addEventListener('click', ()=>{
   entries = [];
-  ocrResultBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:24px 0;">PDFをアップロードすると、ここに読取結果が表示されます</td></tr>';
+  ocrResultBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:24px 0;">Excelをアップロードすると、ここに読取結果が表示されます</td></tr>';
   previewArea.innerHTML = '';
   registerBtn.disabled = true;
   [1,2,3,4].forEach(n=>setStep(n,''));
@@ -656,9 +691,24 @@ registerBtn.addEventListener('click', async ()=>{
 
   for(const entry of entries){
     try{
+      // フロントのentry → GAS(registerEntry_)が期待する項目名へ変換
+      const payload = {
+        name: entry.name,
+        dept: entry.empDept || entry.dept,
+        empNo: entry.empNo || '',
+        submittedDate: entry.date,
+        title: entry.title,
+        content: entry.content || '',
+        evaluationPoint: entry.score || '',
+        rewardAmount: entry.reward || '',
+        gradeCheckbox: entry.gradeChecked || '',
+        status: entry.status || '',
+        comment: entry.comment || ''
+        // period(評価期間)はGAS側で提出日から自動計算
+      };
       const res = await fetch(CONFIG.GAS_URL, {
         method:'POST',
-        body: JSON.stringify({ action:'register', entry })
+        body: JSON.stringify({ action:'register', entry: payload })
       });
       const json = await res.json();
       if(!json.ok) throw new Error(json.error);
