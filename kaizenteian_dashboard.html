@@ -733,6 +733,8 @@ const deptData = {
 // 部署対抗ランキング用（実データ取得時に設定）。提出枚数合計と部署在籍人数。
 let deptHeadcount = { '総務部':8, '営業部':6, '設計課':10, '電気課':7, '組付課':9, '加工課':15, '購買課':6 };
 let deptSubmissions = { '総務部':3, '営業部':1, '設計課':6, '電気課':4, '組付課':5, '加工課':12, '購買課':5 };
+// ランキングから除外する役職・拠点（部署ではないもの）。提出0の実部署は表示する。
+const RANK_EXCLUDE_DEPTS = ['会長','役員','NVM','社長','第一製造部','NIM'];
 const personData = [
   {name:'加藤 誠', dept:'加工課', count:5, amount:9500, grade:'2級', tier:'g2', score:75},
   {name:'高橋 美咲', dept:'設計課', count:4, amount:7000, grade:'3級', tier:'g34', score:44},
@@ -889,7 +891,7 @@ function renderDeptRanking(){
     const headcount = deptHeadcount[dept] || 0;
     const avg = headcount ? submissions / headcount : 0;
     return { dept, submissions, headcount, avg };
-  }).filter(r => r.headcount > 0)
+  }).filter(r => r.headcount > 0 && !RANK_EXCLUDE_DEPTS.includes(r.dept))
     .sort((a,b)=> b.avg - a.avg);
 
   const tbody = document.getElementById('deptRankBody');
