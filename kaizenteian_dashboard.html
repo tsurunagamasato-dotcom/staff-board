@@ -758,7 +758,7 @@ const gradeChart = new Chart(document.getElementById('gradeChart'), {
   data:{ labels:[], datasets:[{data:[], backgroundColor:[], borderWidth:0}] },
   options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}}} }
 });
-new Chart(document.getElementById('trendChart'), {
+const trendChart = new Chart(document.getElementById('trendChart'), {
   type:'line',
   data:{ labels: trendData.labels, datasets:[
     {label:'提出件数', data: trendData.count, borderColor:'#3B6FF0', backgroundColor:'#3B6FF0', tension:.3, yAxisID:'y'},
@@ -873,15 +873,16 @@ function gradeToTier(grade){
 }
 
 // GAS(empNo統一台帳)から実データを取得してダッシュボードを差し替える
-async function loadDashboard(){
+async function loadDashboard(period){
   if(!CONFIG.GAS_URL) return;
+  period = period || 'all';
   try {
-    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'getDashboard', period:'all', dept:'all' }) });
+    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'getDashboard', period: period, dept:'all' }) });
     const json = await res.json();
     if(!json.ok) throw new Error(json.error || '取得失敗');
     const d = json.result;
 
-    // 部署別
+    // 部署別（選択した評価期間で絞り込み済み）
     const depts = Object.keys(d.byDept);
     deptData.labels = depts;
     deptData.count  = depts.map(k => d.byDept[k].count);
@@ -906,9 +907,26 @@ async function loadDashboard(){
     renderDeptRanking();
     updateDashboard();
 
+    // 推移グラフ：評価期間ごとの件数・報奨金（常に全期間を表示）
+    if (d.periods && d.periods.length) {
+      trendChart.data.labels = d.periods;
+      trendChart.data.datasets[0].data = d.periods.map(k => d.byPeriod[k].count);
+      trendChart.data.datasets[1].data = d.periods.map(k => d.byPeriod[k].amount);
+      trendChart.update();
+    }
+
+    // 評価期間セレクトを実データで生成（初回のみ）＋選択で再取得
+    const sel = document.getElementById('periodSelect');
+    if (!sel.dataset.filled && d.periods) {
+      sel.innerHTML = '<option value="all">全期間</option>' + d.periods.map(p => `<option value="${p}">${p}</option>`).join('');
+      sel.dataset.filled = '1';
+      sel.addEventListener('change', () => loadDashboard(sel.value));
+    }
+
+    const label = period === 'all' ? '全期間' : period;
     const note = document.getElementById('dashboardNote');
     note.classList.remove('err');
-    note.innerHTML = '実データ（改善提案管理台帳）を表示中：全' + d.totalCount + '件 / 報奨金合計 ¥' + Number(d.totalAmount).toLocaleString();
+    note.innerHTML = '実データ（改善提案管理台帳）｜' + label + '：' + d.totalCount + '件 / 報奨金合計 ¥' + Number(d.totalAmount).toLocaleString();
   } catch(e){
     console.log('ダッシュボード実データ取得失敗:', e);
     document.getElementById('dashboardNote').classList.add('err');
@@ -916,7 +934,7 @@ async function loadDashboard(){
   }
 }
 
-if(CONFIG.GAS_URL){ loadDashboard(); }
+if(CONFIG.GAS_URL){ loadDashboard('all'); }
 else { document.getElementById('dashboardNote').classList.add('err'); }
 </script>
 
