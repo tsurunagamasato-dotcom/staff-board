@@ -808,14 +808,16 @@ function exportRangeCSV(dates, allOrders, dataStamp) {
       });
     });
 
-    // 来訪者
+    // 来訪者（futsuu=普通 / oomori=大盛 のみ集計。nashi=食べない は数えない）
     orders.filter(o => o.dept==='来訪者').forEach(v => {
-      const label = v.order==='futsuu'?'普通':'大盛';
+      const label = v.order==='futsuu'?'普通': v.order==='oomori'?'大盛':'食べない';
       const placeLabel = v.place==='nezaki'?'根崎':'本社';
       rows.push([date, '来訪者', v.name||'来訪者', label+'×'+(v.count||1), placeLabel, v.orderer||'']);
       const cnt = parseInt(v.count)||1;
-      if (v.place==='nezaki') { if(v.order==='futsuu') nezaki.futsuu+=cnt; else nezaki.oomori+=cnt; }
-      else { if(v.order==='futsuu') honsha.futsuu+=cnt; else honsha.oomori+=cnt; }
+      if (v.order==='futsuu' || v.order==='oomori') {
+        if (v.place==='nezaki') { if(v.order==='futsuu') nezaki.futsuu+=cnt; else nezaki.oomori+=cnt; }
+        else { if(v.order==='futsuu') honsha.futsuu+=cnt; else honsha.oomori+=cnt; }
+      }
     });
 
     summaryRows.push([date, '本社', honsha.futsuu, honsha.oomori, honsha.futsuu+honsha.oomori, '根崎', nezaki.futsuu, nezaki.oomori, nezaki.futsuu+nezaki.oomori]);
@@ -866,11 +868,16 @@ function exportCSV() {
     });
   });
 
-  // 来訪者
+  // 来訪者（futsuu=普通 / oomori=大盛 のみ集計。nashi=食べない は数えない）
   visitorData.forEach(v => {
-    const label = v.order==='futsuu'?'普通':'大盛';
+    const label = v.order==='futsuu'?'普通': v.order==='oomori'?'大盛':'食べない';
     const placeLabel = v.place==='nezaki'?'根崎':'本社';
-    rows.push([date, '来訪者', v.name, label+'×'+(v.count||1), placeLabel, v.orderer||'']);
+    const cnt = parseInt(v.count)||1;
+    rows.push([date, '来訪者', v.name, label+'×'+cnt, placeLabel, v.orderer||'']);
+    if (v.order==='futsuu' || v.order==='oomori') {
+      if (v.place==='nezaki') { if(v.order==='futsuu') nezaki.futsuu+=cnt; else nezaki.oomori+=cnt; }
+      else { if(v.order==='futsuu') honsha.futsuu+=cnt; else honsha.oomori+=cnt; }
+    }
   });
 
   // 集計行
