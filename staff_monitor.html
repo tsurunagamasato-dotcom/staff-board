@@ -629,9 +629,17 @@ async function fetchAll(silent=false) {
     let changed = false;
     json.data.forEach(row => {
       const id = row.id;
-      if (id && state[id] !== undefined && row.status) {
+      if (id && state[id] !== undefined) {
         const old = state[id];
-        const newSt = { status:row.status, updated:row.updated||'', memo:row.memo||'', leaveStart:row.leaveStart||'', leaveEnd:row.leaveEnd||'' };
+        // GAS側のstatusが空（日次リセット後＝未打刻）なら、デフォルト居場所＋updated空に戻す。
+        // これをしないと設置モニタ（常時表示・差分更新）は前日の「出勤中」を保持し続け、翌朝も残る。
+        let newSt;
+        if (row.status) {
+          newSt = { status:row.status, updated:row.updated||'', memo:row.memo||'', leaveStart:row.leaveStart||'', leaveEnd:row.leaveEnd||'' };
+        } else {
+          const sm = STAFF_MASTER.find(s => String(s.id) === String(id));
+          newSt = { status:(sm ? sm.base : old.status), updated:'', memo:'', leaveStart:'', leaveEnd:'' };
+        }
         if (old.status !== newSt.status || old.updated !== newSt.updated || old.memo !== newSt.memo || old.leaveStart !== newSt.leaveStart || old.leaveEnd !== newSt.leaveEnd) {
           state[id] = newSt;
           changed = true;
