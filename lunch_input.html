@@ -939,7 +939,7 @@ async function submitVisitor() {
   const orderer = (document.getElementById('visitorOrderer').value||'').trim();
   if (!orderer) { showToast('注文者名を入力してください'); return; }
   const orders = visitorList.map(v=>({
-    action:'saveOrder', date:visitorDate, id:'visitor_'+v.id,
+    action:'saveOrder', date:(v.date||fmtDate(new Date())), id:'visitor_'+v.id,
     name: v.name||'来訪者', dept:'来訪者', order:v.order,
     place:visitorPlace, count:v.count, proxy:false, orderer:orderer
   }));
@@ -947,7 +947,8 @@ async function submitVisitor() {
     const res = await fetchWithTimeout(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveOrders',orders})},35000);
     const json = await res.json();
     if (json.ok) {
-      showToast(`来訪者${visitorList.length}件を登録しました（${visitorDate}）`);
+      const dsList = [...new Set(orders.map(o=>o.date))].join('、');
+      showToast(`来訪者${orders.length}件を登録しました（${dsList}）`);
       visitorList=[]; renderVisitorList();
     }
   } catch(e) { showToast('通信エラー。再度お試しください'); }

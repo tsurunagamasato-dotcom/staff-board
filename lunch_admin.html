@@ -427,6 +427,14 @@ let permanentNG = {};
 let ordersData = [];
 let visitorData = [];
 let locationStatusMap = {}; // empNo → status（所在地）
+let lastOrdersLoadedAt = ''; // 単日データ(loadOrders)を取得した時刻
+
+// 「YYYY-MM-DD HH:MM」形式の現在時刻
+function nowStamp() {
+  const n = new Date();
+  const p = x => String(x).padStart(2,'0');
+  return `${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())} ${p(n.getHours())}:${p(n.getMinutes())}`;
+}
 let toastTimer;
 
 function showToast(msg) {
@@ -518,6 +526,7 @@ async function loadOrders() {
     if (json.ok) {
       ordersData = json.orders.filter(o => !String(o.id).startsWith('visitor_') && !String(o.id).startsWith('E-'));
       visitorData = json.orders.filter(o => String(o.id).startsWith('visitor_'));
+      lastOrdersLoadedAt = nowStamp();
       if (json.permanentNG) permanentNG = json.permanentNG;
       renderLocationSummary();
       renderVisitorSummary();
@@ -759,17 +768,15 @@ async function doExport() {
     } catch(e) { allOrders[date] = []; }
   }
 
-  exportRangeCSV(dates, allOrders);
+  exportRangeCSV(dates, allOrders, nowStamp());
 }
 
-function exportRangeCSV(dates, allOrders) {
+function exportRangeCSV(dates, allOrders, dataStamp) {
   const BOM = '\uFEFF';
   const rows = [];
 
-  // 出力日時（総務がいつ発注数を出力したかを記録）
-  const _now = new Date();
-  const _p = n => String(n).padStart(2,'0');
-  rows.push(['出力日時', `${_now.getFullYear()}-${_p(_now.getMonth()+1)}-${_p(_now.getDate())} ${_p(_now.getHours())}:${_p(_now.getMinutes())}`]);
+  // データ取得日時（このExcelがいつ時点の注文状況かを示す）
+  rows.push(['データ取得日時', dataStamp || nowStamp()]);
   rows.push([]);
 
   // ヘッダー
@@ -842,10 +849,8 @@ function exportCSV() {
   if (!date) return;
 
   const honsha={futsuu:0,oomori:0}, nezaki={futsuu:0,oomori:0};
-  const _now = new Date();
-  const _p = n => String(n).padStart(2,'0');
   const rows = [
-    ['出力日時', `${_now.getFullYear()}-${_p(_now.getMonth()+1)}-${_p(_now.getDate())} ${_p(_now.getHours())}:${_p(_now.getMinutes())}`],
+    ['データ取得日時', lastOrdersLoadedAt || nowStamp()],
     [],
     ['日付','部署','氏名','注文','場所','注文者']
   ];
