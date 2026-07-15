@@ -265,6 +265,15 @@
       </div>
     </div>
     <div class="settings-card">
+      <div class="settings-title">🔒 来訪者注文パスワード</div>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:14px;">注文画面の「来訪者」タブを開く際に必要なパスワードです。総務部のみが来訪者弁当を注文できるようにします。空欄で保存するとロックは無効になります。</p>
+      <div class="settings-row">
+        <div class="settings-label">パスワード</div>
+        <input type="text" class="settings-input" id="visitorPasswordInput" placeholder="例：nakashima2026" autocomplete="off">
+        <button class="icon-btn primary" onclick="saveVisitorPassword()">保存</button>
+      </div>
+    </div>
+    <div class="settings-card">
       <div class="settings-title">× 永久×設定</div>
       <p style="font-size:13px;color:var(--text-sub);margin-bottom:14px;">ONにすると毎日デフォルトで×になります（本人が○に変更することも可能）</p>
       <table class="ng-table">
@@ -456,6 +465,7 @@ async function init() {
     const json = settingsResult.value;
     const deadlineRaw = json.settings.deadline || '08:30';
     document.getElementById('deadlineInput').value = normalizeDeadline(deadlineRaw);
+    if (json.settings.visitor_password != null) document.getElementById('visitorPasswordInput').value = String(json.settings.visitor_password);
     Object.keys(json.settings).forEach(k => {
       if (k.startsWith('ng_') && (json.settings[k] === true || json.settings[k] === 'TRUE' || json.settings[k] === 'true')) permanentNG[k.replace('ng_','')] = true;
       if (k.startsWith('mon_price_')) mondayPrices[k.replace('mon_price_','')] = Number(json.settings[k]) || 600;
@@ -756,8 +766,14 @@ function exportRangeCSV(dates, allOrders) {
   const BOM = '\uFEFF';
   const rows = [];
 
+  // 出力日時（総務がいつ発注数を出力したかを記録）
+  const _now = new Date();
+  const _p = n => String(n).padStart(2,'0');
+  rows.push(['出力日時', `${_now.getFullYear()}-${_p(_now.getMonth()+1)}-${_p(_now.getDate())} ${_p(_now.getHours())}:${_p(_now.getMinutes())}`]);
+  rows.push([]);
+
   // ヘッダー
-  rows.push(['日付', '部署', '氏名', '注文', '場所']);
+  rows.push(['日付', '部署', '氏名', '注文', '場所', '注文者']);
 
   const summaryRows = [];
 
@@ -777,7 +793,7 @@ function exportRangeCSV(dates, allOrders) {
         const place = rec ? rec.place : getDefaultPlace(s);
         const label = order==='futsuu'?'普通': order==='oomori'?'大盛': order==='nashi'?'食べない':'未回答';
         const placeLabel = place==='nezaki'?'根崎':'本社';
-        rows.push([date, dept, s.name, label, placeLabel]);
+        rows.push([date, dept, s.name, label, placeLabel, '']);
         if (order==='futsuu'||order==='oomori') {
           if (place==='nezaki') { if(order==='futsuu') nezaki.futsuu++; else nezaki.oomori++; }
           else { if(order==='futsuu') honsha.futsuu++; else honsha.oomori++; }
@@ -789,7 +805,7 @@ function exportRangeCSV(dates, allOrders) {
     orders.filter(o => o.dept==='来訪者').forEach(v => {
       const label = v.order==='futsuu'?'普通':'大盛';
       const placeLabel = v.place==='nezaki'?'根崎':'本社';
-      rows.push([date, '来訪者', v.name||'来訪者', label+'×'+(v.count||1), placeLabel]);
+      rows.push([date, '来訪者', v.name||'来訪者', label+'×'+(v.count||1), placeLabel, v.orderer||'']);
       const cnt = parseInt(v.count)||1;
       if (v.place==='nezaki') { if(v.order==='futsuu') nezaki.futsuu+=cnt; else nezaki.oomori+=cnt; }
       else { if(v.order==='futsuu') honsha.futsuu+=cnt; else honsha.oomori+=cnt; }
@@ -826,14 +842,20 @@ function exportCSV() {
   if (!date) return;
 
   const honsha={futsuu:0,oomori:0}, nezaki={futsuu:0,oomori:0};
-  const rows = [['日付','部署','氏名','注文','場所']];
+  const _now = new Date();
+  const _p = n => String(n).padStart(2,'0');
+  const rows = [
+    ['出力日時', `${_now.getFullYear()}-${_p(_now.getMonth()+1)}-${_p(_now.getDate())} ${_p(_now.getHours())}:${_p(_now.getMinutes())}`],
+    [],
+    ['日付','部署','氏名','注文','場所','注文者']
+  ];
 
   DEPT_ORDER.forEach(dept => {
     STAFF_MASTER.filter(s=>s.dept===dept).forEach(s => {
       const {order,place} = getEffectiveOrder(s);
       const label = order==='futsuu'?'普通':order==='oomori'?'大盛':order==='nashi'?'食べない':'未回答';
       const placeLabel = place==='nezaki'?'根崎':'本社';
-      rows.push([date, dept, s.name, label, placeLabel]);
+      rows.push([date, dept, s.name, label, placeLabel, '']);
       if (place==='honsha') { if(order==='futsuu') honsha.futsuu++; else if(order==='oomori') honsha.oomori++; }
       else { if(order==='futsuu') nezaki.futsuu++; else if(order==='oomori') nezaki.oomori++; }
     });
@@ -843,7 +865,7 @@ function exportCSV() {
   visitorData.forEach(v => {
     const label = v.order==='futsuu'?'普通':'大盛';
     const placeLabel = v.place==='nezaki'?'根崎':'本社';
-    rows.push([date, '来訪者', v.name, label+'×'+(v.count||1), placeLabel]);
+    rows.push([date, '来訪者', v.name, label+'×'+(v.count||1), placeLabel, v.orderer||'']);
   });
 
   // 集計行
@@ -869,6 +891,15 @@ async function saveDeadline() {
     const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveSettings',key:'deadline',value})});
     const json = await res.json();
     if (json.ok) showToast('締切時刻を保存しました');
+  } catch(e) { showToast('保存に失敗しました'); }
+}
+
+async function saveVisitorPassword() {
+  const value = document.getElementById('visitorPasswordInput').value.trim();
+  try {
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveSettings',key:'visitor_password',value})});
+    const json = await res.json();
+    if (json.ok) showToast(value ? '来訪者パスワードを保存しました' : '来訪者ロックを無効にしました');
   } catch(e) { showToast('保存に失敗しました'); }
 }
 

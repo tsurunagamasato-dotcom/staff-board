@@ -283,6 +283,10 @@
   <!-- 来訪者タブ -->
   <div id="visitorTab" class="hidden">
     <div class="section-label" style="margin-bottom:10px;">来訪者の注文を入力してください</div>
+    <div class="visitor-card" style="margin-bottom:12px;">
+      <div class="section-label" style="margin-bottom:6px;">注文者（総務部の記入者）</div>
+      <input class="visitor-input" id="visitorOrderer" type="text" placeholder="注文した人の氏名を入力" style="width:100%;box-sizing:border-box;" />
+    </div>
     <div id="visitorList"></div>
     <button class="add-visitor-btn" onclick="addVisitor()">＋ 来訪者を追加</button>
     <div style="height:12px;"></div>
@@ -397,6 +401,8 @@ function getDefaultPlace(staff) {
 
 let deadline = '08:45';
 let permanentNG = {};
+let visitorPassword = '';
+let visitorUnlocked = (function(){ try { return sessionStorage.getItem('visitorUnlocked')==='1'; } catch(e){ return false; } })();
 
 function normalizeDeadline(val) {
   if (!val) return '08:30';
@@ -481,6 +487,7 @@ async function init() {
     fetch(GAS_URL+'?action=getSettings&t='+Date.now()).then(r=>r.json()).then(json => {
       if (json.ok) {
         deadline = normalizeDeadline(json.settings.deadline) || '08:45';
+        if (json.settings.visitor_password != null) visitorPassword = String(json.settings.visitor_password);
         Object.keys(json.settings).forEach(k => {
           if (k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k];
         });
@@ -929,10 +936,12 @@ function removeVisitor(id) {
 
 async function submitVisitor() {
   if (visitorList.length===0) { showToast('来訪者を追加してください'); return; }
+  const orderer = (document.getElementById('visitorOrderer').value||'').trim();
+  if (!orderer) { showToast('注文者名を入力してください'); return; }
   const orders = visitorList.map(v=>({
     action:'saveOrder', date:visitorDate, id:'visitor_'+v.id,
     name: v.name||'来訪者', dept:'来訪者', order:v.order,
-    place:visitorPlace, count:v.count, proxy:false
+    place:visitorPlace, count:v.count, proxy:false, orderer:orderer
   }));
   try {
     const res = await fetchWithTimeout(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveOrders',orders})},35000);
@@ -1023,7 +1032,23 @@ async function loadMenu() {
 }
 
 // ===== TAB =====
+function ensureVisitorUnlocked() {
+  if (visitorUnlocked) return true;
+  if (!visitorPassword) return true; // パスワード未設定時はロックしない（管理画面で設定するまで従来通り）
+  const input = prompt('来訪者注文は総務部専用です。パスワードを入力してください：');
+  if (input === null) return false;
+  if (String(input) === visitorPassword) {
+    visitorUnlocked = true;
+    try { sessionStorage.setItem('visitorUnlocked','1'); } catch(e){}
+    return true;
+  }
+  showToast('パスワードが違います');
+  return false;
+}
+
 function switchTab(tab) {
+  // 来訪者タブは総務部専用（パスワードロック）
+  if (tab === 'visitor' && !ensureVisitorUnlocked()) return;
   ['order','bulk','visitor','history','today','menu'].forEach(t=>{
     document.getElementById(t+'Tab').classList.toggle('hidden',t!==tab);
   });
