@@ -440,6 +440,18 @@ function setStep(n, state){
   if(state) el.classList.add(state);
 }
 
+// ArrayBuffer → base64（Box保存用に原本バイトを送るための変換。
+// 大きいファイルでも呼び出しスタックが溢れないようチャンク単位で処理する）
+function arrayBufferToBase64(buf){
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const chunk = 0x8000;
+  for(let i=0; i<bytes.length; i+=chunk){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  }
+  return btoa(binary);
+}
+
 async function handleFiles(fileList){
   setStep(1,'done'); setStep(2,'active');
   ocrResultBody.innerHTML = '';
@@ -499,6 +511,7 @@ async function extractFromExcel(file){
 
   return {
     filename: file.name,
+    fileBase64: arrayBufferToBase64(buf),   // Box保存用：原本Excelのバイトを保持
     dept, deptOk:true,
     name, nameOk:true,
     empNo: emp.empNo||'', empMatch: emp.matchType||'none', empCandidates: emp.candidates||[], empDept: emp.dept||'',
@@ -691,7 +704,25 @@ registerBtn.addEventListener('click', async ()=>{
 
   for(const entry of entries){
     try{
-      // フロントのentry → GAS(registerEntry_)が期待する項目名へ変換
+      // ① 原本Excelを Box に保存（評価期間フォルダへ自動振り分け）。
+      //    失敗しても台帳登録は止めず、Boxリンク空で続行する。
+      let boxSharedLink = '';
+      if(entry.fileBase64){
+        try{
+          const up = await fetch(CONFIG.GAS_URL, {
+            method:'POST',
+            body: JSON.stringify({ action:'uploadBox', filename: entry.filename, base64pdf: entry.fileBase64, submittedDate: entry.date })
+          });
+          const upj = await up.json();
+          if(upj.ok && upj.result){
+            boxSharedLink = upj.result.boxSharedLink || '';
+            entry.boxFileId = upj.result.boxFileId || null;
+            entry.boxSharedLink = boxSharedLink;
+          }
+        }catch(e){ console.log('Box保存失敗（登録は継続）:', entry.filename, e); }
+      }
+
+      // ② フロントのentry → GAS(registerEntry_)が期待する項目名へ変換
       const payload = {
         name: entry.name,
         dept: entry.empDept || entry.dept,
@@ -703,7 +734,8 @@ registerBtn.addEventListener('click', async ()=>{
         rewardAmount: entry.reward || '',
         gradeCheckbox: entry.gradeChecked || '',
         status: entry.status || '',
-        comment: entry.comment || ''
+        comment: entry.comment || '',
+        boxSharedLink: boxSharedLink   // 備考にBox共有リンクを保存（案件名一覧のPDFリンク元）
         // period(評価期間)はGAS側で提出日から自動計算
       };
       const res = await fetch(CONFIG.GAS_URL, {
