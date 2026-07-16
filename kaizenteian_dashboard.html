@@ -718,10 +718,12 @@ registerBtn.addEventListener('click', async ()=>{
   registerBtn.disabled = true;
   registerStatus.textContent = '登録中…';
 
+  const boxWarnings = []; // Box保存に失敗したファイルの理由を集める
+
   for(const entry of entries){
     try{
-      // ① 原本Excelを Box に保存（評価期間フォルダへ自動振り分け）。
-      //    失敗しても台帳登録は止めず、Boxリンク空で続行する。
+      // ① 原本Excelを Box に PDF変換して保存（評価期間フォルダへ自動振り分け）。
+      //    失敗しても台帳登録は止めないが、理由は画面に表示する。
       let boxSharedLink = '';
       if(entry.fileBase64){
         try{
@@ -734,8 +736,12 @@ registerBtn.addEventListener('click', async ()=>{
             boxSharedLink = upj.result.boxSharedLink || '';
             entry.boxFileId = upj.result.boxFileId || null;
             entry.boxSharedLink = boxSharedLink;
+          }else{
+            boxWarnings.push(`${entry.filename}：${upj.error || 'Box保存エラー'}`);
           }
-        }catch(e){ console.log('Box保存失敗（登録は継続）:', entry.filename, e); }
+        }catch(e){ boxWarnings.push(`${entry.filename}：${e.message}`); }
+      }else{
+        boxWarnings.push(`${entry.filename}：原本データが無く保存できません（HTML更新が未反映かも）`);
       }
 
       // ② フロントのentry → GAS(registerEntry_)が期待する項目名へ変換
@@ -767,7 +773,8 @@ registerBtn.addEventListener('click', async ()=>{
     }
   }
   setStep(4,'done');
-  registerStatus.textContent = `${entries.length}件を台帳へ登録しました`;
+  registerStatus.textContent = `${entries.length}件を台帳へ登録しました`
+    + (boxWarnings.length ? `｜⚠ Box保存に失敗: ${boxWarnings.join(' / ')}` : '｜Box(PDF)保存OK');
   loadRecentEntries(); // 登録直後に管理一覧を更新
 });
 
