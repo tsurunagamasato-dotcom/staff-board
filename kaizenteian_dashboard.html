@@ -366,10 +366,10 @@
       <div class="dept-rank-note">直近の登録を新しい順に表示します。誤って登録した提案は「削除」で台帳から削除できます（Boxの原本PDFも一緒に削除されます）。</div>
       <table>
         <thead>
-          <tr><th>No</th><th>提出日</th><th>部署</th><th>氏名</th><th>案件名</th><th>原本</th><th></th></tr>
+          <tr><th>No</th><th>提出日</th><th>部署</th><th>氏名</th><th>案件名</th><th>原本</th><th>報奨金処理</th><th></th></tr>
         </thead>
         <tbody id="recentBody">
-          <tr><td colspan="7" style="text-align:center; color:var(--ink-soft); padding:18px 0;">読み込み中…</td></tr>
+          <tr><td colspan="8" style="text-align:center; color:var(--ink-soft); padding:18px 0;">読み込み中…</td></tr>
         </tbody>
       </table>
       <div style="margin-top:12px; text-align:right;">
@@ -784,14 +784,14 @@ registerBtn.addEventListener('click', async ()=>{
 const recentBody = document.getElementById('recentBody');
 
 async function loadRecentEntries(){
-  if(!CONFIG.GAS_URL){ recentBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:18px 0;">GAS未接続</td></tr>'; return; }
-  recentBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:18px 0;">読み込み中…</td></tr>';
+  if(!CONFIG.GAS_URL){ recentBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:18px 0;">GAS未接続</td></tr>'; return; }
+  recentBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:18px 0;">読み込み中…</td></tr>';
   try{
     const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'getRecentEntries', limit:30 }) });
     const json = await res.json();
     if(!json.ok) throw new Error(json.error || '取得失敗');
     const rows = json.result || [];
-    if(!rows.length){ recentBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:18px 0;">登録がありません</td></tr>'; return; }
+    if(!rows.length){ recentBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:18px 0;">登録がありません</td></tr>'; return; }
     recentBody.innerHTML = rows.map(r => `
       <tr data-no="${r.no}">
         <td>${r.no}</td>
@@ -800,13 +800,29 @@ async function loadRecentEntries(){
         <td>${r.name || ''}</td>
         <td>${r.title || ''}</td>
         <td>${r.boxUrl ? `<a class="proposal-link" href="${r.boxUrl}" target="_blank" rel="noopener">PDF</a>` : '—'}</td>
+        <td style="text-align:center;"><label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:var(--ink-soft);"><input type="checkbox" class="chk-paid" data-no="${r.no}" ${r.rewardPaid ? 'checked' : ''}>済</label></td>
         <td><button class="btn btn-ghost btn-del" data-no="${r.no}" data-title="${String(r.title || '').replace(/"/g,'&quot;')}" style="padding:5px 12px; color:#B91C1C; border-color:#F0C2C2;">削除</button></td>
       </tr>`).join('');
     recentBody.querySelectorAll('.btn-del').forEach(b=>{
       b.addEventListener('click', ()=>deleteEntryViaGas(b.dataset.no, b.dataset.title));
     });
+    recentBody.querySelectorAll('.chk-paid').forEach(c=>{
+      c.addEventListener('change', ()=>setRewardPaidViaGas(c.dataset.no, c.checked, c));
+    });
   }catch(e){
-    recentBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#B91C1C;padding:18px 0;">一覧の取得に失敗しました（${e.message}）</td></tr>`;
+    recentBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#B91C1C;padding:18px 0;">一覧の取得に失敗しました（${e.message}）</td></tr>`;
+  }
+}
+
+// 報奨金処理済みチェックの反映（台帳「報奨金支給」列を 済/空 に更新）
+async function setRewardPaidViaGas(no, paid, el){
+  try{
+    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'setRewardPaid', no, paid }) });
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.error || '更新失敗');
+  }catch(e){
+    alert('報奨金処理の更新に失敗しました：' + e.message);
+    if(el) el.checked = !paid; // 失敗したらチェック状態を元に戻す
   }
 }
 
