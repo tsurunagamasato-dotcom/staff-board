@@ -81,11 +81,16 @@
     width:4px; background:#1D9E75; border-radius:10px 0 0 10px;
   }
   .staff-card.att-left {
-    opacity:0.35; filter:grayscale(0.8);
-    background:rgba(240,238,234,0.7) !important;
-    border-color:rgba(0,0,0,0.06) !important;
+    opacity:0.62; filter:grayscale(0.55);
+    background:rgba(233,230,224,0.9) !important;
+    border-color:rgba(0,0,0,0.12) !important;
   }
-  .staff-card.att-left::before { display:none !important; }
+  /* 退勤済は左帯を濃いグレーで表示して「状態あり（帰宅済）」を明示 */
+  .staff-card.att-left::before {
+    content:''; position:absolute; left:0; top:0; bottom:0;
+    width:4px; background:#8a8780; border-radius:10px 0 0 10px;
+    display:block !important;
+  }
   .staff-card.att-off { /* 薄くしない */ }
   .staff-card.att-none {
     border:2px dashed rgba(0,0,0,0.15);
@@ -97,7 +102,7 @@
     margin-top:4px;
   }
   .att-badge.working { background:#e8f5f0; color:#0f6e56; }
-  .att-badge.left    { background:#f1efe8; color:#666; }
+  .att-badge.left    { background:#5f5c56; color:#fff; font-size:11px; padding:3px 10px; }
   .att-badge.off     { background:#fdecea; color:#b71c1c; }
   .att-badge.none    { background:#f4f4f2; color:#999; }
 
