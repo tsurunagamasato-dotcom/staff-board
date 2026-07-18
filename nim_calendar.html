@@ -70,6 +70,22 @@
   /* アラート：案件ごとに1行で表示 */
   .overrun-alert .ov-proj{display:block;line-height:1.55;}
   .overrun-alert .ov-name{font-weight:700;margin-right:6px;}
+  /* 工程別予定工数モーダル（#7） */
+  .ph-group{margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .ph-group-head{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--surface2);font-weight:700;font-size:13px;}
+  .ph-group-sub{font-size:11px;font-weight:600;color:var(--accent);font-family:'IBM Plex Mono',monospace;}
+  .ph-row{display:flex;align-items:center;gap:8px;padding:4px 10px;}
+  .ph-label{flex:1;font-size:12px;color:var(--text);}
+  .ph-input{width:90px;flex-shrink:0;}
+  .ph-total-bar{margin-top:10px;padding:8px 10px;background:var(--surface2);border-radius:6px;font-weight:700;font-size:13px;text-align:right;}
+  /* 予定コピペ（#4） */
+  .paste-banner{font-size:12px;color:#4f7fff;font-weight:600;background:rgba(79,127,255,.12);border:1px solid rgba(79,127,255,.4);border-radius:6px;padding:4px 10px;display:flex;align-items:center;gap:8px;}
+  .ctx-menu{position:fixed;z-index:2000;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.35);padding:4px;min-width:130px;}
+  .ctx-item{padding:8px 12px;font-size:13px;border-radius:5px;cursor:pointer;white-space:nowrap;}
+  .ctx-item:hover{background:var(--surface2);}
+  .ctx-danger{color:#ff6b6b;}
+  .slot-empty.paste-target{outline:1.5px dashed #4f7fff;outline-offset:-2px;background:rgba(79,127,255,.10);cursor:copy;}
+  .slot-empty.paste-target:hover{background:rgba(79,127,255,.22);}
 
   /* ===== SIDE PANEL（案件一覧） ===== */
   .side-panel-title{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:'IBM Plex Mono',monospace;}
@@ -318,6 +334,9 @@
   .rep-date-input:focus{border-color:var(--accent);}
   .rep-select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:'Noto Sans JP',sans-serif;padding:6px 10px;outline:none;}
   .report-member-section{margin-bottom:24px;}
+  .report-proj-sub{display:flex;align-items:baseline;gap:10px;margin:14px 0 4px;padding:5px 10px;background:var(--surface2);border-left:3px solid var(--accent);border-radius:4px;flex-wrap:wrap;}
+  .report-proj-sub-name{font-size:13px;font-weight:700;}
+  .report-proj-sub-kpi{font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-left:auto;}
   .report-member-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);}
   .report-member-name{font-size:16px;font-weight:700;}
   .report-member-summary{font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;}
@@ -454,6 +473,7 @@
   <!-- GAS連携バー -->
   <div class="gas-bar">
     <span class="gas-status" id="gas-status"></span>
+    <span id="paste-banner" class="paste-banner" style="display:none;"></span>
     <span id="overrun-alert" class="overrun-alert" style="display:none;"></span>
   </div>
   <div id="member-filter-wrap" class="member-filter"></div>
@@ -588,6 +608,7 @@
     <div class="toolbar-group">
       <button class="btn btn-toggle active" id="rep-axis-process" onclick="setReportAxis('process')">工程別</button>
       <button class="btn btn-toggle" id="rep-axis-project" onclick="setReportAxis('project')">案件別</button>
+      <button class="btn btn-toggle" id="rep-axis-projproc" onclick="setReportAxis('projproc')">案件×工程別</button>
       <button class="btn btn-toggle" id="rep-axis-monthly" onclick="setReportAxis('monthly')">月別</button>
     </div>
     <!-- 担当者選択（必須） -->
@@ -602,10 +623,11 @@
 
 <!-- ======= 部門工数設定モーダル ======= -->
 <div class="modal-overlay" id="dept-hours-modal">
-  <div class="modal" style="width:480px;">
-    <div class="modal-title">🏭 部門別予定工数の設定</div>
+  <div class="modal" style="width:520px;">
+    <div class="modal-title">🏭 工程別予定工数の設定</div>
     <div class="modal-sub" id="dept-hours-modal-sub">案件名</div>
-    <div id="dept-hours-rows"></div>
+    <div id="dept-hours-rows" style="max-height:calc(100vh - 260px);overflow-y:auto;"></div>
+    <div class="ph-total-bar">合計予定工数：<span id="ph-total">0</span>H</div>
     <div class="modal-actions">
       <button class="btn" onclick="closeDeptHoursModal()">キャンセル</button>
       <button class="btn btn-primary" onclick="saveDeptHours()">保存</button>
@@ -754,8 +776,8 @@ state.members.forEach((m,i)=>{
 if(!state.slots) state.slots=[];
 if(!state.filterMembers) state.filterMembers=[];
 // departments廃止（DEPT_PROCESSESを直接参照）
-// projectsにdeptHoursフィールドを補完
-state.projects.forEach(p=>{ if(!p.deptHours) p.deptHours={}; });
+// projectsにdeptHours/processHoursフィールドを補完
+state.projects.forEach(p=>{ if(!p.deptHours) p.deptHours={}; if(!p.processHours) p.processHours={}; });
 if(!state.baseMonth){
   const n=new Date();
   state.baseMonth=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
@@ -766,6 +788,7 @@ if(!state.weekStart){
 
 let viewMode    = 1;
 let dragData    = null;  // {projId, memberId} or {slotId}
+let clipboardSlot = null;  // コピー中の予定 {projId, memberId, process}
 let actualTarget= null;
 let selectedColor = 1;
 let openProjId  = null;  // 展開中の案件ID
@@ -921,6 +944,17 @@ function renderOverrunAlert(){
       if(usedH>planH){
         const deptShort=dept.split(' / ')[0];
         add(proj.name, `${deptShort} ${usedH}/${planH}H`);
+      }
+    });
+    // ③ 工程別：配置が工程別予定工数を超過
+    const ph=proj.processHours||{};
+    Object.keys(ph).forEach(procKey=>{
+      if(DEPT_PROCESSES[procKey]) return; // 部門一括キー（一般事務）は②で判定
+      const planH=ph[procKey]||0;
+      if(planH<=0) return;
+      const usedH=calcProcessPlacedH(proj.id, procKey);
+      if(usedH>planH){
+        add(proj.name, `工程:${procKey} ${usedH}/${planH}H`);
       }
     });
   });
@@ -1173,9 +1207,13 @@ function buildDayCell(y,m,d,todayKey){
     const emptyCount=Math.max(0, maxPerSlot-placed.length);
     for(let ei=0;ei<emptyCount;ei++){
       const empty=document.createElement('div');
-      empty.className='slot-empty';
+      empty.className='slot-empty'+(clipboardSlot?' paste-target':'');
       empty.innerHTML='<span style="font-size:8px;color:var(--text-dim)">＋</span>';
       setupDropZone(empty,key,slot);
+      // 貼付モード中はクリックで貼り付け
+      if(clipboardSlot){
+        empty.addEventListener('click',ev=>{ ev.stopPropagation(); pasteToSlot(key,slot); });
+      }
       entries.appendChild(empty);
     }
 
@@ -1244,13 +1282,10 @@ function buildSlotEntry(s,date,slot){
       ${!isLarge&&hasActual?`<span class="slot-bar-result">✓${pct}%</span>`:''}
     </div>`;
   el.addEventListener('click',e=>{e.stopPropagation();openActualModal(s.id);});
-  // 右クリックで削除
+  // 右クリックでメニュー（コピー／削除）
   el.addEventListener('contextmenu',e=>{
     e.preventDefault();e.stopPropagation();
-    if(confirm('「'+(proj?proj.name:'この予定')+'」をスロットから削除しますか？')){
-      state.slots=state.slots.filter(x=>x.id!==s.id);
-      const _delId=s.id; saveState();renderCalendar(); sendAction("deleteSlot",{id:_delId});
-    }
+    showSlotMenu(e.clientX, e.clientY, s);
   });
   el.addEventListener('dragstart',e=>{
     dragData={slotId:s.id};
@@ -1269,10 +1304,11 @@ function setupDropZone(el,toDate,toSlot){
   el.addEventListener('drop',e=>{
     e.preventDefault();el.classList.remove('slot-drop-over');
     if(!dragData)return;
+    let movedSlot=null;
     if(dragData.slotId){
       // 移動
-      const s=state.slots.find(x=>x.id===dragData.slotId);
-      if(s){s.date=toDate;s.slot=toSlot;}
+      movedSlot=state.slots.find(x=>x.id===dragData.slotId);
+      if(movedSlot){movedSlot.date=toDate;movedSlot.slot=toSlot;}
     } else if(dragData.projId&&dragData.memberId){
       // 新規配置（案件＋担当者が確定済み）
       const newSlot={
@@ -1288,8 +1324,81 @@ function setupDropZone(el,toDate,toSlot){
     }
     dragData=null;
     saveState();renderCalendar();
-    if(s) sendAction('updateSlot', s);
+    if(movedSlot) sendAction('updateSlot', movedSlot);
   });
+}
+
+// =====================================================
+//  予定のコピー＆ペースト（#4）
+// =====================================================
+// 右クリックメニュー表示
+function showSlotMenu(x, y, s){
+  closeSlotMenu();
+  const proj=getProject(s.projId);
+  const menu=document.createElement('div');
+  menu.id='slot-ctx-menu';
+  menu.className='ctx-menu';
+  menu.innerHTML=`
+    <div class="ctx-item" data-act="copy">📋 コピー</div>
+    <div class="ctx-item ctx-danger" data-act="del">🗑 削除</div>`;
+  document.body.appendChild(menu);
+  // 画面内に収める
+  const mw=140, mh=76;
+  menu.style.left=Math.min(x, window.innerWidth-mw-8)+'px';
+  menu.style.top=Math.min(y, window.innerHeight-mh-8)+'px';
+  menu.querySelector('[data-act="copy"]').onclick=()=>{ copySlot(s); closeSlotMenu(); };
+  menu.querySelector('[data-act="del"]').onclick=()=>{
+    closeSlotMenu();
+    if(confirm('「'+(proj?proj.name:'この予定')+'」をスロットから削除しますか？')){
+      state.slots=state.slots.filter(x=>x.id!==s.id);
+      const _delId=s.id; saveState();renderCalendar(); sendAction('deleteSlot',{id:_delId});
+    }
+  };
+  // 外側クリックで閉じる
+  setTimeout(()=>document.addEventListener('click', closeSlotMenu, {once:true}), 0);
+}
+function closeSlotMenu(){
+  const m=document.getElementById('slot-ctx-menu');
+  if(m) m.remove();
+}
+// コピー実行：クリップボードに予定を保持し、貼付モードに入る
+function copySlot(s){
+  clipboardSlot={ projId:s.projId, memberId:s.memberId, process:s.process||'' };
+  updatePasteBanner();
+  renderCalendar(); // 空きスロットを貼付ターゲット表示に
+}
+// 貼付解除
+function clearClipboard(){
+  clipboardSlot=null;
+  updatePasteBanner();
+  renderCalendar();
+}
+// 空きスロットへ貼り付け（連続貼付可）
+function pasteToSlot(toDate, toSlot){
+  if(!clipboardSlot) return;
+  const newSlot={
+    id:uid(), projId:clipboardSlot.projId, memberId:clipboardSlot.memberId,
+    date:toDate, slot:toSlot, actualH:0, process:clipboardSlot.process||'',
+    shortfallType:'', shortfallProcess:'', comment:''
+  };
+  state.slots.push(newSlot);
+  saveState(); renderCalendar();
+  sendAction('addSlot', newSlot);
+}
+// 貼付モードのバナー更新
+function updatePasteBanner(){
+  const el=document.getElementById('paste-banner');
+  if(!el) return;
+  if(clipboardSlot){
+    const proj=getProject(clipboardSlot.projId);
+    const mem=getMember(clipboardSlot.memberId);
+    el.style.display='';
+    el.innerHTML=`📋 コピー中：<b>${proj?proj.name:'?'}</b>（${mem?mem.name:''}）`
+      +` — 空きスロットの＋をクリックで貼付　<button class="btn btn-sm" onclick="clearClipboard()">解除(Esc)</button>`;
+  } else {
+    el.style.display='none';
+    el.innerHTML='';
+  }
 }
 
 // =====================================================
@@ -1677,23 +1786,55 @@ function addProject(){
   sendAction('addProject', newProj);
 }
 // 部門工数モーダル
+// 予算対象外の共通工程（その他）
+const CATCHALL_PROCS = ['999 その他','900 その他'];
 let deptHoursTargetId = null;
 function openDeptHoursModal(projId){
   deptHoursTargetId=projId;
   const proj=getProject(projId);
   if(!proj)return;
+  const ph=proj.processHours||{};
   document.getElementById('dept-hours-modal-sub').textContent=proj.name;
   const rows=document.getElementById('dept-hours-rows');
   rows.innerHTML='';
-  (Object.keys(DEPT_PROCESSES)).forEach(d=>{
-    const val=(proj.deptHours&&proj.deptHours[d])||0;
-    const row=document.createElement('div');
-    row.className='modal-row';
-    row.innerHTML=`<div class="modal-label">${d}（H）</div>
-      <input class="modal-input" id="dept-h-${d}" type="number" min="0" step="0.5" value="${val}" placeholder="0">`;
-    rows.appendChild(row);
+  Object.keys(DEPT_PROCESSES).forEach(dept=>{
+    const deptShort=dept.split(' / ')[0];
+    const procs=DEPT_PROCESSES[dept].filter(p=>!CATCHALL_PROCS.includes(p));
+    const group=document.createElement('div');
+    group.className='ph-group';
+    let inner=`<div class="ph-group-head"><span class="ph-group-name">${deptShort}</span><span class="ph-group-sub" data-dept="${dept}">小計 0H</span></div>`;
+    if(procs.length===0){
+      // 一般事務など：実工程がない部門は部門一括で入力（キーは部門名）
+      const val=ph[dept]||0;
+      inner+=`<div class="ph-row"><div class="ph-label">${deptShort}（一括）</div>`
+        +`<input class="ph-input modal-input" data-key="${dept}" data-dept="${dept}" type="number" min="0" step="0.5" value="${val}" placeholder="0" oninput="updatePhSubtotals()"></div>`;
+    } else {
+      procs.forEach(p=>{
+        const val=ph[p]||0;
+        inner+=`<div class="ph-row"><div class="ph-label">${p}</div>`
+          +`<input class="ph-input modal-input" data-key="${p}" data-dept="${dept}" type="number" min="0" step="0.5" value="${val}" placeholder="0" oninput="updatePhSubtotals()"></div>`;
+      });
+    }
+    group.innerHTML=inner;
+    rows.appendChild(group);
   });
+  updatePhSubtotals();
   document.getElementById('dept-hours-modal').classList.add('open');
+}
+// 部門ごとの小計と全体合計をライブ更新
+function updatePhSubtotals(){
+  let grand=0;
+  document.querySelectorAll('#dept-hours-rows .ph-group-sub').forEach(sub=>{
+    const dept=sub.getAttribute('data-dept');
+    let sum=0;
+    document.querySelectorAll('#dept-hours-rows .ph-input[data-dept="'+dept+'"]').forEach(inp=>{
+      sum+=parseFloat(inp.value)||0;
+    });
+    sub.textContent='小計 '+sum+'H';
+    grand+=sum;
+  });
+  const gEl=document.getElementById('ph-total');
+  if(gEl) gEl.textContent=grand;
 }
 function closeDeptHoursModal(){
   document.getElementById('dept-hours-modal').classList.remove('open');
@@ -1702,16 +1843,31 @@ function closeDeptHoursModal(){
 async function saveDeptHours(){
   const proj=getProject(deptHoursTargetId);
   if(!proj)return;
-  if(!proj.deptHours) proj.deptHours={};
-  (Object.keys(DEPT_PROCESSES)).forEach(d=>{
-    const val=parseFloat(document.getElementById('dept-h-'+d).value)||0;
-    proj.deptHours[d]=val;
+  // 工程別予定を収集
+  const ph={};
+  document.querySelectorAll('#dept-hours-rows .ph-input').forEach(inp=>{
+    const key=inp.getAttribute('data-key');
+    const val=parseFloat(inp.value)||0;
+    if(val>0) ph[key]=val;
   });
-  // totalPlanH を deptHours の合計から自動計算
-  proj.totalPlanH = Object.values(proj.deptHours).reduce((sum,v)=>sum+(Number(v)||0), 0);
+  proj.processHours=ph;
+  // 部門別予定を工程合計から自動算出（既存の部門アラート・集計と互換）
+  const dh={};
+  Object.keys(DEPT_PROCESSES).forEach(dept=>{
+    const procs=DEPT_PROCESSES[dept].filter(p=>!CATCHALL_PROCS.includes(p));
+    let sum=0;
+    if(procs.length===0){ sum=ph[dept]||0; }
+    else { procs.forEach(p=>{ sum+=ph[p]||0; }); }
+    if(sum>0) dh[dept]=sum;
+  });
+  proj.deptHours=dh;
+  proj.totalPlanH=Object.values(dh).reduce((s,v)=>s+(Number(v)||0),0);
   saveState();closeDeptHoursModal();renderProjTable();
-  // GASにも保存
   await sendAction('updateProject', proj);
+}
+// 案件×工程ごとの配置工数（s.processが一致するスロット×4H）
+function calcProcessPlacedH(projId, processName){
+  return state.slots.filter(s=>s.projId===projId && s.process===processName).length * SLOT_H;
 }
 
 // カレンダーのスロットから部門工数を開く（スロットクリック→実績モーダル内リンク）
@@ -1768,7 +1924,7 @@ function setReportMode(mode){
 
 function setReportAxis(axis){
   reportAxis=axis;
-  ['process','project','monthly'].forEach(a=>{
+  ['process','project','projproc','monthly'].forEach(a=>{
     document.getElementById('rep-axis-'+a).classList.toggle('active',a===axis);
   });
   renderReport();
@@ -1835,6 +1991,7 @@ function renderReport(){
     const c=COLORS[mem.color];
     if(reportAxis==='process')      renderByProcess(body,mem,c,memSlots);
     else if(reportAxis==='project') renderByProject(body,mem,c,memSlots);
+    else if(reportAxis==='projproc') renderByProjectProcess(body,mem,c,memSlots);
     else if(reportAxis==='monthly') renderByMonthly(body,mem,c,memSlots);
   });
 }
@@ -1880,6 +2037,43 @@ function renderByProject(body,mem,c,slots){
     ]),
     rows
   ));
+}
+
+// ---- 案件×工程別（案件ごとに工程内訳を表示） ----
+function renderByProjectProcess(body,mem,c,slots){
+  // 案件ごとにグループ化
+  const byProj={};
+  slots.forEach(s=>{
+    const proj=getProject(s.projId);
+    const key=proj?proj.name:'（未設定）';
+    (byProj[key]=byProj[key]||[]).push(s);
+  });
+  // メンバー全体ヘッダー
+  let totalPlan=0,totalActual=0;
+  slots.forEach(s=>{ totalPlan+=SLOT_H; totalActual+=calcActualH(s); });
+  body.appendChild(makeMemberHeader(mem,c,totalPlan,totalActual));
+  // 案件ごとにサブ見出し＋工程テーブル
+  Object.keys(byProj).sort((a,b)=>a.localeCompare(b,'ja')).forEach(pname=>{
+    const pslots=byProj[pname];
+    const{rows}=aggregateByProcess(pslots);
+    const pPlan=pslots.length*SLOT_H;
+    const pAct=pslots.reduce((sum,x)=>sum+calcActualH(x),0);
+    const pPct=pPlan>0?Math.round(pAct/pPlan*100):0;
+    const sub=document.createElement('div');
+    sub.className='report-proj-sub';
+    sub.innerHTML=`<span class="report-proj-sub-name">${pname}</span>`
+      +`<span class="report-proj-sub-kpi">予定 ${pPlan}H　実績 ${pAct}H　<span style="color:${achieveColor(pPct)}">${pPct}%</span></span>`;
+    body.appendChild(sub);
+    body.appendChild(makeTable(
+      ['工程名','予定H','実績H','差異H','達成率'],
+      rows.map(r=>[
+        r.key, r.planH, r.actualH,
+        (r.actualH-r.planH>=0?'+':'')+(r.actualH-r.planH),
+        r.planH>0?Math.round(r.actualH/r.planH*100)+'%':'-'
+      ]),
+      rows
+    ));
+  });
 }
 
 // ---- 月別 ----
@@ -2146,6 +2340,7 @@ async function autoLoadFromGAS() {
             name: String(p.name||''),
             totalPlanH: Number(p.totalPlanH)||0,
             deptHours: (p.deptHours && typeof p.deptHours==='object') ? p.deptHours : {},
+            processHours: (p.processHours && typeof p.processHours==='object') ? p.processHours : {},
             ended: p.ended === '1' || p.ended === true || p.ended === 1,
           });
         });
@@ -2270,6 +2465,10 @@ renderMaster();
 autoLoadFromGAS();
 // ④ 60秒ごとに自動更新
 startAutoRefresh();
+// ⑤ ESCキーで貼付モード解除／メニューを閉じる
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ closeSlotMenu(); if(clipboardSlot) clearClipboard(); }
+});
 </script>
 </body>
 </html>
