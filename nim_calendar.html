@@ -61,6 +61,15 @@
   .left-col{width:190px;flex-shrink:0;display:flex;flex-direction:column;}
   .cal-center{flex:1;min-width:0;overflow:hidden;}
   .right-col{width:220px;flex-shrink:0;align-self:flex-start;position:sticky;top:70px;}
+  /* 週表示：月次集計をカレンダー下に回し、カレンダーを横いっぱいに広げる */
+  .layout-wrap.week-mode{flex-wrap:wrap;height:auto;}
+  .layout-wrap.week-mode .cal-center{flex:1 1 auto;}
+  .layout-wrap.week-mode .right-col{order:3;width:100%;flex:1 1 100%;position:static;top:auto;}
+  .layout-wrap.week-mode .summary-panel{max-height:none;}
+  .layout-wrap.week-mode .summary-members{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;}
+  /* アラート：案件ごとに1行で表示 */
+  .overrun-alert .ov-proj{display:block;line-height:1.55;}
+  .overrun-alert .ov-name{font-weight:700;margin-right:6px;}
 
   /* ===== SIDE PANEL（案件一覧） ===== */
   .side-panel-title{font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:'IBM Plex Mono',monospace;}
@@ -841,6 +850,9 @@ function shiftCal(n){
 }
 
 function renderCalendar(){
+  // 週表示ではレイアウトを切替（集計を下・カレンダー横広げ）
+  const lw=document.querySelector('.layout-wrap');
+  if(lw) lw.classList.toggle('week-mode', viewMode===7);
   // 週表示
   if(viewMode===7){
     if(!state.weekStart) state.weekStart=dateToKey(startOfWeek(new Date()));
@@ -880,11 +892,16 @@ function calcProjActualH(projId){
     .reduce((sum,s)=>sum+(Number(s.actualH)||0),0);
 }
 
-// 案件×部門ごと／案件全体で予定工数を超えているものを上部に表示
+// 案件ごとに超過項目をまとめて上部に表示
 function renderOverrunAlert(){
   const el=document.getElementById('overrun-alert');
   if(!el) return;
-  const overruns=[];
+  const byProj={};   // 案件名 → 超過ラベルの配列
+  const order=[];    // 案件の出現順を保持
+  const add=(name,label)=>{
+    if(!byProj[name]){ byProj[name]=[]; order.push(name); }
+    byProj[name].push(label);
+  };
   state.projects.forEach(proj=>{
     if(proj.ended) return;
     // ① 案件全体：実績合計が総予定工数を超過
@@ -892,7 +909,7 @@ function renderOverrunAlert(){
     if(totalPlanH>0){
       const actH=calcProjActualH(proj.id);
       if(actH>totalPlanH){
-        overruns.push(`${proj.name}（案件計・実績）${actH}/${totalPlanH}H`);
+        add(proj.name, `案件計・実績 ${actH}/${totalPlanH}H`);
       }
     }
     // ② 部門別：配置が部門別予定工数を超過
@@ -903,13 +920,16 @@ function renderOverrunAlert(){
       const{usedH}=calcDeptUsage(proj.id, dept);
       if(usedH>planH){
         const deptShort=dept.split(' / ')[0];
-        overruns.push(`${proj.name}（${deptShort}）${usedH}/${planH}H`);
+        add(proj.name, `${deptShort} ${usedH}/${planH}H`);
       }
     });
   });
-  if(overruns.length){
+  if(order.length){
     el.style.display='';
-    el.innerHTML='⚠ 予定工数を超過：'+overruns.join('　／　');
+    const lines=order.map(name=>
+      `<span class="ov-proj"><span class="ov-name">${name}</span>${byProj[name].join('　／　')}</span>`
+    ).join('');
+    el.innerHTML='⚠ 予定工数を超過　'+lines;
   } else {
     el.style.display='none';
     el.innerHTML='';
