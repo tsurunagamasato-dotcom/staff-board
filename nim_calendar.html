@@ -114,6 +114,7 @@
   .months-row{display:grid;gap:0;}
   .months-row.view-1{grid-template-columns:1fr;}
   .months-row.view-3{grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  .months-row.view-7{grid-template-columns:1fr;}
   .month-block{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:0;}
 
   /* 曜日ヘッダー */
@@ -136,6 +137,22 @@
     vertical-align:top;
   }
   .view-3 .cal-cell{height:auto;min-height:70px;}
+  /* 週表示：セルを縦に大きくし、案件名を大きく縦積みで表示 */
+  .view-7 .cal-cell{height:auto;min-height:260px;}
+  .view-7 .slot-entries{grid-template-columns:1fr;gap:3px;}
+  .view-7 .slot-entry{
+    display:block;padding:6px 8px;border-left-width:4px;border-radius:4px;
+    white-space:normal;min-height:40px;
+  }
+  .view-7 .slot-bar-plan{flex-direction:column;align-items:flex-start;gap:2px;overflow:visible;}
+  .view-7 .slot-bar-text{
+    font-size:13px;font-weight:700;line-height:1.25;
+    white-space:normal;overflow:visible;text-overflow:clip;flex:none;width:100%;
+  }
+  .view-7 .slot-bar-sub{font-size:11px;opacity:.85;white-space:normal;flex-shrink:1;}
+  .view-7 .slot-bar-result{font-size:11px;}
+  .view-7 .slot-group-label{font-size:11px;font-weight:700;}
+  .view-7 .slot-empty{min-height:22px;}
   .cal-cell:nth-child(7n){border-right:none;}
   .cal-cell.empty{background:rgba(0,0,0,.08);}
   .cal-cell.today{background:rgba(79,127,255,.05);}
@@ -415,10 +432,11 @@
 <!-- ======= カレンダービュー ======= -->
 <div id="view-calendar" class="view active">
   <div class="cal-toolbar">
-    <button class="btn" onclick="shiftMonths(-1)">◀ 前へ</button>
+    <button class="btn" onclick="shiftCal(-1)">◀ 前へ</button>
     <h2 id="cal-range-label"></h2>
-    <button class="btn" onclick="shiftMonths(1)">次へ ▶</button>
+    <button class="btn" onclick="shiftCal(1)">次へ ▶</button>
     <div class="toolbar-group">
+      <button class="btn btn-toggle" id="btn-view-7" onclick="setViewMode(7)">1週間</button>
       <button class="btn btn-toggle active" id="btn-view-1" onclick="setViewMode(1)">1ヶ月</button>
       <button class="btn btn-toggle" id="btn-view-3" onclick="setViewMode(3)">3ヶ月</button>
     </div>
@@ -512,9 +530,22 @@
         <div>　カレンダーの日付にドロップ</div>
         <div>④ 配置済みバーをクリックで実績入力</div>
         <div style="margin-top:8px;padding:8px;background:var(--surface2);border-radius:6px;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <div style="font-size:11px;margin-bottom:4px;font-weight:600;">達成率バーの色</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+            <div style="width:20px;height:4px;border-radius:2px;background:#4f7fff;"></div>
+            <span style="font-size:11px;">青＝50%未満</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
             <div style="width:20px;height:4px;border-radius:2px;background:#3ecf8e;"></div>
-            <span style="font-size:11px;">緑バー＝実績達成率</span>
+            <span style="font-size:11px;">緑＝50〜70%未満</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+            <div style="width:20px;height:4px;border-radius:2px;background:#f7b731;"></div>
+            <span style="font-size:11px;">黄＝70〜100%未満</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:20px;height:4px;border-radius:2px;background:#ff6b6b;"></div>
+            <span style="font-size:11px;">赤＝100%以上</span>
           </div>
         </div>
       </div>
@@ -720,6 +751,9 @@ if(!state.baseMonth){
   const n=new Date();
   state.baseMonth=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
 }
+if(!state.weekStart){
+  state.weekStart=dateToKey(startOfWeek(new Date()));
+}
 
 let viewMode    = 1;
 let dragData    = null;  // {projId, memberId} or {slotId}
@@ -741,6 +775,17 @@ function parseYM(ym){const[y,m]=ym.split('-').map(Number);return{y,m};}
 function addMonths(ym,n){let{y,m}=parseYM(ym);m+=n;while(m>12){m-=12;y++;}while(m<1){m+=12;y--;}return`${y}-${String(m).padStart(2,'0')}`;}
 function daysInMonth(y,m){return new Date(y,m,0).getDate();}
 function dateKey(y,m,d){return`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
+// 週表示用の日付ヘルパー
+function ymdToDate(key){const[y,m,d]=key.split('-').map(Number);return new Date(y,m-1,d);}
+function dateToKey(dt){return dateKey(dt.getFullYear(),dt.getMonth()+1,dt.getDate());}
+function startOfWeek(dt){const c=new Date(dt);c.setDate(c.getDate()-c.getDay());return c;} // 日曜始まり
+// 達成率バーの色（50%未満:青 / 50〜70%未満:緑 / 70〜100%未満:黄 / 100%以上:赤）
+function achieveColor(pct){
+  if(pct>=100) return '#ff6b6b'; // 赤
+  if(pct>=70)  return '#f7b731'; // 黄
+  if(pct>=50)  return '#3ecf8e'; // 緑
+  return '#4f7fff';              // 青
+}
 function getMember(id){return state.members.find(m=>m.id===id);}
 function getProject(id){return state.projects.find(p=>p.id===id);}
 function colorOf(memberId){const m=getMember(memberId);return m?COLORS[m.color]:COLORS[1];}
@@ -762,8 +807,17 @@ function switchView(v){
 }
 function setViewMode(n){
   viewMode=n;
+  document.getElementById('btn-view-7').classList.toggle('active',n===7);
   document.getElementById('btn-view-1').classList.toggle('active',n===1);
   document.getElementById('btn-view-3').classList.toggle('active',n===3);
+  // 週表示に切替えたら、表示中の月内の週（今月なら今週）を起点にする
+  if(n===7){
+    const{y,m}=parseYM(state.baseMonth);
+    const today=new Date();
+    const anchor=(today.getFullYear()===y&&today.getMonth()+1===m)?today:new Date(y,m-1,1);
+    state.weekStart=dateToKey(startOfWeek(anchor));
+    saveState();
+  }
   renderCalendar();
 }
 
@@ -771,8 +825,39 @@ function setViewMode(n){
 //  CALENDAR RENDER
 // =====================================================
 function shiftMonths(n){state.baseMonth=addMonths(state.baseMonth,n);saveState();renderCalendar();}
+// 前へ/次へ：週表示なら1週間、月表示なら1ヶ月移動
+function shiftCal(n){
+  if(viewMode===7){
+    const s=ymdToDate(state.weekStart);
+    s.setDate(s.getDate()+7*n);
+    state.weekStart=dateToKey(s);
+    // 週の中央（木曜）の月をbaseMonthに同期（集計パネルの月を揃える）
+    const mid=new Date(s); mid.setDate(mid.getDate()+3);
+    state.baseMonth=`${mid.getFullYear()}-${String(mid.getMonth()+1).padStart(2,'0')}`;
+    saveState(); renderCalendar();
+  } else {
+    shiftMonths(n);
+  }
+}
 
 function renderCalendar(){
+  // 週表示
+  if(viewMode===7){
+    if(!state.weekStart) state.weekStart=dateToKey(startOfWeek(new Date()));
+    const start=ymdToDate(state.weekStart);
+    const end=new Date(start); end.setDate(end.getDate()+6);
+    document.getElementById('cal-range-label').textContent=
+      `${start.getFullYear()}年${start.getMonth()+1}月${start.getDate()}日 〜 ${end.getMonth()+1}月${end.getDate()}日`;
+    renderMemberFilter();
+    renderSidePanel();
+    renderSummary();
+    renderOverrunAlert();
+    const row=document.getElementById('months-row');
+    row.className='months-row view-7';
+    row.innerHTML='';
+    row.appendChild(buildWeekBlock(state.weekStart));
+    return;
+  }
   const months=viewMode===1?[state.baseMonth]:[state.baseMonth,addMonths(state.baseMonth,1),addMonths(state.baseMonth,2)];
   const{y:y0,m:m0}=parseYM(months[0]);
   const last=months[months.length-1];const{y:yL,m:mL}=parseYM(last);
@@ -788,12 +873,29 @@ function renderCalendar(){
   months.forEach(ym=>row.appendChild(buildMonthBlock(ym)));
 }
 
-// 案件×部門ごとに予定工数を超えているものを上部に表示
+// 案件の実績工数合計（入力されたactualHの合計）
+function calcProjActualH(projId){
+  return state.slots
+    .filter(s=>s.projId===projId)
+    .reduce((sum,s)=>sum+(Number(s.actualH)||0),0);
+}
+
+// 案件×部門ごと／案件全体で予定工数を超えているものを上部に表示
 function renderOverrunAlert(){
   const el=document.getElementById('overrun-alert');
   if(!el) return;
   const overruns=[];
   state.projects.forEach(proj=>{
+    if(proj.ended) return;
+    // ① 案件全体：実績合計が総予定工数を超過
+    const totalPlanH=proj.totalPlanH||0;
+    if(totalPlanH>0){
+      const actH=calcProjActualH(proj.id);
+      if(actH>totalPlanH){
+        overruns.push(`${proj.name}（案件計・実績）${actH}/${totalPlanH}H`);
+      }
+    }
+    // ② 部門別：配置が部門別予定工数を超過
     const dh=proj.deptHours||{};
     Object.keys(dh).forEach(dept=>{
       const planH=dh[dept]||0;
@@ -952,7 +1054,7 @@ function renderSummary(){
     if(!d)return;
     const c=COLORS[mem.color];
     const pct=d.planH>0?Math.round(d.actualH/d.planH*100):0;
-    const barColor=pct>=100?'#3ecf8e':pct>=70?'#f7b731':'#4f7fff';
+    const barColor=achieveColor(pct);
 
     // 予定が稼働上限を超えたら赤
     const isOver = d.planH > maxH;
@@ -1016,44 +1118,74 @@ function buildMonthBlock(ym){
   for(let i=0;i<firstDow;i++){const e=document.createElement('div');e.className='cal-cell empty';grid.appendChild(e);}
 
   for(let d=1;d<=days;d++){
-    const key=dateKey(y,m,d);
-    const cell=document.createElement('div');
-    const dow=new Date(y,m-1,d).getDay();
-    const isWeekend=dow===0||dow===6;
-    cell.className='cal-cell'+(key===todayKey?' today':'')+(isWeekend?' weekend':'');
-    cell.innerHTML=`<span class="date-num">${d}</span>`;
-    const halfSlots=document.createElement('div');
-    halfSlots.className='half-slots';
+    grid.appendChild(buildDayCell(y,m,d,todayKey));
+  }
+  block.appendChild(grid);
+  return block;
+}
 
-    ['AM','PM'].forEach(slot=>{
-      const group=document.createElement('div');
-      group.className='slot-group '+(slot==='AM'?'am-group':'pm-group');
-      const lbl=document.createElement('div');
-      lbl.className='slot-group-label';lbl.textContent=slot;
-      group.appendChild(lbl);
-      const entries=document.createElement('div');
-      entries.className='slot-entries';
+// 1日分のセルを生成（月表示・週表示で共通）
+function buildDayCell(y,m,d,todayKey){
+  const key=dateKey(y,m,d);
+  const cell=document.createElement('div');
+  const dow=new Date(y,m-1,d).getDay();
+  const isWeekend=dow===0||dow===6;
+  cell.className='cal-cell'+(key===todayKey?' today':'')+(isWeekend?' weekend':'');
+  cell.innerHTML=`<span class="date-num">${d}</span>`;
+  const halfSlots=document.createElement('div');
+  halfSlots.className='half-slots';
 
-      const placed=getSlotsAt(key,slot);
-      placed.forEach(s=>{entries.appendChild(buildSlotEntry(s,key,slot));});
+  ['AM','PM'].forEach(slot=>{
+    const group=document.createElement('div');
+    group.className='slot-group '+(slot==='AM'?'am-group':'pm-group');
+    const lbl=document.createElement('div');
+    lbl.className='slot-group-label';lbl.textContent=slot;
+    group.appendChild(lbl);
+    const entries=document.createElement('div');
+    entries.className='slot-entries';
 
-      // 2列グリッド：配置は最大2件
-      // 空きスロット分だけドロップゾーンを追加
-      const maxPerSlot=2;
-      const emptyCount=Math.max(0, maxPerSlot-placed.length);
-      for(let ei=0;ei<emptyCount;ei++){
-        const empty=document.createElement('div');
-        empty.className='slot-empty';
-        empty.innerHTML='<span style="font-size:8px;color:var(--text-dim)">＋</span>';
-        setupDropZone(empty,key,slot);
-        entries.appendChild(empty);
-      }
+    const placed=getSlotsAt(key,slot);
+    placed.forEach(s=>{entries.appendChild(buildSlotEntry(s,key,slot));});
 
-      group.appendChild(entries);
-      halfSlots.appendChild(group);
-    });
-    cell.appendChild(halfSlots);
-    grid.appendChild(cell);
+    // 2列グリッド：配置は最大2件
+    // 空きスロット分だけドロップゾーンを追加
+    const maxPerSlot=2;
+    const emptyCount=Math.max(0, maxPerSlot-placed.length);
+    for(let ei=0;ei<emptyCount;ei++){
+      const empty=document.createElement('div');
+      empty.className='slot-empty';
+      empty.innerHTML='<span style="font-size:8px;color:var(--text-dim)">＋</span>';
+      setupDropZone(empty,key,slot);
+      entries.appendChild(empty);
+    }
+
+    group.appendChild(entries);
+    halfSlots.appendChild(group);
+  });
+  cell.appendChild(halfSlots);
+  return cell;
+}
+
+// 週ブロック（日曜〜土曜の7日）を生成
+function buildWeekBlock(weekStartKey){
+  const today=new Date();
+  const todayKey=dateKey(today.getFullYear(),today.getMonth()+1,today.getDate());
+  const start=ymdToDate(weekStartKey);
+  const end=new Date(start); end.setDate(end.getDate()+6);
+  const block=document.createElement('div');
+  block.className='month-block';
+  block.innerHTML=`<div class="month-header">${start.getMonth()+1}/${start.getDate()} 〜 ${end.getMonth()+1}/${end.getDate()}</div>
+    <div class="dow-row">
+      <div class="dow-cell">日</div><div class="dow-cell">月</div>
+      <div class="dow-cell">火</div><div class="dow-cell">水</div>
+      <div class="dow-cell">木</div><div class="dow-cell">金</div>
+      <div class="dow-cell">土</div>
+    </div>`;
+  const grid=document.createElement('div');
+  grid.className='cal-grid';
+  for(let i=0;i<7;i++){
+    const dt=new Date(start); dt.setDate(dt.getDate()+i);
+    grid.appendChild(buildDayCell(dt.getFullYear(),dt.getMonth()+1,dt.getDate(),todayKey));
   }
   block.appendChild(grid);
   return block;
@@ -1809,7 +1941,7 @@ function makeTable(headers,dataRows,rawRows){
   dataRows.forEach((cols,ri)=>{
     const raw=rawRows[ri];
     const pct=raw.planH>0?Math.round(raw.actualH/raw.planH*100):0;
-    const bc=pct>=100?'#3ecf8e':pct>=70?'#f7b731':'#4f7fff';
+    const bc=achieveColor(pct);
     html+=`<tr>`;
     cols.forEach((val,ci)=>{
       const right=ci>=1&&ci<=3?'text-align:right;font-family:"IBM Plex Mono",monospace;':'';
