@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ナカシマ 検索実績ダッシュボード</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f7cff;
+    --accent2: #a78bfa;
+    --text: #e8eaf0;
+    --muted: #8892a4;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --radius: 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; }
+
+  /* ヘッダー */
+  .header {
+    background: linear-gradient(135deg, #1a1d27 0%, #1e2240 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-title { font-size: 1.15rem; font-weight: 700; letter-spacing: .02em; }
+  .header-sub { font-size: .8rem; color: var(--muted); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  .status-dot.loading { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 1s infinite; }
+  .status-dot.error { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .last-updated { font-size:.75rem; color:var(--muted); }
+
+  /* フィルターパネル */
+  .filters {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+  }
+  .filter-group { display:flex; flex-direction:column; gap:5px; }
+  .filter-group label { font-size:.72rem; color:var(--muted); font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+  select, .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: .88rem;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  select:focus, select:hover { border-color: var(--accent); outline: none; }
+  .btn { background: var(--accent); border-color: var(--accent); font-weight:600; padding:8px 18px; }
+  .btn:hover { opacity:.85; }
+  .btn.secondary { background: var(--surface2); border-color: var(--border); font-weight:400; }
+  .btn.secondary:hover { border-color: var(--accent); }
+
+  /* KPIカード */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 22px 28px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .kpi-label { font-size:.75rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+  .kpi-value { font-size:2rem; font-weight:800; line-height:1; }
+  .kpi-sub { font-size:.75rem; color:var(--muted); margin-top:6px; }
+
+  /* グリッド */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 0 28px 28px;
+  }
+  .full { grid-column: 1 / -1; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title { font-size:.9rem; font-weight:700; }
+  .card-body { padding: 16px 18px; }
+
+  /* テーブル */
+  table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  th { padding:8px 10px; text-align:left; color:var(--muted); font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--border); }
+  td { padding:9px 10px; border-bottom:1px solid var(--border); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background: var(--surface2); }
+  .rank-badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:24px; height:24px; border-radius:50%;
+    background:var(--surface2); border:1px solid var(--border);
+    font-size:.75rem; font-weight:700; color:var(--muted);
+  }
+  .rank-badge.top { background: var(--accent); border-color:var(--accent); color:white; }
+
+  .dept-tag {
+    display:inline-block;
+    background:var(--surface2); border:1px solid var(--border);
+    padding:2px 8px; border-radius:20px;
+    font-size:.72rem; color:var(--muted);
+  }
+
+  .bar-bg { background:var(--surface2); border-radius:3px; height:6px; margin-top:4px; }
+  .bar-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+
+  .chart-wrap { position:relative; height:280px; }
+
+  /* スケルトン */
+  .skeleton { background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%); background-size:400% 100%; animation:shimmer 1.5s infinite; border-radius:6px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  .trend-tab {
+    padding: 5px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 5px;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .trend-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .trend-tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+  /* チェックボックスフィルターパネル */
+  .cbfilter-panel {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0;
+  }
+  .cbfilter-col {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    min-width: 160px;
+  }
+  .cbfilter-col:last-child { border-right: none; flex: 1; }
+  .cbfilter-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    gap: 8px;
+  }
+  .cbfilter-title {
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    white-space: nowrap;
+  }
+  .cbfilter-actions { display:flex; gap:4px; }
+  .cbfilter-actions button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: .7rem;
+    cursor: pointer;
+    transition: all .15s;
+    transform: none;
+    box-shadow: none;
+  }
+  .cbfilter-actions button:hover { border-color:var(--accent); color:var(--accent); }
+  .cbfilter-list {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 220px;
+    padding: 6px 0;
+  }
+  /* 人リストは横に並べる */
+  #personCheckList {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-height: 220px;
+  }
+  .cb-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: background .12s;
+    white-space: nowrap;
+    font-size: .85rem;
+    user-select: none;
+  }
+  .cb-item:hover { background: var(--surface2); }
+  .cb-item input[type=checkbox] {
+    width: 14px; height: 14px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .cb-dept-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cb-item.dimmed { opacity: .35; }
+
+  /* ページタブ */
+  @media(max-width:900px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .main-grid{grid-template-columns:1fr;}
+    .full{grid-column:1;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">📊 ナカシマ 検索実績ダッシュボード</div>
+    <div class="header-sub">CADDi 検索実績レポート</div>
+  </div>
+  <div id="lastUpdated" class="last-updated"></div>
+  <label id="importBtn" style="
+    display:flex; align-items:center; gap:8px;
+    background:var(--accent); color:white;
+    padding:8px 16px; border-radius:6px;
+    font-size:.88rem; font-weight:600; cursor:pointer;
+    transition:opacity .2s; white-space:nowrap;
+  " onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">
+    📂 CSVを読み込む
+    <input type="file" accept=".csv" style="display:none" onchange="onFileSelect(event)">
+  </label>
+</div>
+
+<!-- ページタブ -->
+</div>
+
+
+<!-- ドロップゾーン（データ未読込時のみ表示） -->
+<div id="dropZone" style="
+  margin:20px 28px;
+  border:2px dashed var(--border);
+  border-radius:12px;
+  padding:48px;
+  text-align:center;
+  color:var(--muted);
+  transition:border-color .2s, background .2s;
+  cursor:pointer;
+">
+  <div style="font-size:3rem; margin-bottom:12px">📊</div>
+  <div style="font-size:1.1rem; font-weight:600; color:var(--text); margin-bottom:8px">CSVをここにドロップ</div>
+  <div style="font-size:.85rem; margin-bottom:20px">毎週届く「検索実績レポート_YYYYMMDD.csv」をそのまま読み込めます</div>
+  <label style="
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--accent); color:white;
+    padding:10px 24px; border-radius:6px;
+    font-size:.9rem; font-weight:600; cursor:pointer;
+  ">
+    📂 ファイルを選択
+    <input type="file" accept=".csv" style="display:none" onchange="onFileSelect(event)">
+  </label>
+</div>
+
+<div class="filters">
+  <!-- 時間粒度 -->
+  <div class="filter-group">
+    <label>時間粒度</label>
+    <select id="granularity" onchange="onGranularityChange()">
+      <option value="weekly">週</option>
+      <option value="monthly" selected>月</option>
+      <option value="quarterly">四半期</option>
+      <option value="semi_annual">半年</option>
+      <option value="annual">年間</option>
+    </select>
+  </div>
+  <!-- 期間 -->
+  <div class="filter-group">
+    <label>開始</label>
+    <select id="startPeriod" onchange="render()"></select>
+  </div>
+  <div class="filter-group">
+    <label>終了</label>
+    <select id="endPeriod" onchange="render()"></select>
+  </div>
+  <!-- リセット -->
+  <div class="filter-group" style="justify-content:flex-end; margin-left:auto;">
+    <label>&nbsp;</label>
+    <button class="btn secondary" onclick="resetFilters()">リセット</button>
+  </div>
+</div>
+
+<!-- チェックボックスフィルター -->
+<div class="cbfilter-panel">
+  <!-- 部署 -->
+  <div class="cbfilter-col" id="deptCol">
+    <div class="cbfilter-head">
+      <span class="cbfilter-title">部署</span>
+      <div class="cbfilter-actions">
+        <button onclick="checkAllDepts(true)">全選択</button>
+        <button onclick="checkAllDepts(false)">解除</button>
+      </div>
+    </div>
+    <div class="cbfilter-list" id="deptCheckList"></div>
+  </div>
+  <!-- 人 -->
+  <div class="cbfilter-col" id="personCol">
+    <div class="cbfilter-head">
+      <span class="cbfilter-title">人</span>
+      <div class="cbfilter-actions">
+        <button onclick="checkAllPersons(true)">全選択</button>
+        <button onclick="checkAllPersons(false)">解除</button>
+      </div>
+    </div>
+    <div class="cbfilter-list" id="personCheckList"></div>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-label">総アクセス数</div><div class="kpi-value" id="kpiTotal">—</div><div class="kpi-sub" id="kpiPeriod">—</div></div>
+  <div class="kpi"><div class="kpi-label">ユーザー数</div><div class="kpi-value" id="kpiUsers">—</div><div class="kpi-sub" id="kpiUsersub">フィルター内</div></div>
+  <div class="kpi"><div class="kpi-label">部署数</div><div class="kpi-value" id="kpiDepts">—</div><div class="kpi-sub" id="kpiDeptsub">アクティブ</div></div>
+  <div class="kpi"><div class="kpi-label">データ更新日</div><div class="kpi-value" id="kpiDate" style="font-size:1.2rem">—</div><div class="kpi-sub" id="kpiFile">—</div></div>
+</div>
+
+<div class="main-grid">
+  <!-- 時系列 -->
+  <div class="card full">
+    <div class="card-header">
+      <div class="card-title">📈 時系列トレンド</div>
+      <div style="display:flex; gap:4px;">
+        <button id="trendTab-dept"   class="trend-tab active" onclick="setTrendMode('dept')">部署別</button>
+        <button id="trendTab-person" class="trend-tab"        onclick="setTrendMode('person')">個人別</button>
+      </div>
+    </div>
+    <!-- 個人モード時：部署を1つ選んで絞り込むセレクタ -->
+    <div id="trendPersonCtrl" style="display:none; padding:10px 18px; border-bottom:1px solid var(--border); display:none; align-items:center; gap:12px;">
+      <span style="font-size:.8rem; color:var(--muted); white-space:nowrap;">部署で絞り込む</span>
+      <select id="trendDeptSelect" onchange="render()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:.85rem;">
+        <option value="__all__">すべて</option>
+      </select>
+      <span style="font-size:.75rem; color:var(--muted);">※ 線が多い場合は部署で絞るとみやすくなります</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 部署別 -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">🏢 部署別アクセス</div></div>
+    <div class="card-body">
+      <div class="chart-wrap"><canvas id="deptChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 検索タイプ別 -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">🔍 検索タイプ別</div></div>
+    <div class="card-body">
+      <div class="chart-wrap"><canvas id="searchTypeChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ユーザーランキング -->
+  <div class="card full">
+    <div class="card-header">
+      <div class="card-title">👥 ユーザーランキング</div>
+      <div style="font-size:.75rem;color:var(--muted)">フィルター期間の合計</div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead><tr><th>順位</th><th>名前</th><th>部署</th><th>アクセス数</th><th style="width:30%">割合</th></tr></thead>
+        <tbody id="rankTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 部署×期間クロス集計 -->
+  <div class="card full">
+    <div class="card-header">
+      <div class="card-title">📋 部署 × 期間 クロス集計</div>
+    </div>
+    <div class="card-body" style="padding:0;overflow-x:auto">
+      <table id="crossTable"></table>
+    </div>
+  </div>
+</div><!-- /main-grid -->
+
+
+
+<script>
+// ============================================================
+// 設定
+// ============================================================
+
+// 名前マスター: email → {name, dept}
+// ※ C列（user_department）は無視。部署はここで一元管理。
+const NAME_MAP = {
+  'sakamoto_kazutaka@nakashima-mfg.co.jp': { name:'坂本',   dept:'加工' },
+  'arie_tatsuo@nakashima-mfg.co.jp':       { name:'有江',   dept:'営業' },
+  'furuta_tsuyoshi@nakashima-mfg.co.jp':   { name:'古田',   dept:'営業' },
+  'kato_tomona@nakashima-mfg.co.jp':       { name:'友那',   dept:'営業' },
+  'onoda_takahiro@nakashima-mfg.co.jp':    { name:'小野田', dept:'営業' },
+  'sasakura@nakashima-mfg.co.jp':          { name:'笹倉',   dept:'営業' },
+  'goro@nakashima-mfg.co.jp':              { name:'竹内',   dept:'組付' },
+  'ishida_masaya@nakashima-mfg.co.jp':     { name:'石田',   dept:'加工' },
+  'kamiya_tsubasa@nakashima-mfg.co.jp':    { name:'神谷',   dept:'加工' },
+  'manabu@nakashima-mfg.co.jp':            { name:'学',     dept:'営業' },
+  'nguyen_van_lanh@nakashima-mfg.co.jp':   { name:'ラン',   dept:'加工' },
+  'oomura@nakashima-mfg.co.jp':            { name:'大村',   dept:'組付' },
+  'ota_yasuhiko@nakashima-mfg.co.jp':      { name:'太田',   dept:'加工' },
+  'tran_van_than@nakashima-mfg.co.jp':     { name:'タン',   dept:'加工' },
+  'yoshida@nakashima-mfg.co.jp':           { name:'吉田',   dept:'組付' },
+  'banno@nakashima-mfg.co.jp':             { name:'坂野',   dept:'組付' },
+  'dai@nakashima-mfg.co.jp':               { name:'大',     dept:'組付' },
+  'ibara@nakashima-mfg.co.jp':             { name:'茨',     dept:'設計' },
+  'nomura_masashi@nakashima-mfg.co.jp':    { name:'野村',   dept:'加工' },
+  'suu@nakashima-mfg.co.jp':               { name:'鄒',     dept:'設計' },
+  'a-kondo@nakashima-mfg.co.jp':           { name:'あゆみ', dept:'設計' },
+  'arakawa_mao@nakashima-mfg.co.jp':       { name:'荒川',   dept:'設計' },
+  'ben@nakashima-mfg.co.jp':               { name:'寺本',   dept:'設計' },
+  'hirai@nakashima-mfg.co.jp':             { name:'平井',   dept:'設計' },
+  'hirose@nakashima-mfg.co.jp':            { name:'広瀬',   dept:'設計' },
+  'hirose_noboru@nakashima-mfg.co.jp':     { name:'廣瀬昇', dept:'設計' },
+  'igushi@nakashima-mfg.co.jp':            { name:'伊串',   dept:'設計' },
+  'katsura@nakashima-mfg.co.jp':           { name:'桂',     dept:'設計' },
+  'matsuki@nakashima-mfg.co.jp':           { name:'松木',   dept:'設計' },
+  'otani_toshiharu@nakashima-mfg.co.jp':   { name:'大谷',   dept:'設計' },
+  'quy@nakashima-mfg.co.jp':               { name:'クイ',   dept:'NVM'  },
+  'takase@nakashima-mfg.co.jp':            { name:'高瀬',   dept:'設計' },
+  'y.yonezu@nakashima-mfg.co.jp':          { name:'米津',   dept:'設計' },
+  'komatsu_azumi@nakashima-mfg.co.jp':     { name:'小松',   dept:'設計' },
+  'miyagawa_teppei@nakashima-mfg.co.jp':   { name:'宮川',   dept:'購買' },
+  'tsurunaga_masato@nakashima-mfg.co.jp':  { name:'鶴永',   dept:'購買' },
+  'y-kswd@nakashima-mfg.co.jp':            { name:'柏田',   dept:'加工' },
+  'tajima@nakashima-mfg.co.jp':            { name:'田島',   dept:'総務' },
+  'yamaguchi_nanami@nakashima-mfg.co.jp':  { name:'山口',   dept:'総務' },
+  'quang@nakashima-mfg.co.jp':             { name:'クアン', dept:'NVM'  },
+};
+
+const DEPT_COLORS = {
+  '設計': '#4f7cff',
+  '加工': '#a78bfa',
+  '組付': '#34d399',
+  '営業': '#fbbf24',
+  '購買': '#f87171',
+  '総務': '#60a5fa',
+  'NVM':  '#fb923c',
+};
+
+// ============================================================
+// 状態
+// ============================================================
+let rawData   = null; // パース済み全データ
+let parsedCSV = null; // {dates, rows}
+let charts    = {};
+let latestFileName = '';
+let latestFileDate = '';
+
+// ============================================================
+// CSVファイル読み込み（ファイル選択 or ドロップ）
+// ============================================================
+function onFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) loadCSVFile(file);
+  event.target.value = ''; // 同じファイルを再選択できるようにリセット
+}
+
+function loadCSVFile(file) {
+  // Shift-JIS対応のFileReader
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      let text = e.target.result;
+      processCSV(text, file.name);
+    } catch(err) {
+      showError('CSVの読み込みに失敗しました: ' + err.message);
+    }
+  };
+
+  // まずShift-JISで試みる
+  reader.onerror = function() { showError('ファイルの読み込みに失敗しました'); };
+  reader.readAsText(file, 'Shift_JIS');
+}
+
+function processCSV(csvText, fileName) {
+  // 文字化けしていたらUTF-8で再読込（簡易チェック：メールアドレスが読めるか）
+  if (!csvText.includes('@nakashima-mfg.co.jp') && !csvText.includes('email')) {
+    showError('文字コードの読み込みに失敗しました。ファイルを確認してください。');
+    return;
+  }
+
+  parsedCSV = parseCSV(csvText);
+  rawData   = aggregate(parsedCSV);
+
+  // ファイル名から日付を抽出
+  const m = fileName.match(/_(\d{4})(\d{2})(\d{2})\.csv/);
+  latestFileDate = m ? `${m[1]}/${m[2]}/${m[3]}` : new Date().toLocaleDateString('ja-JP');
+  latestFileName = fileName;
+
+  // ドロップゾーンを隠してダッシュボードを表示
+  document.getElementById('dropZone').style.display = 'none';
+
+  initFilters();
+  render();
+
+  document.getElementById('kpiDate').textContent = latestFileDate;
+  document.getElementById('kpiFile').textContent = latestFileName;
+  document.getElementById('lastUpdated').textContent = '読込: ' + new Date().toLocaleTimeString('ja-JP');
+}
+
+function showError(msg) {
+  alert('⚠️ ' + msg);
+}
+
+// ============================================================
+// CSV パーサー（Shift-JIS はBox APIが自動でUTF-8に変換してくれる場合を想定
+//  ※もし文字化けしたら再エンコード処理を追加）
+// ============================================================
+function parseCSV(text) {
+  const lines = text.trim().split('\n').map(l => l.trim());
+  const header = lines[0].split(',');
+
+  // A列（名前）があるかチェック
+  let hasNameCol = false;
+  let colOffset  = 0;
+  if (header[0] !== 'email' && !header[0].startsWith('2')) {
+    hasNameCol = true;
+    colOffset  = 1;
+  }
+
+  const emailCol  = colOffset;
+  const deptCol   = colOffset + 1;
+  const type1Col  = colOffset + 2;
+  const type2Col  = colOffset + 3;
+  const dateStart = colOffset + 4;
+
+  const dates = header.slice(dateStart);
+  const rows  = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i]) continue;
+    const cols = lines[i].split(',');
+    const email = cols[emailCol]?.trim();
+    if (!email) continue;
+
+    const nameFromCol = hasNameCol ? (cols[0]?.trim() || '') : '';
+    const counts = dates.map((_, di) => parseInt(cols[dateStart + di]) || 0);
+
+    rows.push({
+      email,
+      dept:    null, // C列は無視。部署はNAME_MAPから解決する
+      type1:   cols[type1Col]?.trim() || '',
+      type2:   cols[type2Col]?.trim() || '',
+      nameFromCol,
+      counts,
+    });
+  }
+
+  return { dates, rows };
+}
+
+// ============================================================
+// 集計：日付→週/月/四半期/半年/年 に変換して集計
+// ============================================================
+function aggregate({ dates, rows }) {
+  const parseDate = s => {
+    // 2026/7/6 or 2026-07-06
+    const cleaned = s.replace(/\//g, '-');
+    const parts = cleaned.split('-').map(Number);
+    return new Date(parts[0], parts[1]-1, parts[2]);
+  };
+
+  const periodKey = (d, gran) => {
+    const Y = d.getFullYear(), M = d.getMonth()+1, D = d.getDate();
+    if (gran === 'weekly') {
+      // ISO週番号
+      const jan1  = new Date(Y, 0, 1);
+      const week  = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+      return `${Y}-W${String(week).padStart(2,'0')}`;
+    }
+    if (gran === 'monthly')     return `${Y}-${String(M).padStart(2,'0')}`;
+    if (gran === 'quarterly')   return `${Y}-Q${Math.ceil(M/3)}`;
+    if (gran === 'semi_annual') return `${Y}-H${M<=6?1:2}`;
+    return String(Y);
+  };
+
+  // 名前・部署マップ（NAME_MAPを正としてA列は補完用）
+  const localNameMap = {};
+  const localDeptMap = {};
+  rows.forEach(r => {
+    const master = NAME_MAP[r.email];
+    localNameMap[r.email] = master?.name || r.nameFromCol || r.email.split('@')[0];
+    localDeptMap[r.email] = master?.dept || '未設定';
+  });
+
+  // 部署リスト（NAME_MAPの定義順を尊重）
+  const deptOrder = ['設計','加工','組付','営業','購買','総務','NVM','未設定'];
+  const allDepts = [...new Set(Object.values(localDeptMap))].sort(
+    (a,b) => (deptOrder.indexOf(a)+1||99) - (deptOrder.indexOf(b)+1||99)
+  );
+  const allTypes = [...new Set(rows.map(r => r.type2).filter(Boolean))];
+
+  // 全粒度で集計
+  const grans = ['weekly','monthly','quarterly','semi_annual','annual'];
+  const periods = {};
+
+  grans.forEach(gran => {
+    periods[gran] = {};
+    rows.forEach(row => {
+      row.counts.forEach((cnt, di) => {
+        if (!cnt) return;
+        const d   = parseDate(dates[di]);
+        const key = periodKey(d, gran);
+        if (!periods[gran][key]) {
+          periods[gran][key] = {
+            date:   d.toISOString().slice(0,10),
+            users:  {},
+            depts:  {},
+            types:  {},
+          };
+        }
+        const p = periods[gran][key];
+
+        // ユーザー
+        const uDept = localDeptMap[row.email] || '未設定';
+        if (!p.users[row.email]) p.users[row.email] = { name: localNameMap[row.email], dept: uDept, total: 0, types:{} };
+        p.users[row.email].total += cnt;
+        p.users[row.email].types[row.type2] = (p.users[row.email].types[row.type2]||0) + cnt;
+
+        // 部署
+        p.depts[uDept] = (p.depts[uDept]||0) + cnt;
+
+        // 検索タイプ
+        if (row.type2) p.types[row.type2] = (p.types[row.type2]||0) + cnt;
+      });
+    });
+  });
+
+  // 各粒度のラベルをソート
+  grans.forEach(gran => {
+    periods[gran] = Object.fromEntries(
+      Object.entries(periods[gran]).sort((a,b) => a[0].localeCompare(b[0]))
+    );
+  });
+
+  return { periods, allDepts, allTypes, nameMap: localNameMap, deptMap: localDeptMap };
+}
+
+// ============================================================
+// フィルター初期化
+// ============================================================
+const DEPT_ORDER = ['設計','加工','組付','営業','購買','総務','NVM','未設定'];
+
+function initFilters() {
+  buildDeptCheckboxes();
+  buildPersonCheckboxes();
+  syncPersonVisibility(); // 初期表示状態を部署チェックと同期
+  updatePeriodSelects();
+}
+
+// 全部署の現在のチェック状態に合わせて人リストの表示を同期
+function syncPersonVisibility() {
+  document.querySelectorAll('#deptCheckList input[type=checkbox]').forEach(cb => {
+    const visible = cb.checked;
+    document.querySelectorAll(`#personCheckList .cb-item[data-dept="${cb.value}"]`).forEach(item => {
+      item.style.display = visible ? '' : 'none';
+    });
+  });
+}
+
+function buildDeptCheckboxes() {
+  const { allDepts } = rawData;
+  const sorted = [...allDepts].sort(
+    (a,b) => (DEPT_ORDER.indexOf(a)+1||99) - (DEPT_ORDER.indexOf(b)+1||99)
+  );
+  document.getElementById('deptCheckList').innerHTML = sorted.map(dept => `
+    <label class="cb-item" onclick="onDeptCheck(event, '${dept}')">
+      <input type="checkbox" id="dept-cb-${dept}" value="${dept}" checked onchange="onDeptChange('${dept}')">
+      <span class="cb-dept-dot" style="background:${DEPT_COLORS[dept]||'#94a3b8'}"></span>
+      <span>${dept}</span>
+    </label>
+  `).join('');
+}
+
+function buildPersonCheckboxes() {
+  const deptOrder = DEPT_ORDER;
+  // email → {name, dept} の重複なしリストを部署順・名前順で
+  const seen = new Set();
+  const entries = Object.entries(rawData.deptMap)
+    .map(([email, dept]) => ({ email, dept, name: rawData.nameMap[email] || email.split('@')[0] }))
+    .filter(e => { if (seen.has(e.name)) return false; seen.add(e.name); return true; })
+    .sort((a,b) => {
+      const da = deptOrder.indexOf(a.dept)+1||99;
+      const db = deptOrder.indexOf(b.dept)+1||99;
+      return da !== db ? da - db : a.name.localeCompare(b.name,'ja');
+    });
+
+  document.getElementById('personCheckList').innerHTML = entries.map(e => `
+    <label class="cb-item" data-dept="${e.dept}">
+      <input type="checkbox" id="person-cb-${e.name}" value="${e.name}" checked onchange="render()">
+      <span class="cb-dept-dot" style="background:${DEPT_COLORS[e.dept]||'#94a3b8'}"></span>
+      <span>${e.name}</span>
+    </label>
+  `).join('');
+}
+
+// 部署チェック変更 → 対応する人の表示・チェックを連動
+function onDeptChange(dept) {
+  const deptChecked = document.getElementById(`dept-cb-${dept}`).checked;
+  document.querySelectorAll(`#personCheckList .cb-item[data-dept="${dept}"]`).forEach(item => {
+    // チェック状態を同期
+    const cb = item.querySelector('input');
+    cb.checked = deptChecked;
+    // 表示／非表示を切り替え
+    item.style.display = deptChecked ? '' : 'none';
+  });
+  render();
+}
+
+function onDeptCheck(event, dept) {
+  if (event.target.tagName === 'INPUT') return;
+}
+
+function checkAllDepts(state) {
+  document.querySelectorAll('#deptCheckList input[type=checkbox]').forEach(cb => {
+    cb.checked = state;
+    onDeptChange(cb.value);
+  });
+}
+
+function checkAllPersons(state) {
+  // 現在表示中の人のみ対象
+  document.querySelectorAll('#personCheckList .cb-item:not([style*="display: none"]) input').forEach(cb => cb.checked = state);
+  render();
+}
+
+function updatePeriodSelects() {
+  const gran = document.getElementById('granularity').value;
+  const keys = Object.keys(rawData.periods[gran]);
+  const sp = document.getElementById('startPeriod');
+  const ep = document.getElementById('endPeriod');
+  const prevStart = sp.value, prevEnd = ep.value;
+  sp.innerHTML = keys.map(k => `<option value="${k}">${k}</option>`).join('');
+  ep.innerHTML = keys.map(k => `<option value="${k}">${k}</option>`).join('');
+  sp.value = keys.includes(prevStart) ? prevStart : keys[0];
+  ep.value = keys.includes(prevEnd)   ? prevEnd   : keys[keys.length-1];
+}
+
+function onGranularityChange() {
+  updatePeriodSelects();
+  render();
+}
+
+document.getElementById('granularity').addEventListener('change', onGranularityChange);
+
+function resetFilters() {
+  document.getElementById('granularity').value = 'monthly';
+  checkAllDepts(true);
+  updatePeriodSelects();
+  render();
+}
+
+// ============================================================
+// フィルター適用
+// ============================================================
+function getFiltered() {
+  const gran = document.getElementById('granularity').value;
+
+  // チェック済み部署
+  const selDepts = [...document.querySelectorAll('#deptCheckList input:checked')].map(cb => cb.value);
+  // チェック済み人
+  const selPers  = [...document.querySelectorAll('#personCheckList input:checked')].map(cb => cb.value);
+
+  const start = document.getElementById('startPeriod').value;
+  const end   = document.getElementById('endPeriod').value;
+
+  const src    = rawData.periods[gran];
+  const result = {};
+
+  Object.entries(src).forEach(([key, period]) => {
+    if (key < start || key > end) return;
+
+    const users = {}, depts = {}, types = {};
+    Object.entries(period.users).forEach(([email, info]) => {
+      if (!selDepts.includes(info.dept)) return;
+      if (!selPers.includes(info.name))  return;
+      users[email] = info;
+      depts[info.dept] = (depts[info.dept]||0) + info.total;
+      Object.entries(info.types).forEach(([t,c]) => { types[t]=(types[t]||0)+c; });
+    });
+
+    if (Object.keys(users).length) result[key] = { ...period, users, depts, types };
+  });
+
+  return result;
+}
+
+// ============================================================
+// レンダー
+// ============================================================
+function render() {
+  if (!rawData) return;
+  const filtered = getFiltered();
+  const keys     = Object.keys(filtered);
+  const allDepts = [...new Set(Object.values(filtered).flatMap(p=>Object.keys(p.depts)))].sort();
+
+  // KPI
+  let total=0, users=new Set(), depts=new Set();
+  keys.forEach(k=>{
+    Object.entries(filtered[k].users).forEach(([e,i])=>{ total+=i.total; users.add(i.name); depts.add(i.dept); });
+  });
+  document.getElementById('kpiTotal').textContent  = total.toLocaleString();
+  document.getElementById('kpiUsers').textContent  = users.size;
+  document.getElementById('kpiDepts').textContent  = depts.size;
+  document.getElementById('kpiPeriod').textContent = keys.length + '期間の合計';
+
+  // 時系列チャート
+  renderTrend(filtered, keys);
+
+  // 部署チャート
+  renderDept(filtered, allDepts);
+
+  // 検索タイプ
+  renderSearchType(filtered);
+
+  // ランキングテーブル
+  renderRanking(filtered, total);
+
+  // クロス集計
+  renderCross(filtered, keys, allDepts);
+}
+
+function makeChart(id, config) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  charts[id] = new Chart(ctx, config);
+}
+
+let trendMode = 'dept'; // 'dept' | 'person'
+
+function setTrendMode(mode) {
+  trendMode = mode;
+  document.getElementById('trendTab-dept').classList.toggle('active',   mode === 'dept');
+  document.getElementById('trendTab-person').classList.toggle('active', mode === 'person');
+  const ctrl = document.getElementById('trendPersonCtrl');
+  ctrl.style.display = mode === 'person' ? 'flex' : 'none';
+  render();
+}
+
+// 個人モード用の部署セレクタを更新（チェック済み部署のみ）
+function updateTrendDeptSelect(filtered) {
+  const sel   = document.getElementById('trendDeptSelect');
+  const cur   = sel.value;
+  const depts = new Set();
+  Object.values(filtered).forEach(p =>
+    Object.values(p.users).forEach(u => depts.add(u.dept))
+  );
+  const sorted = [...depts].sort((a,b)=>(DEPT_ORDER.indexOf(a)+1||99)-(DEPT_ORDER.indexOf(b)+1||99));
+  sel.innerHTML = '<option value="__all__">すべて</option>'
+    + sorted.map(d => `<option value="${d}"${d===cur?' selected':''}>${d}</option>`).join('');
+}
+
+function renderTrend(filtered, keys) {
+  // 個人モード用セレクタ更新
+  updateTrendDeptSelect(filtered);
+
+  let datasets;
+
+  if (trendMode === 'dept') {
+    // ── 部署別モード（従来通り） ──
+    const allDepts = [...new Set(
+      Object.values(filtered).flatMap(p => Object.keys(p.depts))
+    )];
+    datasets = allDepts.map(dept => ({
+      label: dept,
+      data:  keys.map(k => filtered[k].depts[dept] || 0),
+      borderColor:     DEPT_COLORS[dept] || '#60a5fa',
+      backgroundColor: (DEPT_COLORS[dept] || '#60a5fa') + '18',
+      tension: 0.35, fill: true,
+      pointRadius: keys.length > 20 ? 1 : 4,
+      borderWidth: 2,
+    }));
+
+  } else {
+    // ── 個人別モード ──
+    const filterDept = document.getElementById('trendDeptSelect').value;
+
+    // 対象ユーザーを収集
+    const userMap = {}; // name → { dept, data:{key→count} }
+    keys.forEach(k => {
+      Object.values(filtered[k].users).forEach(u => {
+        if (filterDept !== '__all__' && u.dept !== filterDept) return;
+        if (!userMap[u.name]) userMap[u.name] = { dept: u.dept, data: {} };
+        userMap[u.name].data[k] = (userMap[u.name].data[k] || 0) + u.total;
+      });
+    });
+
+    // 部署カラーをベースに同部署内で明度を振り分けるパレット生成
+    const PERSON_PALETTES = {
+      '設計': ['#4f7cff','#7fa0ff','#3a5fcc','#a0bcff','#2a4aaa','#c0d4ff','#1a3488','#d8e8ff','#96aaee','#b0c4ff','#6888ee','#4466cc'],
+      '加工': ['#a78bfa','#c4adfc','#8a6ecc','#d8c8fe','#7055aa','#e8dcff','#5a4488','#b89cfc','#9077d8','#cdb8fe'],
+      '組付': ['#34d399','#5ddcaa','#28aa77','#86e8c4','#1e8860','#a8f0d6','#167044','#60d8b0','#3ebf88'],
+      '営業': ['#fbbf24','#fccc55','#d89e1a','#fdd88a','#b07e12','#fee5b0','#906608','#f8c840','#eeaa10'],
+      '購買': ['#f87171','#fa9595','#d05555','#fbbdbd','#aa3a3a','#fdd0d0','#882020','#f08080','#e06060'],
+      '総務': ['#60a5fa','#88bafb','#4488d8','#b0d0fd','#3370c0','#cce0fe','#2258a8','#78b0fc'],
+      'NVM':  ['#fb923c','#fcaa66','#d87020','#fdc49a','#b05a10','#fedd c0','#905020','#f8a050'],
+    };
+    const DEFAULT_PALETTE = ['#94a3b8','#b0bec8','#78909c','#cdd5e0'];
+
+    const names = Object.keys(userMap).sort((a,b) =>
+      (userMap[a].dept > userMap[b].dept ? 1 : -1) || a.localeCompare(b,'ja')
+    );
+
+    // 部署ごとの色インデックス管理
+    const deptIdx = {};
+    datasets = names.map(name => {
+      const { dept, data } = userMap[name];
+      const palette = PERSON_PALETTES[dept] || DEFAULT_PALETTE;
+      deptIdx[dept] = (deptIdx[dept] || 0);
+      const color = palette[deptIdx[dept] % palette.length];
+      deptIdx[dept]++;
+
+      return {
+        label: `${name}（${dept}）`,
+        data:  keys.map(k => data[k] || 0),
+        borderColor:     color,
+        backgroundColor: color + '18',
+        tension: 0.35, fill: false,
+        pointRadius: keys.length > 20 ? 2 : 5,
+        borderWidth: 2,
+        borderDash: dept === filterDept || filterDept === '__all__' ? [] : [4,4],
+      };
+    });
+  }
+
+  makeChart('trendChart', {
+    type: 'line',
+    data: { labels: keys, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color:'#8892a4', boxWidth:12, font:{size:11},
+            // 個人モードで人数が多い場合は凡例を小さく
+            padding: trendMode === 'person' ? 8 : 12,
+          }
+        },
+        tooltip: {
+          callbacks: {
+            // ツールチップに合計を表示
+            footer: items => {
+              const sum = items.reduce((s,i) => s + i.parsed.y, 0);
+              return items.length > 1 ? `合計: ${sum.toLocaleString()}` : '';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks:{color:'#8892a4',font:{size:10}}, grid:{color:'#2e3350'} },
+        y: { ticks:{color:'#8892a4',font:{size:10}}, grid:{color:'#2e3350'}, beginAtZero:true },
+      }
+    }
+  });
+}
+
+function renderDept(filtered, allDepts) {
+  const totals = {};
+  Object.values(filtered).forEach(p => {
+    Object.entries(p.depts).forEach(([d,c]) => { totals[d]=(totals[d]||0)+c; });
+  });
+  const sorted = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+
+  makeChart('deptChart', {
+    type:'bar',
+    data:{
+      labels: sorted.map(d=>d[0]),
+      datasets:[{
+        data: sorted.map(d=>d[1]),
+        backgroundColor: sorted.map(d=>DEPT_COLORS[d[0]]||'#60a5fa'),
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ ticks:{color:'#8892a4',font:{size:10}}, grid:{color:'#2e3350'}, beginAtZero:true },
+        y:{ ticks:{color:'#c8cdd8',font:{size:11}}, grid:{display:false} },
+      }
+    }
+  });
+}
+
+function renderSearchType(filtered) {
+  const types = {};
+  Object.values(filtered).forEach(p => {
+    Object.entries(p.types).forEach(([t,c]) => { types[t]=(types[t]||0)+c; });
+  });
+  const sorted = Object.entries(types).sort((a,b)=>b[1]-a[1]);
+  const palette = ['#4f7cff','#a78bfa','#34d399','#fbbf24','#f87171','#60a5fa','#fb923c','#94a3b8'];
+
+  makeChart('searchTypeChart', {
+    type:'doughnut',
+    data:{
+      labels: sorted.map(d=>d[0]),
+      datasets:[{ data:sorted.map(d=>d[1]), backgroundColor:palette, borderColor:'#0f1117', borderWidth:2, hoverOffset:6 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom', labels:{ color:'#8892a4', boxWidth:12, font:{size:11}, padding:10 } }
+      }
+    }
+  });
+}
+
+function renderRanking(filtered, grandTotal) {
+  const userTotals = {};
+  const userDept   = {};
+  Object.values(filtered).forEach(p => {
+    Object.entries(p.users).forEach(([email,info]) => {
+      userTotals[info.name] = (userTotals[info.name]||0) + info.total;
+      userDept[info.name]   = info.dept;
+    });
+  });
+
+  const sorted = Object.entries(userTotals).sort((a,b)=>b[1]-a[1]);
+  const max    = sorted[0]?.[1] || 1;
+
+  document.getElementById('rankTable').innerHTML = sorted.map(([name,cnt],i) => {
+    const pct  = grandTotal ? ((cnt/grandTotal)*100).toFixed(1) : 0;
+    const bpct = ((cnt/max)*100).toFixed(1);
+    return `<tr>
+      <td><span class="rank-badge ${i<3?'top':''}">${i+1}</span></td>
+      <td><strong>${name}</strong></td>
+      <td><span class="dept-tag">${userDept[name]||''}</span></td>
+      <td>${cnt.toLocaleString()}</td>
+      <td>
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:2px">${pct}%</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${bpct}%"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCross(filtered, keys, allDepts) {
+  const table = document.getElementById('crossTable');
+  const head  = `<thead><tr><th>期間</th>${allDepts.map(d=>`<th>${d}</th>`).join('')}<th>合計</th></tr></thead>`;
+
+  const bodyRows = keys.map(k => {
+    const row    = filtered[k];
+    const cells  = allDepts.map(d => `<td>${(row.depts[d]||0).toLocaleString()}</td>`);
+    const rowSum = allDepts.reduce((s,d)=>s+(row.depts[d]||0), 0);
+    return `<tr><td><strong>${k}</strong></td>${cells.join('')}<td><strong>${rowSum.toLocaleString()}</strong></td></tr>`;
+  }).join('');
+
+  // 合計行
+  const totalRow = allDepts.map(d => {
+    const t = keys.reduce((s,k)=>s+(filtered[k].depts[d]||0),0);
+    return `<td><strong>${t.toLocaleString()}</strong></td>`;
+  }).join('');
+  const grandT = keys.reduce((s,k)=>s+allDepts.reduce((ss,d)=>ss+(filtered[k].depts[d]||0),0),0);
+  const foot   = `<tfoot><tr><td><strong>合計</strong></td>${totalRow}<td><strong>${grandT.toLocaleString()}</strong></td></tr></tfoot>`;
+
+  table.innerHTML = head + `<tbody>${bodyRows}</tbody>` + foot;
+}
+
+// ============================================================
+// 起動：ドラッグ＆ドロップの初期化
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  const zone = document.getElementById('dropZone');
+
+  // ドラッグオーバー時のスタイル
+  zone.addEventListener('dragover', e => {
+    e.preventDefault();
+    zone.style.borderColor = 'var(--accent)';
+    zone.style.background  = 'rgba(79,124,255,.08)';
+  });
+  zone.addEventListener('dragleave', () => {
+    zone.style.borderColor = 'var(--border)';
+    zone.style.background  = '';
+  });
+
+  // ドロップ
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.style.borderColor = 'var(--border)';
+    zone.style.background  = '';
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+      loadCSVFile(file);
+    } else {
+      showError('CSVファイルをドロップしてください');
+    }
+  });
+
+  // ヘッダーとページ全体でもドロップ受け付け
+  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) loadCSVFile(file);
+  });
+
+});
+
+</script>
+</body>
+</html>
