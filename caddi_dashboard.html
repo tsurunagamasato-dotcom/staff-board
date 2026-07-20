@@ -298,20 +298,22 @@
   text-align:center;
   color:var(--muted);
   transition:border-color .2s, background .2s;
-  cursor:pointer;
 ">
-  <div style="font-size:3rem; margin-bottom:12px">📊</div>
-  <div style="font-size:1.1rem; font-weight:600; color:var(--text); margin-bottom:8px">CSVをここにドロップ</div>
-  <div style="font-size:.85rem; margin-bottom:20px">毎週届く「検索実績レポート_YYYYMMDD.csv」をそのまま読み込めます</div>
-  <label style="
-    display:inline-flex; align-items:center; gap:8px;
-    background:var(--accent); color:white;
-    padding:10px 24px; border-radius:6px;
-    font-size:.9rem; font-weight:600; cursor:pointer;
-  ">
-    📂 ファイルを選択
-    <input type="file" accept=".csv" style="display:none" onchange="onFileSelect(event)">
-  </label>
+  <div id="dropZoneIcon" style="font-size:3rem; margin-bottom:12px">⏳</div>
+  <div id="dropZoneTitle" style="font-size:1.1rem; font-weight:600; color:var(--text); margin-bottom:8px">最新データを読み込み中...</div>
+  <div id="dropZoneMsg" style="font-size:.85rem; margin-bottom:20px">BoxのCADDiフォルダから自動取得しています</div>
+  <div style="display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap;">
+    <label id="manualUploadBtn" style="
+      display:none; align-items:center; gap:8px;
+      background:var(--surface2); color:var(--muted);
+      border:1px solid var(--border);
+      padding:10px 24px; border-radius:6px;
+      font-size:.85rem; cursor:pointer;
+    ">
+      📂 手動でCSVを選択
+      <input type="file" accept=".csv" style="display:none" onchange="onFileSelect(event)">
+    </label>
+  </div>
 </div>
 
 <div class="filters">
@@ -509,6 +511,50 @@ let parsedCSV = null; // {dates, rows}
 let charts    = {};
 let latestFileName = '';
 let latestFileDate = '';
+
+// ============================================================
+// GitHub から latest_caddi.csv を自動読込
+// ============================================================
+const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/tsurunagamasato-dotcom/staff-board/main/latest_caddi.csv';
+
+async function autoLoadFromGitHub() {
+  try {
+    const resp = await fetch(GITHUB_RAW_URL + '?t=' + Date.now()); // キャッシュ回避
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const text = await resp.text();
+    if (!text.includes('@nakashima-mfg.co.jp')) throw new Error('CSVの内容が不正');
+
+    processCSV(text, 'latest_caddi.csv');
+
+  } catch(e) {
+    // 自動読込失敗 → 手動アップロードに切り替え
+    document.getElementById('dropZoneIcon').textContent  = '📊';
+    document.getElementById('dropZoneTitle').textContent = 'CSVをドロップして読み込む';
+    document.getElementById('dropZoneMsg').textContent   = 'BoxからCSVをダウンロードしてここにドラッグ＆ドロップしてください';
+    document.getElementById('dropZone').style.cursor     = 'pointer';
+    const btn = document.getElementById('manualUploadBtn');
+    btn.style.display = 'inline-flex';
+
+    // ドロップ受け付け
+    const zone = document.getElementById('dropZone');
+    zone.addEventListener('dragover', ev => {
+      ev.preventDefault();
+      zone.style.borderColor = 'var(--accent)';
+      zone.style.background  = 'rgba(79,124,255,.08)';
+    });
+    zone.addEventListener('dragleave', () => {
+      zone.style.borderColor = 'var(--border)';
+      zone.style.background  = '';
+    });
+    zone.addEventListener('drop', ev => {
+      ev.preventDefault();
+      zone.style.borderColor = 'var(--border)';
+      zone.style.background  = '';
+      const file = ev.dataTransfer.files[0];
+      if (file && file.name.endsWith('.csv')) loadCSVFile(file);
+    });
+  }
+}
 
 // ============================================================
 // CSVファイル読み込み（ファイル選択 or ドロップ）
@@ -1154,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ヘッダーとページ全体でもドロップ受け付け
+  // ページ全体でもドロップ受け付け（手動時）
   document.addEventListener('dragover', e => e.preventDefault());
   document.addEventListener('drop', e => {
     e.preventDefault();
@@ -1162,6 +1208,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (file && file.name.endsWith('.csv')) loadCSVFile(file);
   });
 
+  // GitHubから自動読込
+  autoLoadFromGitHub();
 });
 
 </script>
