@@ -639,8 +639,8 @@ function renderVisitorSummary() {
     const count = v.count||1;
     const label = v.order==='futsuu'?'普通':'大盛';
     const place = v.place==='nezaki'?'根崎':'本社';
-    return `<div class="visitor-edit-row" data-id="${escapeAttr(String(v.id))}" data-name="${escapeAttr(v.name||'来訪者')}" data-order="${v.order}" data-place="${v.place||'honsha'}" data-count="${count}" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06);">
-      <span>${escapeAttr(v.name||'来訪者')}：${label} ${count}名（${place}）</span>
+    return `<div class="visitor-edit-row" data-id="${escapeAttr(String(v.id))}" data-name="${escapeAttr(v.name||'来訪者')}" data-order="${v.order}" data-place="${v.place||'honsha'}" data-count="${count}" data-orderer="${escapeAttr(v.orderer||'')}" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06);">
+      <span>${escapeAttr(v.name||'来訪者')}：${label} ${count}名（${place}）${v.orderer?`　<span style="color:var(--text-sub);font-size:12px;">注文者:${escapeAttr(v.orderer)}</span>`:''}</span>
       <span style="font-size:12px;color:var(--orange-fg);">✏️ 編集</span>
     </div>`;
   }).join('');
@@ -1490,18 +1490,20 @@ function openVisitorAdd() {
   document.getElementById('visitorPopupTitle').textContent = '来訪者の昼食を追加';
   document.getElementById('visitorPopupSub').textContent = date + ' に追加します';
   document.getElementById('vpop-name').value = '';
+  document.getElementById('vpop-orderer').value = '';
   document.getElementById('vpop-count').textContent = '1';
   document.getElementById('vpop-delete').style.display = 'none';
   vpopSelectOrder('futsuu'); vpopSelectPlace('honsha');
   document.getElementById('visitorPopupOverlay').classList.remove('hidden');
 }
 
-function openVisitorEdit(id, name, order, place, count) {
+function openVisitorEdit(id, name, order, place, count, orderer) {
   var date = document.getElementById('targetDate').value;
   _vpop = {id:id, name:name, order:order||'futsuu', place:place||'honsha', count:parseInt(count)||1, isNew:false};
   document.getElementById('visitorPopupTitle').textContent = '来訪者注文を編集';
   document.getElementById('visitorPopupSub').textContent = date + '　' + (name||'来訪者');
   document.getElementById('vpop-name').value = name||'';
+  document.getElementById('vpop-orderer').value = orderer||'';
   document.getElementById('vpop-count').textContent = String(_vpop.count);
   document.getElementById('vpop-delete').style.display = '';
   vpopSelectOrder(_vpop.order); vpopSelectPlace(_vpop.place);
@@ -1532,6 +1534,7 @@ async function vpopSave() {
   var date = document.getElementById('targetDate').value;
   if (!date) { showToast('日付を選択してください'); return; }
   var name = document.getElementById('vpop-name').value.trim() || '来訪者';
+  var orderer = document.getElementById('vpop-orderer').value.trim();
   if (!_vpop.order) { showToast('注文を選択してください'); return; }
   // 新規は一意なIDを発行、編集は既存IDを維持（同IDで上書き）
   var vid = _vpop.isNew ? ('visitor_' + Date.now()) : _vpop.id;
@@ -1539,7 +1542,7 @@ async function vpopSave() {
     var res = await fetch(GAS_URL, {
       method: 'POST', headers: {'Content-Type':'text/plain'},
       body: JSON.stringify({ action:'saveOrder', id:vid, name:name, dept:'来訪者',
-        date:date, order:_vpop.order, place:_vpop.place||'honsha', count:_vpop.count })
+        date:date, order:_vpop.order, place:_vpop.place||'honsha', count:_vpop.count, orderer:orderer })
     });
     var json = await res.json();
     if (json.ok) {
@@ -1571,7 +1574,7 @@ async function vpopDelete() {
 document.addEventListener('click', function(e){
   var row = e.target.closest ? e.target.closest('.visitor-edit-row') : null;
   if (row && row.dataset && row.dataset.id) {
-    openVisitorEdit(row.dataset.id, row.dataset.name, row.dataset.order, row.dataset.place, row.dataset.count);
+    openVisitorEdit(row.dataset.id, row.dataset.name, row.dataset.order, row.dataset.place, row.dataset.count, row.dataset.orderer);
   }
 });
 // オーバーレイ外側クリックで閉じる
@@ -1611,6 +1614,8 @@ document.addEventListener('click', function(e){
     <div class="edit-popup-sub" id="visitorPopupSub"></div>
     <div class="edit-popup-label">来訪者名（会社名など）</div>
     <input type="text" id="vpop-name" class="settings-input" style="width:100%;margin-bottom:16px;" placeholder="例：〇〇商事 様">
+    <div class="edit-popup-label">注文者（総務部の記入者）</div>
+    <input type="text" id="vpop-orderer" class="settings-input" style="width:100%;margin-bottom:16px;" placeholder="注文した人の氏名">
     <div class="edit-popup-label">数量</div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
       <button type="button" onclick="vpopCount(-1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-size:18px;cursor:pointer;font-family:inherit;">−</button>
