@@ -381,20 +381,20 @@ async function loadEmployees() {
     }
   } catch(e) {}
 
-  // localStorageが空の場合のみGASから初期取得
-  if (employees.length === 0) {
-    try {
-      const res = await fetch(GAS_URL + '?action=getEmployees&t=' + Date.now());
-      const json = await res.json();
-      if (json.ok && json.employees.length > 0) {
-        employees = json.employees;
-        localStorage.setItem(LS_KEY, JSON.stringify(employees));
-        renderTable();
-        renderStats();
-        showToast('✅ ' + employees.length + '名のデータを取得しました', 'success');
-      }
-    } catch(e) { showToast('通信エラーが発生しました', 'error'); }
-  }
+  // マスタ画面は常に最新を正とする。キャッシュの有無に関わらずGASから取得して差し替える。
+  // （キャッシュ優先のままだと、開く人ごとに古いデータが残って総数がズレる／新規社員が表示されない）
+  try {
+    const wasEmpty = employees.length === 0;
+    const res = await fetch(GAS_URL + '?action=getEmployees&t=' + Date.now());
+    const json = await res.json();
+    if (json.ok && json.employees.length > 0) {
+      employees = json.employees;
+      localStorage.setItem(LS_KEY, JSON.stringify(employees));
+      renderTable();
+      renderStats();
+      if (wasEmpty) showToast('✅ ' + employees.length + '名のデータを取得しました', 'success');
+    }
+  } catch(e) { if (employees.length === 0) showToast('通信エラーが発生しました', 'error'); }
 }
 
 // 統計
