@@ -525,16 +525,36 @@ async function submitToGAS() {
   const now = new Date();
   const updatedStr = now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + '更新';
   const memo = document.getElementById('memoInput') ? document.getElementById('memoInput').value.trim() : '';
-  const leaveStart = document.getElementById('leaveStart') ? document.getElementById('leaveStart').value : '';
-  let leaveEnd     = document.getElementById('leaveEnd')   ? document.getElementById('leaveEnd').value   : '';
+  let leaveStart = document.getElementById('leaveStart') ? document.getElementById('leaveStart').value : '';
+  let leaveEnd   = document.getElementById('leaveEnd')   ? document.getElementById('leaveEnd').value   : '';
+  // 期間(leave)を使うステータス以外は必ずクリアする。
+  // （本社などの居場所を登録し直したとき、前に選んだ午後休等のleaveStartが残って誤動作するのを防ぐ。
+  //   これをしないと居場所登録でも当日leaveが付いてしまう）
+  const LEAVE_STATUSES = ['yasumi','gaishutsu','zaitaku','gozen_kyuu','gogo_kyuu'];
+  if (!LEAVE_STATUSES.includes(selStatus)) { leaveStart = ''; leaveEnd = ''; }
   // 午前休・午後休は単日指定：終了日を開始日に揃える
   if (selStatus === 'gozen_kyuu' || selStatus === 'gogo_kyuu') leaveEnd = leaveStart;
+
+  // 送信データ。午後休(gogo_kyuu)は「居場所(status)は変えず、午後休フラグ(gogoHalf)だけ立てる」。
+  // 左＝現在地はKOTや通常の居場所登録で入り、右＝午後休はフラグで維持される。
+  const payload = { id:selStaff.id, name:selStaff.name, dept:selStaff.dept };
+  if (selStatus === 'gogo_kyuu') {
+    // 午後休：フラグ(gogoHalf)だけ立てる。居場所(status/updated/memo)は一切触らない＝左はKOT・手動で入る。
+    payload.gogoHalf = leaveStart || fmtDateStr(new Date()); // 午後休にする日（単日）
+  } else {
+    payload.status     = selStatus;
+    payload.updated    = updatedStr;
+    payload.memo       = memo;
+    payload.leaveStart = leaveStart;
+    payload.leaveEnd   = leaveEnd;
+    // gogoHalf は送らない＝GAS側で維持（居場所を移動しても午後休は消さない／退勤時はGASが自動解除）
+  }
 
   document.getElementById('savingOverlay').classList.add('show');
   try {
     const res = await fetchWithRetry(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({id:selStaff.id, name:selStaff.name, dept:selStaff.dept, status:selStatus, updated:updatedStr, memo, leaveStart, leaveEnd})
+      body: JSON.stringify(payload)
     });
     const json = await res.json();
     if (!json.ok) throw new Error();

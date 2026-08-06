@@ -430,7 +430,7 @@ function _applyEmployees(emps) {
     birthday: e.birthday || '', showBirthday: e.showBirthday
   }));
   STAFF_MASTER.forEach(s => {
-    if (!state[s.id]) state[s.id] = { status: s.base, updated: '', memo: '', leaveStart: '', leaveEnd: '' };
+    if (!state[s.id]) state[s.id] = { status: s.base, updated: '', memo: '', leaveStart: '', leaveEnd: '', gogoHalf: '' };
   });
 }
 
@@ -447,7 +447,7 @@ function setAttLocal(id, data) {
 }
 function nowTimeStr() { const d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 
-function initState() { state = {}; STAFF_MASTER.forEach(s => { state[s.id] = { status:s.base, updated:'', memo:'', leaveStart:'', leaveEnd:'' }; }); }
+function initState() { state = {}; STAFF_MASTER.forEach(s => { state[s.id] = { status:s.base, updated:'', memo:'', leaveStart:'', leaveEnd:'', gogoHalf:'' }; }); }
 
 // 本社事務所を選んだ人を①②③に振り分ける。本人の座席(slide)に従う：
 // honsha2→本社②、honsha3→本社③、それ以外（根崎系nezaki/nezaki2・honsha1・空）は本社①。
@@ -654,12 +654,13 @@ async function fetchAll(silent=false) {
         // これをしないと設置モニタ（常時表示・差分更新）は前日の「出勤中」を保持し続け、翌朝も残る。
         let newSt;
         if (row.status) {
-          newSt = { status:row.status, updated:row.updated||'', memo:row.memo||'', leaveStart:row.leaveStart||'', leaveEnd:row.leaveEnd||'' };
+          newSt = { status:row.status, updated:row.updated||'', memo:row.memo||'', leaveStart:row.leaveStart||'', leaveEnd:row.leaveEnd||'', gogoHalf:row.gogoHalf||'' };
         } else {
           const sm = STAFF_MASTER.find(s => String(s.id) === String(id));
-          newSt = { status:(sm ? sm.base : old.status), updated:'', memo:'', leaveStart:'', leaveEnd:'' };
+          // statusが空でも午後休フラグ(gogoHalf)は別管理なので保持する（午後休登録直後は居場所が空のことがある）
+          newSt = { status:(sm ? sm.base : old.status), updated:'', memo:'', leaveStart:'', leaveEnd:'', gogoHalf:row.gogoHalf||'' };
         }
-        if (old.status !== newSt.status || old.updated !== newSt.updated || old.memo !== newSt.memo || old.leaveStart !== newSt.leaveStart || old.leaveEnd !== newSt.leaveEnd) {
+        if (old.status !== newSt.status || old.updated !== newSt.updated || old.memo !== newSt.memo || old.leaveStart !== newSt.leaveStart || old.leaveEnd !== newSt.leaveEnd || old.gogoHalf !== newSt.gogoHalf) {
           state[id] = newSt;
           changed = true;
         }
@@ -705,6 +706,13 @@ function isBirthdayToday(bday) {
   return (now.getMonth() + 1) === mm && now.getDate() === dd;
 }
 
+// 午後休フラグ（当日）判定。居場所(status)とは別レイヤーで「右半分オレンジ＝午後休」を出すため。
+function isGogoHalfToday(m) {
+  const st = state[m.id];
+  if (!st || !st.gogoHalf) return false;
+  return normalizeStateDate(st.gogoHalf) === getTodayStr();
+}
+
 // ===== カード生成 =====
 function buildCardHtml(m, showBadge) {
   const st = state[m.id];
@@ -718,7 +726,8 @@ function buildCardHtml(m, showBadge) {
   if (isNonDefault) classes += ' non-default';
   if (rawStatus === 'yasumi') classes += ' yasumi-card';
   if (rawStatus === 'gozen_kyuu') classes += ' hankyuu-gozen';
-  if (rawStatus === 'gogo_kyuu') classes += ' hankyuu-gogo';
+  const gogoHalf = isGogoHalfToday(m);   // 午後休フラグ（当日・居場所statusとは別レイヤー）
+  if (gogoHalf) classes += ' hankyuu-gogo';
   classes += ' att-' + attClass;
   if (isBday) classes += ' birthday-card';
 
@@ -739,6 +748,7 @@ function buildCardHtml(m, showBadge) {
     ${showBadge ? badgeHtml : `<div class="card-dept">${m.dept}</div>`}
     ${isBday ? '<div class="bday-badge">🎂 お誕生日おめでとう！</div>' : ''}
     ${getAttendanceBadgeHtml(m)}
+    ${gogoHalf ? '<span class="att-badge gogo">🌇 午後休</span>' : ''}
     ${(isNonDefault && rawStatus !== 'yasumi' && dispSt.memo)?`<div class="card-time" style="color:#1a0a00;font-size:15px;font-weight:700;margin-top:4px;">📍 ${dispSt.memo}</div>`:''}
     ${(dispSt.leaveStart && isActiveToday(m.id, st.status)) ? `<div class="card-time" style="color:#00132a;font-size:15px;font-weight:700;margin-top:4px;">📅 ${dispSt.leaveStart===dispSt.leaveEnd ? formatDate(dispSt.leaveStart) : formatDate(dispSt.leaveStart)+'〜'+formatDate(dispSt.leaveEnd)}</div>` : ''}
     ${isNonDefault && dispSt.updated?`<div class="card-time" style="color:#333;font-size:13px;">${dispSt.updated}</div>`:''}
@@ -1192,13 +1202,29 @@ async function doRegister() {
   const memoInput = document.getElementById('regMemoInput');
   const memo = memoInput ? memoInput.value.trim() : '';
 
-  const payload = { id:regStaff.id, name:regStaff.name, dept:regStaff.dept, status:regStatus, updated, memo, leaveStart, leaveEnd };
+  const payload = { id:regStaff.id, name:regStaff.name, dept:regStaff.dept };
+  if (regStatus === 'gogo_kyuu') {
+    // 午後休：フラグ(gogoHalf)だけ当日で立てる。居場所(status/updated/memo)は一切触らない。
+    payload.gogoHalf = getTodayStr();
+  } else {
+    payload.status     = regStatus;
+    payload.updated    = updated;
+    payload.memo       = memo;
+    payload.leaveStart = leaveStart;
+    payload.leaveEnd   = leaveEnd;
+    // gogoHalfは送らない＝GAS側で維持（居場所を移動しても午後休は消さない）
+  }
 
   try {
     const res = await fetchWithRetry(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
     const json = await res.json();
     if (json.ok) {
-      state[regStaff.id] = { status:regStatus, updated, memo:memo||'', leaveStart, leaveEnd };
+      if (regStatus === 'gogo_kyuu') {
+        const cur = state[regStaff.id] || { status:regStaff.base, memo:'', leaveStart:'', leaveEnd:'' };
+        state[regStaff.id] = { ...cur, updated, gogoHalf: getTodayStr() };
+      } else {
+        state[regStaff.id] = { status:regStatus, updated, memo:memo||'', leaveStart, leaveEnd, gogoHalf: (state[regStaff.id] && state[regStaff.id].gogoHalf) || '' };
+      }
 
       if (regStatus === 'taikin') {
         const att = getAttLocal(regStaff.id);
