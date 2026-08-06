@@ -76,7 +76,8 @@
   .staff-card.yasumi-card .card-name { color:#b71c1c; }
 
   /* 出退勤ステータス表示 */
-  .staff-card.att-working::before {
+  .staff-card.att-working::before,
+  .staff-card.att-gogo::before {
     content:''; position:absolute; left:0; top:0; bottom:0;
     width:4px; background:#1D9E75; border-radius:10px 0 0 10px;
   }
@@ -92,6 +93,9 @@
     display:block !important;
   }
   .staff-card.att-off { /* 薄くしない */ }
+  /* 午前休・午後休：カードの半分をオレンジにして半休を示す（午前休=左半分, 午後休=右半分） */
+  .staff-card.hankyuu-gozen { background: linear-gradient(105deg, #ffe6c8 46%, #ffffff 46%) !important; }
+  .staff-card.hankyuu-gogo  { background: linear-gradient(105deg, #ffffff 54%, #ffe0c0 54%) !important; }
   .staff-card.att-none {
     border:2px dashed rgba(0,0,0,0.15);
     background:rgba(255,255,255,0.3);
@@ -102,6 +106,8 @@
     margin-top:4px;
   }
   .att-badge.working { background:#e8f5f0; color:#0f6e56; }
+  .att-badge.gozen   { background:#ffe9cc; color:#8a5000; }
+  .att-badge.gogo    { background:#ffe0c4; color:#8a3d00; }
   .att-badge.left    { background:#5f5c56; color:#fff; font-size:11px; padding:3px 10px; }
   .att-badge.off     { background:#fdecea; color:#b71c1c; }
   .att-badge.none    { background:#f4f4f2; color:#999; }
@@ -480,7 +486,9 @@ function getDisplayStatus(m) {
   if (isFixedHolidayOff(m)) return 'yasumi';
   const st = state[m.id]; if (!st || !st.status) return m.base;  // 未登録(status空)はデフォルト居場所
   const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
-  return (activeStatus === 'taikin') ? m.base : activeStatus;
+  // 退勤・午後休はデフォルト居場所のスライドに配置（午後休は午前中いるため居場所別ビューで消えないように）
+  if (activeStatus === 'taikin' || activeStatus === 'gogo_kyuu') return m.base;
+  return activeStatus;
 }
 
 function getAttendanceClass(m) {
@@ -489,6 +497,8 @@ function getAttendanceClass(m) {
   const activeStatus = isActiveToday(m.id, st.status) ? st.status : m.base;
   if (activeStatus === 'taikin') return 'left';
   if (activeStatus === 'yasumi') return 'off';
+  if (activeStatus === 'gozen_kyuu') return 'gozen';   // 午前休（専用バッジ）
+  if (activeStatus === 'gogo_kyuu') return 'gogo';     // 午後休（出勤中＋専用バッジ）
   if (st.updated && st.updated !== '') return 'working';
   if (activeStatus !== m.base) return 'working';
   return 'none';
@@ -499,6 +509,8 @@ function getAttendanceBadgeHtml(m) {
   switch(cls) {
     case 'working': return '<span class="att-badge working">🟢 出勤中</span>';
     case 'left':    return '<span class="att-badge left">⏹ 退勤済</span>';
+    case 'gozen':   return '<span class="att-badge gozen">🌅 午前休</span>';
+    case 'gogo':    return '<span class="att-badge gogo">🟢 出勤中・🌇午後休</span>';
     case 'off':     return '';
     case 'none':    return '<span class="att-badge none">未打刻</span>';
     default:        return '';
@@ -549,6 +561,8 @@ const STATUS_BADGE_MAP = {
   yasumi:{ label:'休み',bg:'#f1efe8',fg:'#444441',dot:'#888780' },
   risseki:{ label:'離席/会議等',bg:'#fdecea',fg:'#7b1a14',dot:'#c0392b' },
   taikin:{ label:'退勤済み',bg:'#f1efe8',fg:'#666666',dot:'#888780' },
+  gozen_kyuu:{ label:'午前休',bg:'#ffe9cc',fg:'#8a5000',dot:'#e0881e' },
+  gogo_kyuu:{ label:'午後休',bg:'#ffdfc7',fg:'#8a3d00',dot:'#e0662a' },
 };
 
 // URLの ?place=xxx で特定の居場所スライドだけ単独表示するためのラベル対応
@@ -703,6 +717,8 @@ function buildCardHtml(m, showBadge) {
   let classes = 'staff-card clickable';
   if (isNonDefault) classes += ' non-default';
   if (rawStatus === 'yasumi') classes += ' yasumi-card';
+  if (rawStatus === 'gozen_kyuu') classes += ' hankyuu-gozen';
+  if (rawStatus === 'gogo_kyuu') classes += ' hankyuu-gogo';
   classes += ' att-' + attClass;
   if (isBday) classes += ' birthday-card';
 
@@ -1100,6 +1116,8 @@ const STATUSES_REG = [
   { key:'gaishutsu', label:'外出/出張', icon:'🚗' },
   { key:'zaitaku', label:'在宅', icon:'🏠' },
   { key:'yasumi', label:'休み', icon:'😴' },
+  { key:'gozen_kyuu', label:'午前休', icon:'🌅' },
+  { key:'gogo_kyuu', label:'午後休', icon:'🌇' },
   { key:'risseki', label:'離席/会議等', icon:'🚶' },
   { key:'taikin', label:'退勤', icon:'⏹' },
 ];
@@ -1208,5 +1226,6 @@ document.getElementById('regOverlay').addEventListener('click', e => {
 
 init();
 </script>
+<script src="usage_beacon.js" data-app="staff_monitor"></script>
 </body>
 </html>

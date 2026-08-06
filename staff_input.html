@@ -142,6 +142,8 @@
   .sel-btn.status-btn.sel-gaishutsu      { border-color: #BA7517; background: #faeeda; color: #633806; }
   .sel-btn.status-btn.sel-zaitaku        { border-color: #639922; background: #eaf3de; color: #27500a; }
   .sel-btn.status-btn.sel-yasumi         { border-color: #888780; background: #f1efe8; color: #444441; }
+  .sel-btn.status-btn.sel-gozen_kyuu     { border-color: #e0881e; background: #ffe9cc; color: #8a5000; }
+  .sel-btn.status-btn.sel-gogo_kyuu      { border-color: #e0662a; background: #ffdfc7; color: #8a3d00; }
   .sel-btn.status-btn.sel-risseki        { border-color: #c0392b; background: #fdecea; color: #7b1a14; }
 
   .status-icon { font-size: 22px; margin-bottom: 4px; }
@@ -362,6 +364,8 @@ const STATUSES = [
   { key:'gaishutsu',      label:'外出/出張',  bg:'#faeeda', fg:'#633806', dot:'#BA7517', icon:'🚗' },
   { key:'zaitaku',        label:'在宅',       bg:'#eaf3de', fg:'#27500a', dot:'#639922', icon:'🏠' },
   { key:'yasumi',         label:'休み',       bg:'#f1efe8', fg:'#444441', dot:'#888780', icon:'🌙' },
+  { key:'gozen_kyuu',     label:'午前休',     bg:'#ffe9cc', fg:'#8a5000', dot:'#e0881e', icon:'🌅' },
+  { key:'gogo_kyuu',      label:'午後休',     bg:'#ffdfc7', fg:'#8a3d00', dot:'#e0662a', icon:'🌇' },
   { key:'risseki',        label:'離席/会議等', bg:'#fdecea', fg:'#7b1a14', dot:'#c0392b', icon:'🚶' },
 ];
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.key, s]));
@@ -522,7 +526,9 @@ async function submitToGAS() {
   const updatedStr = now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + '更新';
   const memo = document.getElementById('memoInput') ? document.getElementById('memoInput').value.trim() : '';
   const leaveStart = document.getElementById('leaveStart') ? document.getElementById('leaveStart').value : '';
-  const leaveEnd   = document.getElementById('leaveEnd')   ? document.getElementById('leaveEnd').value   : '';
+  let leaveEnd     = document.getElementById('leaveEnd')   ? document.getElementById('leaveEnd').value   : '';
+  // 午前休・午後休は単日指定：終了日を開始日に揃える
+  if (selStatus === 'gozen_kyuu' || selStatus === 'gogo_kyuu') leaveEnd = leaveStart;
 
   document.getElementById('savingOverlay').classList.add('show');
   try {
@@ -687,18 +693,27 @@ function renderStatus() {
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <input id="leaveStart" type="date" value="${today}"
           style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:var(--surface);color:var(--text);">
-        <span style="font-size:13px;color:var(--text-sub);">〜</span>
+        <span id="leaveDash" style="font-size:13px;color:var(--text-sub);">〜</span>
         <input id="leaveEnd" type="date" value="${today}"
           style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:var(--surface);color:var(--text);">
       </div>
-      <div style="font-size:11px;color:var(--text-hint);margin-top:6px;">期間を設定すると毎朝の自動リセットがスキップされます</div>
+      <div id="leaveHint" style="font-size:11px;color:var(--text-hint);margin-top:6px;">期間を設定すると毎朝の自動リセットがスキップされます</div>
     `;
     document.getElementById('submitBtn').before(leaveWrap);
   }
-  leaveWrap.style.display = (selStatus === 'yasumi' || selStatus === 'gaishutsu' || selStatus === 'zaitaku') ? 'block' : 'none';
+  const isHankyu = (selStatus === 'gozen_kyuu' || selStatus === 'gogo_kyuu');
+  leaveWrap.style.display = (selStatus === 'yasumi' || selStatus === 'gaishutsu' || selStatus === 'zaitaku' || isHankyu) ? 'block' : 'none';
+  // 午前休・午後休は単日指定：終了日と「〜」を隠す
+  const leaveEndEl = document.getElementById('leaveEnd');
+  const leaveDashEl = document.getElementById('leaveDash');
+  if (leaveEndEl)  leaveEndEl.style.display  = isHankyu ? 'none' : '';
+  if (leaveDashEl) leaveDashEl.style.display = isHankyu ? 'none' : '';
+  const leaveHint = document.getElementById('leaveHint');
+  if (leaveHint) leaveHint.textContent = isHankyu ? '指定した1日だけ午前休／午後休になります' : '期間を設定すると毎朝の自動リセットがスキップされます';
   const leaveLabel = leaveWrap.querySelector('.section-label');
   if (leaveLabel) {
-    leaveLabel.textContent = selStatus === 'gaishutsu' ? '外出/出張の期間（任意）' : selStatus === 'zaitaku' ? '在宅の期間（任意）' : '長期休暇の期間（任意）';
+    leaveLabel.textContent = isHankyu ? (selStatus === 'gozen_kyuu' ? '午前休にする日' : '午後休にする日')
+      : selStatus === 'gaishutsu' ? '外出/出張の期間（任意）' : selStatus === 'zaitaku' ? '在宅の期間（任意）' : '長期休暇の期間（任意）';
   }
 }
 
@@ -719,7 +734,8 @@ function goStep(n) {
 
 async function submit() {
   if (!selStaff || !selStatus) return;
-  if (selStatus !== 'yasumi') {
+  // 休み・午前休・午後休はローカルの出勤打刻を記録しない（モニタはstatusで判定）
+  if (!['yasumi','gozen_kyuu','gogo_kyuu'].includes(selStatus)) {
     const att = getAttendance(selStaff.id);
     if (!att || !att.clockIn) {
       setAttendance(selStaff.id, { clockIn: nowTimeStr(), clockOut: '' });
@@ -754,5 +770,6 @@ function reset() {
 
 init();
 </script>
+<script src="usage_beacon.js" data-app="staff_input"></script>
 </body>
 </html>
