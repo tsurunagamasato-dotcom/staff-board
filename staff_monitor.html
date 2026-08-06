@@ -54,7 +54,7 @@
   .card-name.long { font-size: var(--card-name-long-size) !important; }
 
   .staff-card {
-    background:rgba(255,255,255,0.55);
+    background:#ffffff;
     border:1px solid rgba(0,0,0,0.08);
     border-radius:12px;
     padding:14px 16px;
@@ -62,7 +62,7 @@
     transition: opacity .3s, filter .3s;
   }
   .staff-card.non-default {
-    background:rgba(255,255,255,0.75);
+    background:#ffffff;
     border-color:rgba(186,117,23,0.6);
   }
   .staff-card.non-default::before {
@@ -79,17 +79,17 @@
   .staff-card.att-working::before,
   .staff-card.att-gogo::before {
     content:''; position:absolute; left:0; top:0; bottom:0;
-    width:4px; background:#1D9E75; border-radius:10px 0 0 10px;
+    width:6px; background:#1D9E75; border-radius:10px 0 0 10px;
   }
   .staff-card.att-left {
-    opacity:0.62; filter:grayscale(0.55);
-    background:rgba(233,230,224,0.9) !important;
-    border-color:rgba(0,0,0,0.12) !important;
+    opacity:0.9; filter:grayscale(0.3);
+    background:#cfcbc1 !important;
+    border-color:rgba(0,0,0,0.14) !important;
   }
   /* 退勤済は左帯を濃いグレーで表示して「状態あり（帰宅済）」を明示 */
   .staff-card.att-left::before {
     content:''; position:absolute; left:0; top:0; bottom:0;
-    width:4px; background:#8a8780; border-radius:10px 0 0 10px;
+    width:6px; background:#6f6c64; border-radius:10px 0 0 10px;
     display:block !important;
   }
   .staff-card.att-off { /* 薄くしない */ }
@@ -97,9 +97,10 @@
   .staff-card.hankyuu-gozen { background: linear-gradient(105deg, #ffe6c8 46%, #ffffff 46%) !important; }
   .staff-card.hankyuu-gogo  { background: linear-gradient(105deg, #ffffff 54%, #ffe0c0 54%) !important; }
   .staff-card.att-none {
-    border:2px dashed rgba(0,0,0,0.15);
-    background:rgba(255,255,255,0.3);
+    border:2px dashed rgba(0,0,0,0.16);
+    background:#faf9f6;
   }
+  .staff-card.att-none .card-name { color:#bcbab3; }
   .att-badge {
     display:inline-flex; align-items:center; gap:3px;
     padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700;
