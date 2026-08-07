@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ナカシマ アプリランチャー</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Meiryo', 'Yu Gothic', sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  header h1 {
+    font-size: 22px;
+    color: #1a3a5c;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+  header p {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+  }
+  .section {
+    margin-bottom: 28px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    background: #1a3a5c;
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    letter-spacing: 0.08em;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  a.card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #dde3ea;
+    border-radius: 10px;
+    padding: 18px 10px;
+    text-decoration: none;
+    color: #1a3a5c;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    transition: box-shadow .15s, transform .1s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+  a.card:hover {
+    box-shadow: 0 4px 16px rgba(26,58,92,.18);
+    transform: translateY(-2px);
+    border-color: #4a90d9;
+  }
+  a.card .icon {
+    font-size: 28px;
+    line-height: 1;
+  }
+  a.card .sub {
+    font-size: 10px;
+    color: #999;
+    font-weight: normal;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ナカシマ アプリランチャー</h1>
+  <p>個人用リンク集</p>
+</header>
+
+<div class="section">
+  <div class="section-title">ナカシマポータル</div>
+  <div class="grid">
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/staff_input.html" target="_blank">
+      <span class="icon">📍</span>
+      所在地登録
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/staff_monitor.html" target="_blank">
+      <span class="icon">🖥️</span>
+      所在地モニタ
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/lunch_input.html" target="_blank">
+      <span class="icon">🍱</span>
+      昼食注文
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/room_calendar.html" target="_blank">
+      <span class="icon">🏢</span>
+      会議室予約
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/nakashima-birthday/birthday-app-gas.html" target="_blank">
+      <span class="icon">🎂</span>
+      誕生日アプリ
+    </a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">購買モニタ</div>
+  <div class="grid">
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/nakashima_calendar.html" target="_blank">
+      <span class="icon">📅</span>
+      購買カレンダー
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/factory_monitor_1.html" target="_blank">
+      <span class="icon">🏭</span>
+      工場モニタ
+    </a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">設計</div>
+  <div class="grid">
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/staff_monitor.html?place=honsha2&plus=%E8%A8%AD%E8%A8%88%E8%AA%B2" target="_blank">
+      <span class="icon">🖥️</span>
+      設計モニタ<br>特別Ver
+      <span class="sub">本社事務所②設置用</span>
+    </a>
+    <a class="card" href="http://192.168.22.153:8770/" target="_blank">
+      <span class="icon">📐</span>
+      設計出図予定<br>モニタ
+      <span class="sub">社内サーバー</span>
+    </a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">総務</div>
+  <div class="grid">
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/kaizenteian_dashboard.html" target="_blank">
+      <span class="icon">📊</span>
+      改善提案管理
+      <span class="sub">台帳・ダッシュボード</span>
+    </a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">その他</div>
+  <div class="grid">
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/kaizen_board.html" target="_blank">
+      <span class="icon">💡</span>
+      改善ボード
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/nim_calendar.html" target="_blank">
+      <span class="icon">📆</span>
+      NIM<br>カレンダー
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/caddi_dashboard.html" target="_blank">
+      <span class="icon">📈</span>
+      Drawer<br>使用状況
+    </a>
+    <a class="card" href="https://nakashima-mfg.box.com/s/nme8i6wvo7aiqvrsp50cqysnmfo7xxaw" target="_blank">
+      <span class="icon">📊</span>
+      実働率アプリ
+      <span class="sub">Box</span>
+    </a>
+    <a class="card" href="https://script.google.com/a/macros/nakashima-mfg.co.jp/s/AKfycbyPx2t2wnjjSZjLXDojA4KVqcVST9NDA0bJUUFwQ_mLdzxXFboZLoTdXzDNaIL04Do0/exec" target="_blank">
+      <span class="icon">📐</span>
+      NVM<br>図面進捗
+    </a>
+    <a class="card" href="https://script.google.com/a/macros/nakashima-mfg.co.jp/s/AKfycbxwpE6e9LOyWoWgtM76ZuLPWDdbev7jkzgAIlCkxghUbQlNpdnXNInZy1IsXLzkXnG_Qg/exec" target="_blank">
+      <span class="icon">📦</span>
+      NVM<br>発注入荷
+    </a>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">管理</div>
+  <div class="grid">
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/lunch_admin.html" target="_blank">
+      <span class="icon">⚙️</span>
+      昼食管理
+      <span class="sub">管理者用</span>
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/employee_master.html" target="_blank">
+      <span class="icon">👥</span>
+      社員マスタ
+      <span class="sub">管理者用</span>
+    </a>
+    <a class="card" href="https://tsurunagamasato-dotcom.github.io/staff-board/usage_dashboard.html" target="_blank">
+      <span class="icon">📊</span>
+      アプリ利用状況
+      <span class="sub">管理者用</span>
+    </a>
+  </div>
+</div>
+
+</body>
+</html>
