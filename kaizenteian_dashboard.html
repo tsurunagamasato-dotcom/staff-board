@@ -187,6 +187,11 @@
   .ocr-result-table input:focus, .ocr-result-table select:focus, .ocr-result-table textarea:focus{background:#fff; border-color:var(--gold-soft); outline:none;}
   .conf-flag{font-size:10.5px; padding:2px 7px; border-radius:999px; background:#FFE9D6; color:#C4590F; font-weight:600; white-space:nowrap;}
   .conf-flag.ok{background:#DCFAE6; color:#0F9D58;}
+  /* 補正UI：未取得の必須項目は赤枠でハイライト */
+  .ocr-result-table input.need, .ocr-result-table textarea.need{ background:#FFF2F2; border-color:#E6A6A6; }
+  .btn-rowdel{ border:1px solid var(--line); background:#fff; color:#B91C1C; border-radius:6px; width:28px; height:28px; cursor:pointer; font-size:15px; line-height:1; }
+  .btn-rowdel:hover{ background:#FCEEEA; border-color:#E6A6A6; }
+  .preview-meta.warn{ color:#B45309; }
 
   .btn{
     padding:10px 22px; border-radius:8px; border:none; font-size:13.5px; font-weight:600; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
@@ -366,10 +371,10 @@
       <div class="dept-rank-note">直近の登録を新しい順に表示します。誤って登録した提案は「削除」で台帳から削除できます（Boxの原本PDFも一緒に削除されます）。</div>
       <table>
         <thead>
-          <tr><th>No</th><th>提出日</th><th>部署</th><th>氏名</th><th>案件名</th><th>原本</th><th>報奨金処理</th><th></th></tr>
+          <tr><th>No</th><th>提出日</th><th>部署</th><th>氏名</th><th>案件名</th><th>原本</th><th>報奨金額</th><th>報奨金処理</th><th></th></tr>
         </thead>
         <tbody id="recentBody">
-          <tr><td colspan="8" style="text-align:center; color:var(--ink-soft); padding:18px 0;">読み込み中…</td></tr>
+          <tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:18px 0;">読み込み中…</td></tr>
         </tbody>
       </table>
       <div style="margin-top:12px; text-align:right;">
@@ -482,7 +487,10 @@ async function handleFiles(fileList){
       renderResultRow(entry);
       const wrap = document.createElement('div');
       wrap.className = 'preview-row';
-      wrap.innerHTML = `<div class="preview-meta">📄 ${file.name}</div>`;
+      const warn = entry.weak
+        ? `<div class="preview-meta warn">⚠ 自動抽出できた項目が少ないです。下表の赤枠を手入力してください（読取シート: ${entry.sheetName}）</div>`
+        : `<div class="preview-meta">読取シート: ${entry.sheetName}</div>`;
+      wrap.innerHTML = `<div class="preview-meta">📄 ${file.name}</div>${warn}`;
       previewArea.appendChild(wrap);
     } catch(e){
       console.log('Excel解析エラー:', file.name, e);
@@ -497,46 +505,133 @@ async function handleFiles(fileList){
   registerBtn.disabled = entries.length === 0;
 }
 
-// 改善提案書Excel（フォーマット固定・シート「改善提案書式」）から項目を抽出
+/* --- 抽出ヘルパー：テンプレ版ズレに強いラベル基準の読み取り --------------- */
+
+// 「改善提案書式」を含むシートを選ぶ（'（３案件）'や末尾スペースも許容）。'絵'等の空シートは避ける。
+function pickKaizenSheet(wb){
+  let name = wb.SheetNames.find(s => s.replace(/[\s　]/g,'').indexOf('改善提案書式') >= 0);
+  if(!name) name = wb.SheetNames.find(s => s !== '絵' && wb.Sheets[s] && wb.Sheets[s]['!ref']);
+  if(!name) name = wb.SheetNames[0];
+  return { ws: wb.Sheets[name], sheetName: name };
+}
+
+// セル値を文字列で取得（日付はYYYY/M/Dへ整形）
+function cellStr(cc){
+  if(!cc) return '';
+  if(cc.v instanceof Date){ const d = cc.v; return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(); }
+  return String(cc.w != null ? cc.w : cc.v).trim();
+}
+
+// シート全体を走査できるアクセサ
+function sheetCells(ws){
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  return {
+    range,
+    get(r,c){ return cellStr(ws[XLSX.utils.encode_cell({r:r, c:c})]); },
+    addr(a){ return cellStr(ws[a]); }
+  };
+}
+// ラベル（正規表現）に一致する最初のセル位置を返す
+function findLabelPos(cx, re){
+  for(let r=cx.range.s.r; r<=cx.range.e.r; r++)
+    for(let c=cx.range.s.c; c<=cx.range.e.c; c++)
+      if(re.test(cx.get(r,c))) return {r,c};
+  return null;
+}
+// ラベルの右方向で最初の「値らしいセル」を返す（末尾が：のラベルは飛ばす）
+function valueRightOf(cx, pos){
+  if(!pos) return '';
+  for(let c=pos.c+1; c<=cx.range.e.c; c++){ const v = cx.get(pos.r, c); if(v && !/[：:]\s*$/.test(v)) return v; }
+  return '';
+}
+// ラベルの下方向で最初の非空セルを返す
+function valueBelowOf(cx, pos){
+  if(!pos) return '';
+  for(let r=pos.r+1; r<=cx.range.e.r; r++){ const v = cx.get(r, pos.c); if(v) return v; }
+  return valueRightOf(cx, pos);
+}
+// 日付文字列を YYYY/M/D に正規化
+function normDate(s){
+  s = String(s||'').trim();
+  const m = s.match(/(\d{4})[\-\/.年](\d{1,2})[\-\/.月](\d{1,2})/);
+  if(m) return m[1] + '/' + (+m[2]) + '/' + (+m[3]);
+  return s.replace(/[.．\-]/g,'/');
+}
+// 全角数字→半角
+function toHalfDigits(s){ return String(s||'').replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0)-0xFEE0)); }
+// 等級：チェック済み(☑/■/✓/✔/☒/●)＋「級」のセルを探して等級名を返す
+function detectGrade(cx){
+  for(let r=cx.range.s.r; r<=cx.range.e.r; r++)
+    for(let c=cx.range.s.c; c<=cx.range.e.c; c++){
+      const v = cx.get(r,c);
+      if(v && /[☑■✓✔☒●]/.test(v) && /級/.test(v)){
+        return toHalfDigits(v.replace(/[☑■✓✔☒●□\s　]/g,'')); // '☑ ８級' → '8級'
+      }
+    }
+  return '';
+}
+// 内容（現状・改善案・効果）本文を収集：見出し行/ラベルを除いた本文セルを結合
+function extractContent(cx){
+  const startPos = findLabelPos(cx, /現状/);
+  const endPos   = findLabelPos(cx, /(上司記入欄|判定結果|等級[：:])/);
+  const startR = startPos ? startPos.r + 1 : cx.range.s.r;
+  const endR   = endPos ? endPos.r - 1 : cx.range.e.r;
+  const lines = [];
+  for(let r=startR; r<=endR; r++){
+    for(let c=cx.range.s.c; c<=cx.range.e.c; c++){
+      const v = cx.get(r,c);
+      if(v && v.length > 1 && !/^[　\s]*(現状|改善案|効果)/.test(v) && !/[：:]\s*$/.test(v)){ lines.push(v); break; }
+    }
+  }
+  return lines.join('\n');
+}
+
+// 改善提案書Excel（様式固定）から項目を抽出。ラベル基準＋従来座標フォールバックで版ズレに強くする。
 async function extractFromExcel(file){
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type:'array' });
-  const ws = wb.Sheets['改善提案書式'] || wb.Sheets[wb.SheetNames[0]];
-  const cell = (addr) => { const c = ws[addr]; return c ? String(c.w != null ? c.w : c.v).trim() : ''; };
+  const wb = XLSX.read(buf, { type:'array', cellDates:true });
+  const { ws, sheetName } = pickKaizenSheet(wb);
+  const cx = sheetCells(ws);
+  const A = (a) => cx.addr(a); // 座標フォールバック用
 
-  const dept  = cell('D6');
-  const name  = cell('L6');
-  const date  = cell('V6').replace(/[.．]/g, '/');        // 2026.7.6 → 2026/7/6
-  const title = cell('D8');
+  // ラベルは「：付きのフォーム見出し」に限定（Y1等の説明文への誤爆を防ぐ）
+  const dept  = valueRightOf(cx, findLabelPos(cx, /部署[：:]/)) || A('D6');
+  const name  = valueRightOf(cx, findLabelPos(cx, /氏名[：:]/)) || A('L6');
+  const date  = normDate(valueRightOf(cx, findLabelPos(cx, /(提案日|提出日)[：:]/)) || A('V6'));
+  const title = valueRightOf(cx, findLabelPos(cx, /案件名[：:]/)) || A('D8');
 
-  // 内容（現状・改善案・効果）：D13〜E65の非空行を結合
-  const body = [];
-  for(let r=13; r<=65; r++){ const t = cell('D'+r) || cell('E'+r); if(t) body.push(t); }
-  const content = body.join('\n');
+  // 内容（現状・改善案・効果）
+  let content = extractContent(cx);
+  if(!content){ const b=[]; for(let r=13;r<=65;r++){ const t=A('D'+r)||A('E'+r); if(t) b.push(t); } content=b.join('\n'); }
 
-  // 等級：☑が付いたマスを採用（□は未チェック）
-  const gradeMap = { F76:'特級', I76:'1級', L76:'2級', F77:'3級', I77:'4級', L77:'5級', F78:'6級', I78:'7級', L78:'8級' };
-  let gradeChecked = '';
-  for(const addr in gradeMap){ if(/[☑■✓✔☒]/.test(cell(addr))){ gradeChecked = gradeMap[addr]; break; } }
+  // 等級（☑済みのマス）
+  const gradeChecked = detectGrade(cx);
 
-  const score   = cell('R76').replace(/[^\d]/g,''); // 評価点数
-  const reward  = cell('Y76').replace(/[^\d]/g,''); // 報奨金額
-  const comment = cell('B80');
+  // 評価点数・報奨金額（ラベル右／両様式の座標フォールバック）
+  const score  = (valueRightOf(cx, findLabelPos(cx, /評価点数[：:]/)) || A('R76') || A('R57')).replace(/[^\d]/g,'');
+  const reward = (valueRightOf(cx, findLabelPos(cx, /報奨金額[：:]/)) || A('Y76') || A('Y57')).replace(/[^\d]/g,'');
+  // コメント（ラベル下／両様式の座標フォールバック）
+  const comment = valueBelowOf(cx, findLabelPos(cx, /コメント/)) || A('B80') || A('B61');
 
   const emp = await resolveEmployeeViaGas(name); // empNo照合
 
+  // 自動抽出が不十分か（主要4項目のうち2つ未満しか取れていない）を判定
+  const gotCore = [dept, name, date, title].filter(v => String(v||'').trim()).length;
+
   return {
     filename: file.name,
+    sheetName: sheetName,
     fileBase64: arrayBufferToBase64(buf),   // Box保存用：原本Excelのバイトを保持
-    dept, deptOk:true,
-    name, nameOk:true,
+    dept, deptOk: !!String(dept||'').trim(),
+    name, nameOk: !!String(name||'').trim(),
     empNo: emp.empNo||'', empMatch: emp.matchType||'none', empCandidates: emp.candidates||[], empDept: emp.dept||'',
-    date, dateOk:true,
+    date, dateOk: !!String(date||'').trim(),
     title,
     content,
     score, reward, gradeChecked,
     comment,
     status:'',   // 実施状況は○印判定不可のため手入力
+    weak: gotCore < 2,   // 自動抽出が弱い＝手入力を促す
     boxFileId:null, boxSharedLink:null
   };
 }
@@ -666,36 +761,75 @@ function nameCellHtml(entry){
   return html;
 }
 
+const GRADE_OPTIONS = ['','特級','1級','2級','3級','4級','5級','6級','7級','8級'];
+const needClass = v => String(v||'').trim() ? '' : 'need'; // 空欄は赤枠
+
+// 氏名セル（入力＋照合バッジ＋候補）にイベントを付ける。氏名を直したら自動で再照合。
+function bindNameCell(tr, entry){
+  const td = tr.querySelector('td.name-cell');
+  if(!td) return;
+  const nameInput = td.querySelector('[data-k="name"]');
+  if(nameInput){
+    nameInput.addEventListener('input', ()=>{ entry.name = nameInput.value; });
+    // フォーカスを外した時に社員マスタへ再照合（誤読を直したら自動でempNo再取得）
+    nameInput.addEventListener('change', async ()=>{
+      entry.name = nameInput.value.trim();
+      if(!entry.name){ return; }
+      const emp = await resolveEmployeeViaGas(entry.name);
+      entry.empNo = emp.empNo||''; entry.empMatch = emp.matchType||'none';
+      entry.empCandidates = emp.candidates||[]; entry.empDept = emp.dept||'';
+      td.innerHTML = nameCellHtml(entry);
+      bindNameCell(tr, entry);
+    });
+  }
+  const empSel = td.querySelector('[data-empselect]');
+  if(empSel) empSel.addEventListener('change', ()=>{
+    const opt = empSel.selectedOptions[0];
+    if(opt && opt.value){
+      entry.empNo = opt.value; entry.name = opt.dataset.name; entry.empDept = opt.dataset.dept; entry.empMatch = 'exact';
+      td.innerHTML = nameCellHtml(entry);
+      bindNameCell(tr, entry);
+    }
+  });
+}
+
 function renderResultRow(entry){
   if(ocrResultBody.children.length===1 && ocrResultBody.children[0].children.length===1){
     ocrResultBody.innerHTML = '';
   }
   const tr = document.createElement('tr');
+  const gradeOpts = GRADE_OPTIONS.map(g => `<option value="${g}" ${entry.gradeChecked===g?'selected':''}>${g || '（等級なし）'}</option>`).join('');
   tr.innerHTML = `
-    <td>${entry.filename}</td>
-    <td><input value="${entry.dept}" data-k="dept">${confFlag(entry.deptOk)}</td>
-    <td>${nameCellHtml(entry)}</td>
-    <td><input value="${entry.date}" data-k="date">${confFlag(entry.dateOk)}</td>
-    <td><textarea data-k="title">${entry.title}</textarea></td>
-    <td><input value="${entry.score}" data-k="score" style="margin-bottom:4px;"><input value="${entry.gradeChecked}" data-k="gradeChecked" placeholder="等級(空欄可)"></td>
-    <td><input value="${entry.reward}" data-k="reward"></td>
-    <td><select data-k="status"><option ${entry.status==='済'?'selected':''}>済</option><option ${entry.status==='未'?'selected':''}>未</option><option ${entry.status==='要確認'?'selected':''}>要確認</option></select></td>
-    <td><span class="conf-flag">手書き要確認</span></td>`;
+    <td>${entry.filename}${entry.weak ? '<div class="conf-flag" style="margin-top:4px;background:#FEF3C7;color:#B45309;">自動抽出が不十分</div>' : ''}</td>
+    <td><input value="${entry.dept}" data-k="dept" class="${needClass(entry.dept)}" placeholder="部署">${confFlag(entry.deptOk)}</td>
+    <td class="name-cell">${nameCellHtml(entry)}</td>
+    <td><input value="${entry.date}" data-k="date" class="${needClass(entry.date)}" placeholder="YYYY/M/D">${confFlag(entry.dateOk)}</td>
+    <td><textarea data-k="title" class="${needClass(entry.title)}" placeholder="案件名" style="min-height:40px;">${entry.title}</textarea></td>
+    <td><input value="${entry.score}" data-k="score" placeholder="評価点数" style="margin-bottom:4px;"><select data-k="gradeChecked">${gradeOpts}</select></td>
+    <td><input value="${entry.reward}" data-k="reward" placeholder="円"></td>
+    <td><select data-k="status"><option value="">--</option><option ${entry.status==='済'?'selected':''}>済</option><option ${entry.status==='未'?'selected':''}>未</option><option ${entry.status==='要確認'?'selected':''}>要確認</option></select></td>
+    <td><button class="btn-rowdel" title="この行を除外">×</button></td>`;
   ocrResultBody.appendChild(tr);
-  tr.querySelectorAll('[data-k]').forEach(input=>{
-    input.addEventListener('input', ()=>{ entry[input.dataset.k] = input.value; });
+
+  // 氏名セル以外の入力を entry に反映。入力で赤枠を都度解除。
+  tr.querySelectorAll('td:not(.name-cell) [data-k]').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      entry[input.dataset.k] = input.value;
+      if(input.classList.contains('need') && input.value.trim()) input.classList.remove('need');
+    });
+    input.addEventListener('change', ()=>{ entry[input.dataset.k] = input.value; });
   });
-  // 候補プルダウンで社員を選び直したら、empNo・氏名・部署を確定させる
-  const empSel = tr.querySelector('[data-empselect]');
-  if(empSel) empSel.addEventListener('change', ()=>{
-    const opt = empSel.selectedOptions[0];
-    if(opt && opt.value){
-      entry.empNo = opt.value;
-      entry.name = opt.dataset.name;
-      entry.empDept = opt.dataset.dept;
-      entry.empMatch = 'exact';
-      const nameInput = tr.querySelector('[data-k="name"]');
-      if(nameInput) nameInput.value = opt.dataset.name;
+  bindNameCell(tr, entry);
+
+  // 行の除外（誤読ファイルを登録前に外す）
+  const del = tr.querySelector('.btn-rowdel');
+  if(del) del.addEventListener('click', ()=>{
+    const i = entries.indexOf(entry);
+    if(i>=0) entries.splice(i,1);
+    tr.remove();
+    registerBtn.disabled = entries.length===0;
+    if(!entries.length){
+      ocrResultBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--ink-soft); padding:24px 0;">Excelをアップロードすると、ここに読取結果が表示されます</td></tr>';
     }
   });
 }
@@ -784,14 +918,14 @@ registerBtn.addEventListener('click', async ()=>{
 const recentBody = document.getElementById('recentBody');
 
 async function loadRecentEntries(){
-  if(!CONFIG.GAS_URL){ recentBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:18px 0;">GAS未接続</td></tr>'; return; }
-  recentBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:18px 0;">読み込み中…</td></tr>';
+  if(!CONFIG.GAS_URL){ recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">GAS未接続</td></tr>'; return; }
+  recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">読み込み中…</td></tr>';
   try{
     const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'getRecentEntries', limit:30 }) });
     const json = await res.json();
     if(!json.ok) throw new Error(json.error || '取得失敗');
     const rows = json.result || [];
-    if(!rows.length){ recentBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);padding:18px 0;">登録がありません</td></tr>'; return; }
+    if(!rows.length){ recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">登録がありません</td></tr>'; return; }
     recentBody.innerHTML = rows.map(r => `
       <tr data-no="${r.no}">
         <td>${r.no}</td>
@@ -800,6 +934,7 @@ async function loadRecentEntries(){
         <td>${r.name || ''}</td>
         <td>${r.title || ''}</td>
         <td>${r.boxUrl ? `<a class="proposal-link" href="${r.boxUrl}" target="_blank" rel="noopener">PDF</a>` : '—'}</td>
+        <td style="text-align:right;">${r.reward ? '¥' + Number(r.reward).toLocaleString() : '—'}</td>
         <td style="text-align:center;"><label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:var(--ink-soft);"><input type="checkbox" class="chk-paid" data-no="${r.no}" ${r.rewardPaid ? 'checked' : ''}>済</label></td>
         <td><button class="btn btn-ghost btn-del" data-no="${r.no}" data-title="${String(r.title || '').replace(/"/g,'&quot;')}" style="padding:5px 12px; color:#B91C1C; border-color:#F0C2C2;">削除</button></td>
       </tr>`).join('');
@@ -810,7 +945,7 @@ async function loadRecentEntries(){
       c.addEventListener('change', ()=>setRewardPaidViaGas(c.dataset.no, c.checked, c));
     });
   }catch(e){
-    recentBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#B91C1C;padding:18px 0;">一覧の取得に失敗しました（${e.message}）</td></tr>`;
+    recentBody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#B91C1C;padding:18px 0;">一覧の取得に失敗しました（${e.message}）</td></tr>`;
   }
 }
 
