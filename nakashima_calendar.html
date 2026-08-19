@@ -319,7 +319,9 @@
     </div>
     <!-- イベント種類マスタ -->
     <div class="card">
-      <div class="card-title">🏷 イベント種類マスタ</div>
+      <div class="card-title">🏷 イベント種類マスタ
+        <button class="btn btn-sm" style="margin-left:auto;font-size:11px;color:#f7b731;border-color:#f7b731;" onclick="dedupeTypes()">⚠ 重複を整理</button>
+      </div>
       <div class="form-row">
         <input class="form-input" id="type-input" placeholder="種類名を入力（例：搬入日）" maxlength="20">
         <div class="color-picker" id="type-color-picker"></div>
@@ -1238,6 +1240,15 @@ async function addType(){
   saveState();renderMaster();renderCalendar();
   await sendAction('addType', t);
 }
+async function dedupeTypes(){
+  if(!confirm('イベント種類の重複をGASから削除します。同じ名前の種類は先頭1件だけ残ります。よろしいですか？')) return;
+  setGasStatus('⟳ 重複削除中...','loading');
+  const ok = await sendAction('dedupeTypes', {});
+  if(ok){
+    await autoLoadFromGAS();
+  }
+}
+
 async function deleteType(id){
   const used=state.events.filter(e=>e.typeId===id).length;
   const msg=used
@@ -1311,14 +1322,16 @@ async function autoLoadFromGAS(){
       if(Array.isArray(d.projects)) state.projects=d.projects.map(p=>({id:String(p.id),name:String(p.name)}));
       // typesはGASに存在するものを使う。ただし初期8種類に存在しないものはGASに追加登録する
       if(Array.isArray(d.types) && d.types.length){
-        const gasTypes = d.types.map(t=>({id:String(t.id),name:String(t.name),color:String(t.color)}));
-        // 初期種類のうちGASにないものを追加
-        const missingTypes = DEFAULT_TYPES.filter(dt=>!gasTypes.some(gt=>gt.id===dt.id));
-        for(const t of missingTypes){ await sendAction('addType', t); gasTypes.push(t); }
-        state.types = gasTypes;
+        // GASに種類が存在する場合はそのまま使う（名前で重複排除）
+        const seen = new Set();
+        state.types = d.types
+          .map(t=>({id:String(t.id),name:String(t.name),color:String(t.color)}))
+          .filter(t=>{ if(seen.has(t.name)) return false; seen.add(t.name); return true; });
       } else {
-        // typesが空なら初期8種類を全部登録
-        for(const t of state.types){ await sendAction('addType', t); }
+        // typesが空なら初期8種類を登録
+        const initTypes = DEFAULT_TYPES.map(t=>({...t}));
+        for(const t of initTypes){ await sendAction('addType', t); }
+        state.types = initTypes;
       }
       if(Array.isArray(d.events)) state.events=d.events.map(e=>({
         id:        String(e.id),
