@@ -467,7 +467,9 @@ async function init() {
     const cached = localStorage.getItem(EMP_LS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (parsed.length > 0) { _applyEmployees(parsed); }
+      // empNoが入った新しいキャッシュのみ使う。古い（empNo無し）キャッシュを使うと
+      // id が E-系になりGASに弾かれる（通信エラー）ため、使わず最新取得(loadStaffMaster)を待つ。
+      if (parsed.length > 0 && parsed[0] && parsed[0].empNo) { _applyEmployees(parsed); }
     }
   } catch(e) {}
 
@@ -694,6 +696,12 @@ function updateOrderButtons() {
 // ===== SUBMIT SINGLE =====
 async function submitSingle() {
   if (!selStaff||!selDate||!selOrder) return;
+  // 社員データが古い(empNo未取得)とidがE-系になりGASに弾かれる。その場合は最新を取り直して中断。
+  if (String(selStaff.id).startsWith('E-')) {
+    showToast('社員データを更新中です。数秒後にもう一度お試しください');
+    loadStaffMaster();
+    return;
+  }
   // 締切チェック（当日のみ。9:30以降は再び注文可能）
   const todayStr = fmtDate(new Date());
   if (selDate === todayStr && isTodayLocked()) {
@@ -1191,5 +1199,6 @@ function fetchWithTimeout(url, options, ms) {
 
 init();
 </script>
+<script src="usage_beacon.js" data-app="lunch_input"></script>
 </body>
 </html>
