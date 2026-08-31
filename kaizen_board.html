@@ -568,6 +568,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fDept').appendChild(o);
   });
   updateFBtns();
+  computeAgenda();
   computePrevMt();
   renderLeft();
   renderAgenda();
@@ -590,7 +591,7 @@ async function syncData(){
   try {
     const r = await fetch(GAS+'?action=getAll');
     const d = await r.json();
-    if(d.success){ items=d.items; tasks=d.tasks; saveAll(); computePrevMt(); renderLeft(); renderDash(); setSt('ok'); toast('同期完了','ok'); }
+    if(d.success){ items=d.items; tasks=d.tasks; saveAll(); computeAgenda(); computePrevMt(); renderLeft(); renderDash(); setSt('ok'); toast('同期完了','ok'); }
     else{ setSt('off'); toast('同期エラー','err'); }
   } catch{ setSt('off'); toast('接続エラー','err'); }
 }
@@ -787,10 +788,17 @@ function renderExt(id){
   }).join('');
 }
 
-// ===== アジェンダ =====
+// ===== アジェンダ（スプレッドシートで全員共有） =====
+function computeAgenda(){
+  agenda = new Set(items.filter(it=>String(it.agenda||'')==='1').map(it=>it.item_id));
+}
 function toggleAg(id){
-  agenda.has(id)?agenda.delete(id):agenda.add(id);
-  localStorage.setItem('ka',JSON.stringify([...agenda]));
+  const it=items.find(i=>i.item_id===id); if(!it) return;
+  const on=!agenda.has(id);
+  it.agenda = on ? '1' : '';
+  if(on) agenda.add(id); else agenda.delete(id);
+  saveAll();
+  gp('updateItem',{item_id:id, agenda:it.agenda});
   renderLeft(); renderAgenda();
 }
 function renderAgenda(){
@@ -819,8 +827,11 @@ function toggleAgPane(){
 }
 function resetAgenda(){
   if(!agenda.size){toast('アジェンダは空です');return;}
-  if(!confirm(`アジェンダ${agenda.size}件をリセットしますか？`)) return;
-  agenda.clear(); localStorage.setItem('ka','[]');
+  if(!confirm(`アジェンダ${agenda.size}件をリセットします。\n※全員のアジェンダが対象です。よろしいですか？`)) return;
+  const ids=[...agenda];
+  ids.forEach(id=>{ const it=items.find(i=>i.item_id===id); if(it) it.agenda=''; });
+  agenda.clear(); saveAll();
+  ids.forEach(id=> gp('updateItem',{item_id:id, agenda:''}));
   renderLeft(); renderAgenda(); toast('アジェンダをリセットしました','ok');
 }
 
