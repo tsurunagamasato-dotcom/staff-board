@@ -171,6 +171,16 @@
     flex: 1; padding: 12px; border-radius: 10px; border: 1.5px solid #e0e0e0;
     background: transparent; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
   }
+  /* 休日設定カレンダー */
+  .hcal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .hcal-dow { text-align:center; font-size:12px; color:var(--text-sub); padding:4px 0; font-weight:700; }
+  .hcal-dow.sun { color:#c0392b; }
+  .hcal-dow.sat { color:#1f6fc0; }
+  .hcal-day { text-align:center; padding:9px 0; border-radius:8px; border:1px solid var(--border); cursor:pointer; font-size:13px; background:var(--surface); user-select:none; }
+  .hcal-day.empty { border:none; cursor:default; background:transparent; }
+  .hcal-day.weekend { background:#f1efe8; color:#999; cursor:default; }
+  .hcal-day.holiday { background:#fde0e0; color:#b71c1c; border-color:#eaa; font-weight:700; }
+  .hcal-day.today { outline:2px solid #3B6FF0; outline-offset:-2px; }
 </style>
 </head>
 <body>
@@ -262,6 +272,20 @@
         <div class="settings-label">締切時刻</div>
         <input type="time" class="settings-input" id="deadlineInput" value="08:30">
         <button class="icon-btn primary" onclick="saveDeadline()">保存</button>
+      </div>
+    </div>
+    <div class="settings-card">
+      <div class="settings-title">📅 休日設定（この日は昼食を注文できません）</div>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:12px;">土日は自動で休日です。平日を休日にしたい日をカレンダーでクリック（もう一度で解除）→「休日を保存」を押してください。</p>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">
+        <button class="icon-btn" onclick="holidayCalMove(-1)">◀</button>
+        <span id="holidayCalLabel" style="font-weight:700;font-size:15px;min-width:130px;text-align:center;"></span>
+        <button class="icon-btn" onclick="holidayCalMove(1)">▶</button>
+      </div>
+      <div id="holidayCalGrid" style="max-width:392px;"></div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+        <button class="icon-btn primary" onclick="saveHolidays()">📅 休日を保存</button>
+        <span id="holidaySaveNote" style="font-size:12px;color:var(--text-sub);"></span>
       </div>
     </div>
     <div class="settings-card">
@@ -474,6 +498,8 @@ async function init() {
     const deadlineRaw = json.settings.deadline || '08:30';
     document.getElementById('deadlineInput').value = normalizeDeadline(deadlineRaw);
     if (json.settings.visitor_password != null) document.getElementById('visitorPasswordInput').value = String(json.settings.visitor_password);
+    if (json.settings.lunch_holidays) { try { holidaySet = new Set(JSON.parse(json.settings.lunch_holidays)); } catch(e) {} }
+    renderHolidayCalendar();
     Object.keys(json.settings).forEach(k => {
       if (k.startsWith('ng_') && (json.settings[k] === true || json.settings[k] === 'TRUE' || json.settings[k] === 'true')) permanentNG[k.replace('ng_','')] = true;
       if (k.startsWith('mon_price_')) mondayPrices[k.replace('mon_price_','')] = Number(json.settings[k]) || 600;
@@ -913,6 +939,68 @@ async function saveVisitorPassword() {
     const json = await res.json();
     if (json.ok) showToast(value ? '来訪者パスワードを保存しました' : '来訪者ロックを無効にしました');
   } catch(e) { showToast('保存に失敗しました'); }
+}
+
+// ===== 休日設定カレンダー =====
+let holidaySet = new Set();   // 'YYYY-MM-DD'（指定休日のみ。土日は自動で休日）
+let hcalYear, hcalMonth;      // カレンダー表示中の年月
+
+function hcalPad(n){ return String(n).padStart(2,'0'); }
+function hcalYmd(y,m,d){ return y+'-'+hcalPad(m)+'-'+hcalPad(d); }
+
+function renderHolidayCalendar() {
+  const today = new Date();
+  if (hcalYear === undefined) { hcalYear = today.getFullYear(); hcalMonth = today.getMonth()+1; }
+  const lbl = document.getElementById('holidayCalLabel');
+  if (!lbl) return;
+  lbl.textContent = hcalYear + '年 ' + hcalMonth + '月';
+  const startDow = new Date(hcalYear, hcalMonth-1, 1).getDay();
+  const days = new Date(hcalYear, hcalMonth, 0).getDate();
+  const todayStr = hcalYmd(today.getFullYear(), today.getMonth()+1, today.getDate());
+  const dows = ['日','月','火','水','木','金','土'];
+  let html = '<div class="hcal-grid">';
+  dows.forEach((d,i)=>{ html += '<div class="hcal-dow '+(i===0?'sun':i===6?'sat':'')+'">'+d+'</div>'; });
+  for (let i=0;i<startDow;i++) html += '<div class="hcal-day empty"></div>';
+  for (let d=1; d<=days; d++) {
+    const dateStr = hcalYmd(hcalYear, hcalMonth, d);
+    const dow = new Date(hcalYear, hcalMonth-1, d).getDay();
+    const isWeekend = (dow===0 || dow===6);
+    let cls = 'hcal-day';
+    if (isWeekend) cls += ' weekend';
+    else if (holidaySet.has(dateStr)) cls += ' holiday';
+    if (dateStr === todayStr) cls += ' today';
+    const onclick = isWeekend ? '' : ' onclick="toggleHoliday(\''+dateStr+'\')"';
+    html += '<div class="'+cls+'"'+onclick+'>'+d+'</div>';
+  }
+  html += '</div>';
+  document.getElementById('holidayCalGrid').innerHTML = html;
+}
+
+function holidayCalMove(delta) {
+  hcalMonth += delta;
+  if (hcalMonth < 1) { hcalMonth = 12; hcalYear--; }
+  else if (hcalMonth > 12) { hcalMonth = 1; hcalYear++; }
+  renderHolidayCalendar();
+}
+
+function toggleHoliday(dateStr) {
+  if (holidaySet.has(dateStr)) holidaySet.delete(dateStr);
+  else holidaySet.add(dateStr);
+  renderHolidayCalendar();
+  const note = document.getElementById('holidaySaveNote');
+  if (note) note.textContent = '未保存の変更があります';
+}
+
+async function saveHolidays() {
+  const arr = [...holidaySet].sort();
+  try {
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveSettings',key:'lunch_holidays',value:JSON.stringify(arr)})});
+    const json = await res.json();
+    if (json.ok) {
+      showToast('休日を保存しました（指定休日 '+arr.length+'日）');
+      const note = document.getElementById('holidaySaveNote'); if (note) note.textContent = '';
+    } else showToast('保存に失敗しました');
+  } catch(e) { showToast('通信エラー'); }
 }
 
 function renderNGTable() {

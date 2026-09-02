@@ -403,6 +403,16 @@ let deadline = '08:45';
 let permanentNG = {};
 let visitorPassword = '';
 let visitorUnlocked = (function(){ try { return sessionStorage.getItem('visitorUnlocked')==='1'; } catch(e){ return false; } })();
+let holidaySet = new Set();  // 指定休日（'YYYY-MM-DD'）。土日は別途自動で休日扱い
+
+// 休日判定：土日は自動休日、加えて管理画面で指定した日も休日
+function isHoliday(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay();
+  if (dow === 0 || dow === 6) return true;   // 土日
+  return holidaySet.has(dateStr);            // 指定休日
+}
 
 function normalizeDeadline(val) {
   if (!val) return '08:30';
@@ -490,6 +500,7 @@ async function init() {
       if (json.ok) {
         deadline = normalizeDeadline(json.settings.deadline) || '08:45';
         if (json.settings.visitor_password != null) visitorPassword = String(json.settings.visitor_password);
+        if (json.settings.lunch_holidays) { try { holidaySet = new Set(JSON.parse(json.settings.lunch_holidays)); } catch(e){} }
         Object.keys(json.settings).forEach(k => {
           if (k.startsWith('ng_')) permanentNG[k.replace('ng_','')] = json.settings[k];
         });
@@ -497,6 +508,7 @@ async function init() {
         document.getElementById('deadlineTime').textContent = deadline || '08:45';
         document.getElementById('deadlineTime').textContent = deadline || '08:45';
         document.getElementById('deadlinePassed').classList.toggle('hidden', !isDeadlinePassed());
+        renderDateGrid();  // 休日設定を日付グリッドに反映
       }
     }).catch(()=>{}),
     loadMenu(),
@@ -632,7 +644,7 @@ function getWorkDates(count=5) {
   const today = new Date(); const dates = [];
   let d = new Date(today);
   while (dates.length < count) {
-    if (!isWeekend(d)) dates.push(new Date(d));
+    if (!isHoliday(fmtDate(d))) dates.push(new Date(d));  // 土日＋指定休日を除外して営業日だけ出す
     d.setDate(d.getDate()+1);
   }
   return dates;
@@ -702,6 +714,8 @@ async function submitSingle() {
     loadStaffMaster();
     return;
   }
+  // 休日（土日＋指定休日）は注文不可
+  if (isHoliday(selDate)) { showToast('この日は休日のため注文できません'); return; }
   // 締切チェック（当日のみ。9:30以降は再び注文可能）
   const todayStr = fmtDate(new Date());
   if (selDate === todayStr && isTodayLocked()) {
@@ -776,7 +790,7 @@ function getBulkDates() {
     const day = today.getDay();
     const diff = day===0?-6:1-day;
     monday.setDate(today.getDate()+diff+offset);
-    for (let i=0;i<5;i++) { const d=new Date(monday); d.setDate(monday.getDate()+i); if(!isWeekend(d)) dates.push(d); }
+    for (let i=0;i<5;i++) { const d=new Date(monday); d.setDate(monday.getDate()+i); if(!isHoliday(fmtDate(d))) dates.push(d); }
   } else if (period === 'month' || period === 'nextmonth') {
     const year = today.getFullYear(), month = today.getMonth();
     let startDate, endDate;
@@ -800,7 +814,7 @@ function getBulkDates() {
     }
     const cur = new Date(startDate);
     while (cur <= endDate) {
-      if (!isWeekend(cur)) dates.push(new Date(cur));
+      if (!isHoliday(fmtDate(cur))) dates.push(new Date(cur));  // 土日＋指定休日を除外
       cur.setDate(cur.getDate() + 1);
     }
   }
