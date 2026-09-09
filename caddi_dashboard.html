@@ -273,6 +273,13 @@
     <div class="header-sub">CADDi 検索実績レポート</div>
   </div>
   <div id="lastUpdated" class="last-updated"></div>
+  <button id="clearSavedBtn" onclick="clearSavedCSV()" style="
+    display:none; align-items:center; gap:6px;
+    background:var(--surface2); color:var(--muted);
+    border:1px solid var(--border);
+    padding:8px 12px; border-radius:6px;
+    font-size:.82rem; cursor:pointer; white-space:nowrap;
+  " title="このブラウザに保存したCSVを削除し、GitHub上の最新データに戻します">🗑 保存済みを削除</button>
   <label id="importBtn" style="
     display:flex; align-items:center; gap:8px;
     background:var(--accent); color:white;
@@ -517,43 +524,104 @@ let latestFileDate = '';
 // ============================================================
 const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/tsurunagamasato-dotcom/staff-board/main/latest_caddi.csv';
 
-async function autoLoadFromGitHub() {
+async function fetchGitHubCSV() {
+  const resp = await fetch(GITHUB_RAW_URL + '?t=' + Date.now()); // キャッシュ回避
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const text = await resp.text();
+  if (!text.includes('@nakashima-mfg.co.jp')) throw new Error('CSVの内容が不正');
+  return { csvText: text, fileName: 'latest_caddi.csv' };
+}
+
+// ============================================================
+// 読み込んだCSVをこのブラウザに保存（localStorage）
+// ============================================================
+// 手動で読み込んだCSVを保存し、次に開いたときも同じデータを表示する。
+// 保存先はブラウザ単位・端末単位なので、他の人の画面には反映されない。
+// 全員に反映したい場合はGitHubの latest_caddi.csv を差し替える必要がある。
+const STORAGE_KEY = 'caddi_dashboard_csv_v1';
+
+function saveCSVToStorage(csvText, fileName) {
   try {
-    const resp = await fetch(GITHUB_RAW_URL + '?t=' + Date.now()); // キャッシュ回避
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const text = await resp.text();
-    if (!text.includes('@nakashima-mfg.co.jp')) throw new Error('CSVの内容が不正');
-
-    processCSV(text, 'latest_caddi.csv');
-
-  } catch(e) {
-    // 自動読込失敗 → 手動アップロードに切り替え
-    document.getElementById('dropZoneIcon').textContent  = '📊';
-    document.getElementById('dropZoneTitle').textContent = 'CSVをドロップして読み込む';
-    document.getElementById('dropZoneMsg').textContent   = 'BoxからCSVをダウンロードしてここにドラッグ＆ドロップしてください';
-    document.getElementById('dropZone').style.cursor     = 'pointer';
-    const btn = document.getElementById('manualUploadBtn');
-    btn.style.display = 'inline-flex';
-
-    // ドロップ受け付け
-    const zone = document.getElementById('dropZone');
-    zone.addEventListener('dragover', ev => {
-      ev.preventDefault();
-      zone.style.borderColor = 'var(--accent)';
-      zone.style.background  = 'rgba(79,124,255,.08)';
-    });
-    zone.addEventListener('dragleave', () => {
-      zone.style.borderColor = 'var(--border)';
-      zone.style.background  = '';
-    });
-    zone.addEventListener('drop', ev => {
-      ev.preventDefault();
-      zone.style.borderColor = 'var(--border)';
-      zone.style.background  = '';
-      const file = ev.dataTransfer.files[0];
-      if (file && file.name.endsWith('.csv')) loadCSVFile(file);
-    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      csvText:  csvText,
+      fileName: fileName,
+      savedAt:  new Date().toISOString(),
+    }));
+    return true;
+  } catch (e) {
+    // 容量超過やプライベートモードなど。保存できなくても表示は続行する。
+    console.warn('CSVの保存に失敗しました:', e);
+    return false;
   }
+}
+
+function loadCSVFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj.csvText !== 'string') return null;
+    return obj;
+  } catch (e) {
+    return null;
+  }
+}
+
+function clearSavedCSV() {
+  if (!confirm('このブラウザに保存したCSVを削除します。\nGitHub上の最新データに戻ります。よろしいですか？')) return;
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+  location.reload();
+}
+
+// CSVヘッダーの日付列から最も新しい日付を返す（例: '2026-09-07'）。
+// ISO形式なので文字列比較で新旧を判定できる。判定できなければ '' を返す。
+function newestDateOf(csvText) {
+  const header = (csvText.split('\n')[0] || '').split(',');
+  const dates  = header.map(h => h.trim()).filter(h => /^\d{4}-\d{2}-\d{2}$/.test(h));
+  return dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : '';
+}
+
+// ============================================================
+// 起動時の読み込み
+// ============================================================
+async function initialLoad() {
+  const saved = loadCSVFromStorage();
+
+  let github = null;
+  try {
+    github = await fetchGitHubCSV();
+  } catch (e) {
+    console.warn('GitHubからの自動読込に失敗:', e);
+  }
+
+  // 保存済みとGitHubのうち、データが新しい方を採用する。
+  // 同じ日付ならGitHubを優先するので、自動同期が復活すれば自然に切り替わる。
+  let pick = null;
+  if (github && saved) {
+    pick = newestDateOf(saved.csvText) > newestDateOf(github.csvText)
+         ? { csvText: saved.csvText,  fileName: saved.fileName,  source: 'saved'  }
+         : { csvText: github.csvText, fileName: github.fileName, source: 'github' };
+  } else if (github) {
+    pick = { csvText: github.csvText, fileName: github.fileName, source: 'github' };
+  } else if (saved) {
+    pick = { csvText: saved.csvText,  fileName: saved.fileName,  source: 'saved'  };
+  }
+
+  if (!pick) {
+    showManualUploadPrompt();
+    return;
+  }
+
+  processCSV(pick.csvText, pick.fileName, pick.source);
+}
+
+// データが1件も無いとき、手動アップロードを促す表示に切り替える
+function showManualUploadPrompt() {
+  document.getElementById('dropZoneIcon').textContent  = '📊';
+  document.getElementById('dropZoneTitle').textContent = 'CSVをドロップして読み込む';
+  document.getElementById('dropZoneMsg').textContent   = 'BoxからCSVをダウンロードしてここにドラッグ＆ドロップしてください';
+  document.getElementById('dropZone').style.cursor     = 'pointer';
+  document.getElementById('manualUploadBtn').style.display = 'inline-flex';
 }
 
 // ============================================================
@@ -566,36 +634,61 @@ function onFileSelect(event) {
 }
 
 function loadCSVFile(file) {
-  // Shift-JIS対応のFileReader
   const reader = new FileReader();
 
   reader.onload = function(e) {
     try {
-      let text = e.target.result;
-      processCSV(text, file.name);
+      const text = decodeCSVBytes(new Uint8Array(e.target.result));
+      processCSV(text, file.name, 'file');
     } catch(err) {
       showError('CSVの読み込みに失敗しました: ' + err.message);
     }
   };
 
-  // まずShift-JISで試みる
   reader.onerror = function() { showError('ファイルの読み込みに失敗しました'); };
-  reader.readAsText(file, 'Shift_JIS');
+  reader.readAsArrayBuffer(file);
 }
 
-function processCSV(csvText, fileName) {
+// BoxからダウンロードしたCSVはShift_JIS、GitHub上のCSVはUTF-8。
+// どちらをドロップしても文字化けしないよう自動判定する。
+function decodeCSVBytes(bytes) {
+  // UTF-8 BOM (EF BB BF) があればUTF-8確定
+  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    return new TextDecoder('utf-8').decode(bytes).replace(/^﻿/, '');
+  }
+  // BOMなしでもUTF-8として厳密にデコードできればUTF-8。
+  // 日本語のShift_JISはほぼ確実にここで例外になる。
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch (e) {
+    return new TextDecoder('shift_jis').decode(bytes);
+  }
+}
+
+function processCSV(csvText, fileName, source) {
   // 文字化けしていたらUTF-8で再読込（簡易チェック：メールアドレスが読めるか）
   if (!csvText.includes('@nakashima-mfg.co.jp') && !csvText.includes('email')) {
     showError('文字コードの読み込みに失敗しました。ファイルを確認してください。');
     return;
   }
 
+  // 手動で読み込んだCSVはこのブラウザに保存し、次に開いたときも表示する
+  let savedNow = false;
+  if (source === 'file') savedNow = saveCSVToStorage(csvText, fileName);
+
   parsedCSV = parseCSV(csvText);
   rawData   = aggregate(parsedCSV);
 
   // ファイル名から日付を抽出
   const m = fileName.match(/_(\d{4})(\d{2})(\d{2})\.csv/);
-  latestFileDate = m ? `${m[1]}/${m[2]}/${m[3]}` : new Date().toLocaleDateString('ja-JP');
+  if (m) {
+    latestFileDate = `${m[1]}/${m[2]}/${m[3]}`;
+  } else {
+    // latest_caddi.csv のようにファイル名に日付が無い場合は、CSVの最新日付列を使う。
+    // （読み込んだ日を表示すると、古いデータでも当日更新に見えてしまう）
+    const newest  = newestDateOf(csvText);
+    latestFileDate = newest ? newest.replace(/-/g, '/') : new Date().toLocaleDateString('ja-JP');
+  }
   latestFileName = fileName;
 
   // ドロップゾーンを隠してダッシュボードを表示
@@ -606,7 +699,19 @@ function processCSV(csvText, fileName) {
 
   document.getElementById('kpiDate').textContent = latestFileDate;
   document.getElementById('kpiFile').textContent = latestFileName;
-  document.getElementById('lastUpdated').textContent = '読込: ' + new Date().toLocaleTimeString('ja-JP');
+
+  // どこから読み込んだデータかを表示する
+  const label = source === 'github' ? 'GitHubの最新データ'
+              : source === 'saved'  ? 'このブラウザに保存済み'
+              : source === 'file'   ? (savedNow ? 'このブラウザに保存しました'
+                                               : '保存できませんでした（次回は元に戻ります）')
+              : '';
+  document.getElementById('lastUpdated').textContent =
+    '読込: ' + new Date().toLocaleTimeString('ja-JP') + (label ? ' / ' + label : '');
+
+  // 保存済みデータがある場合のみ「保存済みを削除」ボタンを出す
+  document.getElementById('clearSavedBtn').style.display =
+    loadCSVFromStorage() ? 'inline-flex' : 'none';
 }
 
 function showError(msg) {
@@ -1190,6 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ドロップ
   zone.addEventListener('drop', e => {
     e.preventDefault();
+    e.stopPropagation(); // 下のdocument側ハンドラで二重読込されるのを防ぐ
     zone.style.borderColor = 'var(--border)';
     zone.style.background  = '';
     const file = e.dataTransfer.files[0];
@@ -1208,8 +1314,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (file && file.name.endsWith('.csv')) loadCSVFile(file);
   });
 
-  // GitHubから自動読込
-  autoLoadFromGitHub();
+  // 保存済みCSV／GitHubのうち新しい方を読み込む
+  initialLoad();
 });
 
 </script>
