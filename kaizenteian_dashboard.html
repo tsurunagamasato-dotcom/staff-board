@@ -1208,6 +1208,9 @@ function gradeToTier(grade){
 async function loadDashboard(period){
   if(!CONFIG.GAS_URL) return;
   period = period || 'all';
+  const noteEl = document.getElementById('dashboardNote');
+  noteEl.classList.remove('err');
+  noteEl.innerHTML = '⏳ 実データを読み込み中…（初回は数秒〜十数秒かかることがあります）';
   try {
     const json = await gasFetchJson({ action:'getDashboard', period: period, dept:'all' }); // 一過性HTML応答は自動リトライ
     if(!json.ok) throw new Error(json.error || '取得失敗');
