@@ -400,6 +400,23 @@ const CONFIG = {
 
 // PDF.jsは廃止し、Excel取り込み（SheetJS）に一本化
 
+/* GASへのPOST（読み取り用）。GASが一過性にHTML（ログイン/エラーページ）を返すことがあるため、
+   非JSON応答や通信失敗は少し待って自動リトライする。※登録・削除など更新系には使わない（二重実行防止）。 */
+async function gasFetchJson(payload, retries){
+  retries = (retries == null) ? 2 : retries;
+  let lastErr;
+  for(let attempt=0; attempt<=retries; attempt++){
+    try{
+      const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify(payload) });
+      const text = await res.text();
+      try{ return JSON.parse(text); }
+      catch(parseErr){ lastErr = new Error('サーバーが一時的に応答できませんでした'); } // HTMLが返った＝一過性
+    }catch(netErr){ lastErr = netErr; }
+    if(attempt < retries) await new Promise(r => setTimeout(r, 600 * (attempt + 1))); // 0.6s,1.2s待って再試行
+  }
+  throw lastErr;
+}
+
 /* ==========================================================================
    改善提案書 固定レイアウト テンプレート（ページ画像に対する割合座標）
    ※ 様式のバージョンが変わった場合はここを調整してください
@@ -680,8 +697,7 @@ async function ocrViaGas(dataUrl){
 async function resolveEmployeeViaGas(name){
   if(!CONFIG.GAS_URL || !name) return { empNo:'', matchType:'none' };
   try{
-    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'resolveEmployee', name }) });
-    const json = await res.json();
+    const json = await gasFetchJson({ action:'resolveEmployee', name }); // 一過性HTML応答は自動リトライ
     return json.ok ? json.result : { empNo:'', matchType:'none' };
   }catch(err){ return { empNo:'', matchType:'none' }; }
 }
@@ -921,8 +937,7 @@ async function loadRecentEntries(){
   if(!CONFIG.GAS_URL){ recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">GAS未接続</td></tr>'; return; }
   recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">読み込み中…</td></tr>';
   try{
-    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'getRecentEntries', limit:30 }) });
-    const json = await res.json();
+    const json = await gasFetchJson({ action:'getRecentEntries', limit:30 }); // 一過性HTML応答は自動リトライ
     if(!json.ok) throw new Error(json.error || '取得失敗');
     const rows = json.result || [];
     if(!rows.length){ recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">登録がありません</td></tr>'; return; }
@@ -1194,8 +1209,7 @@ async function loadDashboard(period){
   if(!CONFIG.GAS_URL) return;
   period = period || 'all';
   try {
-    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'getDashboard', period: period, dept:'all' }) });
-    const json = await res.json();
+    const json = await gasFetchJson({ action:'getDashboard', period: period, dept:'all' }); // 一過性HTML応答は自動リトライ
     if(!json.ok) throw new Error(json.error || '取得失敗');
     const d = json.result;
 
