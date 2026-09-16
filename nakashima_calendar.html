@@ -239,6 +239,26 @@
   /* 時期色帯 */
   .period-band{border-radius:3px;padding:3px 6px;margin-bottom:2px;font-size:11px;font-weight:600;opacity:.9;}
 
+  /* 休みチップ */
+  .absence-chip{
+    display:inline-block;padding:1px 6px;border-radius:3px;
+    font-size:11px;background:rgba(255,150,100,.18);
+    color:#ff9664;border:1px solid rgba(255,150,100,.35);
+    cursor:pointer;white-space:nowrap;line-height:1.5;
+    transition:filter .1s;
+  }
+  .absence-chip:hover{filter:brightness(1.2);}
+  .absence-chips-row{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px;}
+  /* 休ボタン（日付セル右上） */
+  .abs-btn{
+    position:absolute;top:4px;right:5px;
+    font-size:9px;padding:1px 4px;border-radius:3px;
+    border:1px solid rgba(255,150,100,.35);
+    background:transparent;color:rgba(255,150,100,.6);
+    cursor:pointer;line-height:1.4;transition:all .1s;
+  }
+  .abs-btn:hover{border-color:#ff9664;color:#ff9664;}
+
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 </style>
@@ -317,6 +337,18 @@
         <tbody></tbody>
       </table>
     </div>
+    <!-- 従業員マスタ -->
+    <div class="card">
+      <div class="card-title">👤 従業員マスタ</div>
+      <div class="form-row">
+        <input class="form-input" id="emp-input" placeholder="氏名を入力" maxlength="20">
+        <button class="btn btn-primary btn-sm" onclick="addEmployee()">追加</button>
+      </div>
+      <table class="data-table" id="emp-table">
+        <thead><tr><th>氏名</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
     <!-- イベント種類マスタ -->
     <div class="card">
       <div class="card-title">🏷 イベント種類マスタ
@@ -331,6 +363,18 @@
         <thead><tr><th>色</th><th>種類名</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- 休み登録モーダル -->
+<div class="modal-overlay" id="absence-modal">
+  <div class="modal" style="max-width:300px;">
+    <div class="modal-title" id="absence-modal-title">休み登録</div>
+    <div id="absence-emp-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAbsenceModal()">閉じる</button>
+      <button class="btn btn-primary" onclick="saveAbsences()">保存</button>
     </div>
   </div>
 </div>
@@ -407,6 +451,15 @@ const PERIODS = {
   matsubi: {label:'月末',  days:[25,31], bg:'rgba(255,107,107,.2)', border:'#ff6b6b'},
 };
 
+// 初期従業員
+const DEFAULT_EMPLOYEES = [
+  {id:'emp_dai',      name:'大'},
+  {id:'emp_tsurunaga',name:'鶴永'},
+  {id:'emp_naiki',    name:'内木'},
+  {id:'emp_iori',     name:'伊織'},
+  {id:'emp_miyakawa', name:'宮川'},
+];
+
 // 初期イベント種類
 const DEFAULT_TYPES = [
   {id:'t_hannyu', name:'搬入日',     color:'#4f7fff'},
@@ -420,11 +473,13 @@ const DEFAULT_TYPES = [
 ];
 
 let state = {
-  projects: [],      // {id, name}
-  types: [],         // {id, name, color}
-  events: [],        // {id, date(YYYY-MM-DD), projId, typeId, note}
+  projects:  [],     // {id, name}
+  types:     [],     // {id, name, color}
+  events:    [],     // {id, date(YYYY-MM-DD), projId, typeId, note}
+  employees: [],     // {id, name}
+  absences:  [],     // {id, date(YYYY-MM-DD), employeeId}
   selectedTypes: [], // 表示する種類ID（空なら描画時に全選択）
-  selectedProjs:  [], // 表示する案件ID（空なら全表示）
+  selectedProjs: [], // 表示する案件ID（空なら全表示）
 };
 let baseMonth = null;  // {y, m}
 let calView = 'month';  // 'month' or '2week'
@@ -549,6 +604,14 @@ function renderCalendar(){
       && (sel.length===0 || sel.includes(ev.typeId))
       && (selP.length===0 || selP.includes(ev.projId)));
     // 時期指定は後でグリッド全体にオーバーレイ描画するのでここでは何もしない
+    // 休みチップ
+    const chips=buildAbsenceChips(key);
+    if(chips) cell.appendChild(chips);
+    // 休ボタン
+    const absBtn=document.createElement('button');
+    absBtn.className='abs-btn';absBtn.textContent='休';
+    absBtn.addEventListener('click',e=>{e.stopPropagation();openAbsenceModal(key);});
+    cell.appendChild(absBtn);
     grid.appendChild(cell);
   }
   // 時期指定バーをグリッド全体にオーバーレイで描画
@@ -873,6 +936,15 @@ function renderCalendar2Week(){
       if(band) cell.appendChild(band);
     });
 
+    // 休みチップ
+    const chips2 = buildAbsenceChips(key);
+    if(chips2) cell.appendChild(chips2);
+    // 休ボタン
+    const absBtn2 = document.createElement('button');
+    absBtn2.className = 'abs-btn'; absBtn2.textContent = '休';
+    absBtn2.addEventListener('click', e => { e.stopPropagation(); openAbsenceModal(key); });
+    cell.appendChild(absBtn2);
+
     grid.appendChild(cell);
   }
   saveState();
@@ -1136,12 +1208,76 @@ async function deleteEvent(){
 }
 
 // =====================================================
+//  休みチップ・モーダル
+// =====================================================
+function buildAbsenceChips(dateKey){
+  const dayAbs=(state.absences||[]).filter(a=>a.date===dateKey);
+  if(!dayAbs.length) return null;
+  const wrap=document.createElement('div');
+  wrap.className='absence-chips-row';
+  dayAbs.forEach(a=>{
+    const emp=(state.employees||[]).find(e=>e.id===a.employeeId);
+    if(!emp) return;
+    const chip=document.createElement('span');
+    chip.className='absence-chip';
+    chip.textContent=emp.name;
+    chip.addEventListener('click',e=>{e.stopPropagation();openAbsenceModal(dateKey);});
+    wrap.appendChild(chip);
+  });
+  return wrap;
+}
+
+let absenceModalDate=null;
+
+function openAbsenceModal(date){
+  absenceModalDate=date;
+  const [y,m,d]=date.split('-');
+  document.getElementById('absence-modal-title').textContent=`${parseInt(y)}/${parseInt(m)}/${parseInt(d)} の休み`;
+  const list=document.getElementById('absence-emp-list');
+  list.innerHTML='';
+  const cur=(state.absences||[]).filter(a=>a.date===date);
+  (state.employees||[]).forEach(emp=>{
+    const isOff=cur.some(a=>a.employeeId===emp.id);
+    const row=document.createElement('label');
+    row.style.cssText='display:flex;align-items:center;gap:10px;cursor:pointer;padding:5px 8px;border-radius:6px;transition:background .1s;';
+    row.innerHTML=`
+      <input type="checkbox" value="${emp.id}" ${isOff?'checked':''} style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+      <span style="font-size:14px;">${emp.name}</span>`;
+    row.addEventListener('mouseenter',()=>row.style.background='rgba(79,127,255,.06)');
+    row.addEventListener('mouseleave',()=>row.style.background='');
+    list.appendChild(row);
+  });
+  document.getElementById('absence-modal').classList.add('show');
+}
+
+function closeAbsenceModal(){
+  document.getElementById('absence-modal').classList.remove('show');
+  absenceModalDate=null;
+}
+
+async function saveAbsences(){
+  if(!absenceModalDate) return;
+  const date=absenceModalDate;
+  const checked=Array.from(document.querySelectorAll('#absence-emp-list input[type=checkbox]:checked')).map(cb=>cb.value);
+  const cur=(state.absences||[]).filter(a=>a.date===date);
+  const toDelete=cur.filter(a=>!checked.includes(a.employeeId));
+  const toAdd=checked.filter(empId=>!cur.some(a=>a.employeeId===empId))
+    .map(empId=>({id:uid(),date,employeeId:empId}));
+  toDelete.forEach(a=>{state.absences=state.absences.filter(x=>x.id!==a.id);});
+  toAdd.forEach(a=>state.absences.push(a));
+  saveState();closeAbsenceModal();renderCalendar();
+  for(const a of toDelete) await sendAction('deleteAbsence',{id:a.id});
+  for(const a of toAdd) await sendAction('addAbsence',a);
+}
+
+// =====================================================
 //  マスタ管理
 // =====================================================
 function renderMaster(){
   renderProjTable();
   renderTypeTable();
   renderTypeColorPicker();
+  renderEmployeeTable();
 }
 
 function renderProjTable(){
@@ -1240,6 +1376,44 @@ async function addType(){
   saveState();renderMaster();renderCalendar();
   await sendAction('addType', t);
 }
+function renderEmployeeTable(){
+  const tbody=document.querySelector('#emp-table tbody');
+  if(!tbody) return;
+  tbody.innerHTML='';
+  if(!state.employees||!state.employees.length){
+    tbody.innerHTML='<tr><td colspan="2" style="color:var(--text-dim);font-size:12px;">従業員が未登録です</td></tr>';
+    return;
+  }
+  state.employees.forEach(emp=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${emp.name}</td>
+      <td style="text-align:right;"><button class="del-btn" onclick="deleteEmployee('${emp.id}')">削除</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function addEmployee(){
+  const name=document.getElementById('emp-input').value.trim();
+  if(!name){alert('氏名を入力してください');return;}
+  if((state.employees||[]).some(e=>e.name===name)){alert('同じ名前が既にあります');return;}
+  const emp={id:'emp_'+uid(),name};
+  if(!state.employees) state.employees=[];
+  state.employees.push(emp);
+  document.getElementById('emp-input').value='';
+  saveState();renderMaster();
+  await sendAction('addEmployee',emp);
+}
+
+async function deleteEmployee(id){
+  const used=(state.absences||[]).filter(a=>a.employeeId===id).length;
+  const msg=used?`この従業員には${used}件の休みが登録されています。削除しますか？`:'この従業員を削除しますか？';
+  if(!confirm(msg)) return;
+  state.employees=state.employees.filter(e=>e.id!==id);
+  state.absences=(state.absences||[]).filter(a=>a.employeeId!==id);
+  saveState();renderMaster();renderCalendar();
+  await sendAction('deleteEmployee',{id});
+}
+
 async function dedupeTypes(){
   if(!confirm('イベント種類の重複をGASから削除します。同じ名前の種類は先頭1件だけ残ります。よろしいですか？')) return;
   setGasStatus('⟳ 重複削除中...','loading');
@@ -1333,6 +1507,20 @@ async function autoLoadFromGAS(){
         for(const t of initTypes){ await sendAction('addType', t); }
         state.types = initTypes;
       }
+      if(Array.isArray(d.employees) && d.employees.length){
+        state.employees=d.employees.map(e=>({id:String(e.id),name:String(e.name)}));
+      } else {
+        const initEmps=DEFAULT_EMPLOYEES.map(e=>({...e}));
+        for(const e of initEmps){ await sendAction('addEmployee',e); }
+        state.employees=initEmps;
+      }
+      if(Array.isArray(d.absences)){
+        state.absences=d.absences.map(a=>({
+          id:String(a.id),
+          date:normalizeDate(a.date),
+          employeeId:String(a.employeeId)
+        }));
+      } else { state.absences=[]; }
       if(Array.isArray(d.events)) state.events=d.events.map(e=>({
         id:        String(e.id),
         dateType:  e.dateType ? String(e.dateType) : 'date',
@@ -1409,6 +1597,10 @@ loadState();
 if(!state.types || !state.types.length){
   state.types = DEFAULT_TYPES.map(t=>({...t}));
 }
+if(!state.employees || !state.employees.length){
+  state.employees = DEFAULT_EMPLOYEES.map(e=>({...e}));
+}
+if(!state.absences) state.absences=[];
 if(!baseMonth){const n=new Date();baseMonth={y:n.getFullYear(),m:n.getMonth()+1};}
 selectedTypeColor=COLORS[0];
 renderCalendar();
