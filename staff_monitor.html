@@ -437,6 +437,10 @@ function _applyEmployees(emps) {
 
 let state = {};
 
+// 楽観的更新で送信中のID。ポーリング(fetchAll)がGASの古い値で上書きし戻すのを防ぐ。
+// POST完了(成功/失敗)後に削除する。
+const pendingWrites = new Set();
+
 // 出退勤 localStorage
 const ATTENDANCE_KEY = 'nakashima_attendance';
 function getTodayStr() { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -649,6 +653,8 @@ async function fetchAll(silent=false) {
     let changed = false;
     json.data.forEach(row => {
       const id = row.id;
+      // 楽観的更新で送信中のIDは、GASにまだ反映されていない古い値で上書きされないようスキップ
+      if (id && pendingWrites.has(id)) return;
       if (id && state[id] !== undefined) {
         const old = state[id];
         // GAS側のstatusが空（日次リセット後＝未打刻）なら、デフォルト居場所＋updated空に戻す。
@@ -777,7 +783,7 @@ function buildSlideHtml(def, idx, members, showBadge=false) {
         </div>
       </div>
       <div class="slide-meta">
-        <div class="slide-company">Nakashima Manufacturing</div>
+        <div class="slide-company">ナカシマ</div>
         <div class="slide-clock"></div>
       </div>
     </div>
@@ -1028,7 +1034,7 @@ function rebuildDeptSlides(filterDept) {
             </div></div>
           </div>
           <div class="slide-meta">
-            <div class="slide-company">Nakashima Manufacturing</div>
+            <div class="slide-company">ナカシマ</div>
             <div class="slide-clock"></div>
           </div>
         </div>
@@ -1187,6 +1193,14 @@ function closeRegModal() {
   if (!wasPausedBeforeModal && isPaused) togglePause();
 }
 
+// 現在のビュー種別に応じて再描画（登録直後・ロールバック時に共通利用）
+function rerenderCurrentView() {
+  const dp = new URLSearchParams(location.search).get('dept');
+  if (dp) rebuildDeptSlides(dp);
+  else if (viewMode === 'location') rebuildSlides();
+  else rebuildDeptSlides();
+}
+
 async function doRegister() {
   if (!regStaff || !regStatus) return;
   const btn = document.getElementById('regSubmit');
@@ -1216,34 +1230,41 @@ async function doRegister() {
     // gogoHalfは送らない＝GAS側で維持（居場所を移動しても午後休は消さない）
   }
 
+  // ===== 楽観的更新: GASの応答を待たず、先に画面へ反映してモーダルを閉じる =====
+  // （GAS応答は1.5〜5秒かかるため、待つと「場所変更が遅い」体感になる。送信は裏で行い、失敗時のみ元へ戻す）
+  const staff = regStaff;                                          // closeRegModalでregStaffがnullになるので退避
+  const prevState = state[staff.id] ? { ...state[staff.id] } : null; // 失敗時ロールバック用
+  pendingWrites.add(staff.id);                                     // ポーリングの上書き防止
+
+  if (regStatus === 'gogo_kyuu') {
+    const cur = state[staff.id] || { status:staff.base, memo:'', leaveStart:'', leaveEnd:'' };
+    state[staff.id] = { ...cur, updated, gogoHalf: getTodayStr() };
+  } else {
+    state[staff.id] = { status:regStatus, updated, memo:memo||'', leaveStart, leaveEnd, gogoHalf: (state[staff.id] && state[staff.id].gogoHalf) || '' };
+  }
+  if (regStatus === 'taikin') {
+    const att = getAttLocal(staff.id);
+    const clockIn = (att && att.clockIn) ? att.clockIn : nowTimeStr();
+    setAttLocal(staff.id, { clockIn, clockOut: nowTimeStr() });
+  } else if (regStatus !== 'yasumi') {
+    const att = getAttLocal(staff.id);
+    if (!att || !att.clockIn) setAttLocal(staff.id, { clockIn:nowTimeStr(), clockOut:'' });
+  }
+  closeRegModal();
+  rerenderCurrentView();
+  btn.textContent = '登録する'; btn.disabled = false;
+
+  // ===== バックグラウンド送信。失敗したらロールバックして通知 =====
   try {
     const res = await fetchWithRetry(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload) });
     const json = await res.json();
-    if (json.ok) {
-      if (regStatus === 'gogo_kyuu') {
-        const cur = state[regStaff.id] || { status:regStaff.base, memo:'', leaveStart:'', leaveEnd:'' };
-        state[regStaff.id] = { ...cur, updated, gogoHalf: getTodayStr() };
-      } else {
-        state[regStaff.id] = { status:regStatus, updated, memo:memo||'', leaveStart, leaveEnd, gogoHalf: (state[regStaff.id] && state[regStaff.id].gogoHalf) || '' };
-      }
-
-      if (regStatus === 'taikin') {
-        const att = getAttLocal(regStaff.id);
-        const clockIn = (att && att.clockIn) ? att.clockIn : nowTimeStr();
-        setAttLocal(regStaff.id, { clockIn, clockOut: nowTimeStr() });
-      } else if (regStatus !== 'yasumi') {
-        const att = getAttLocal(regStaff.id);
-        if (!att || !att.clockIn) setAttLocal(regStaff.id, { clockIn:nowTimeStr(), clockOut:'' });
-      }
-      closeRegModal();
-      const dp = new URLSearchParams(location.search).get('dept');
-      if (dp) rebuildDeptSlides(dp);
-      else if (viewMode === 'location') rebuildSlides(); else rebuildDeptSlides();
-      btn.textContent = '登録する';
-    } else { throw new Error(); }
+    if (!json.ok) throw new Error();
   } catch(e) {
-    btn.textContent = '✗ エラー';
-    setTimeout(() => { btn.textContent = '登録する'; btn.disabled = false; }, 2000);
+    if (prevState) state[staff.id] = prevState; else delete state[staff.id];
+    rerenderCurrentView();
+    alert('⚠ ' + staff.name + ' さんの登録に失敗しました。\n通信状態を確認して、もう一度登録してください。');
+  } finally {
+    pendingWrites.delete(staff.id);
   }
 }
 
