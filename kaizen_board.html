@@ -102,6 +102,8 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
 .iblock.agenda .inum{background:var(--accent)}
 .iblock.prevmt{border-color:#c084fc;background:linear-gradient(135deg,#f5f3ff,#fff)}
 .prevbadge{font-size:9px;font-weight:700;color:#fff;background:#9333ea;padding:2px 7px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+.chgbadge{font-size:9px;font-weight:700;color:#fff;background:#dc2626;padding:1px 6px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+.chgdot{font-size:11px;flex-shrink:0}
 /* 前回MT振り返りパネル */
 .rvpanel{background:linear-gradient(135deg,#faf5ff,#fff);border:1.5px solid #c084fc;border-radius:8px;margin-bottom:8px;overflow:hidden}
 .rvhdr{display:flex;align-items:center;gap:7px;padding:8px 10px;cursor:pointer;user-select:none;font-size:12px;font-weight:800;color:#7e22ce}
@@ -539,6 +541,8 @@ let GAS = localStorage.getItem('kg') || 'https://script.google.com/macros/s/AKfy
 let items = JSON.parse(localStorage.getItem('ki') || 'null') || deepCopy(INIT_ITEMS);
 let tasks = JSON.parse(localStorage.getItem('kt') || 'null') || deepCopy(INIT_TASKS);
 let agenda = new Set(JSON.parse(localStorage.getItem('ka') || '[]'));
+let seen = JSON.parse(localStorage.getItem('kseen') || 'null');
+let changed = new Map();
 let selId = null;
 let hideDone = true;
 let onlyKeiz = false;
@@ -569,6 +573,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   updateFBtns();
   computeAgenda();
+  computeChanges();
   computePrevMt();
   renderLeft();
   renderAgenda();
@@ -591,7 +596,7 @@ async function syncData(){
   try {
     const r = await fetch(GAS+'?action=getAll');
     const d = await r.json();
-    if(d.success){ items=d.items; tasks=d.tasks; saveAll(); computeAgenda(); computePrevMt(); renderLeft(); renderDash(); setSt('ok'); toast('同期完了','ok'); }
+    if(d.success){ items=d.items; tasks=d.tasks; saveAll(); computeAgenda(); computeChanges(); computePrevMt(); renderLeft(); renderDash(); setSt('ok'); toast('同期完了','ok'); }
     else{ setSt('off'); toast('同期エラー','err'); }
   } catch{ setSt('off'); toast('接続エラー','err'); }
 }
@@ -694,7 +699,7 @@ function renderLeft(){
     const at=tasks.filter(t=>t.item_id===item.item_id);
     const done=at.filter(t=>t.status==='完了'||t.status==='完了(継続)').length;
     const pct=at.length?Math.round(done/at.length*100):0;
-    const isSel=selId===item.item_id, isAg=agenda.has(item.item_id), isExp=isSel, isPrev=highlightPrev&&prevItems.has(item.item_id);
+    const isSel=selId===item.item_id, isAg=agenda.has(item.item_id), isExp=isSel, isPrev=highlightPrev&&prevItems.has(item.item_id), hasChg=at.some(t=>changed.has(t.task_id));
     const trows=it.map(t=>{
       const dc=['未着手','実行中','完了','完了(継続)'].indexOf(t.status);
       const cls=['d0','d1','d2','d3','d0'][dc<0?4:dc];
@@ -713,6 +718,7 @@ function renderLeft(){
         <div class="inum">${item.item_num}<\/div>
         <span class="dpill">${item.dept}<\/span>
         ${isPrev?'<span class="prevbadge">前回MT<\/span>':''}
+        ${hasChg?'<span class="chgdot" title="前回から変更あり">🔔<\/span>':''}
         <div class="itwrap">
           <div class="ititle">${esc(item.item_name)}<\/div>
           ${item.goal?`<div class="igoal">▶ ${esc(item.goal)}<\/div>`:''}
@@ -782,6 +788,7 @@ function renderExt(id){
       <div class="ttxt ${dn?'done':''}" style="font-size:13px">${esc(t.task_content)}<\/div>
       ${hm?'<span style="font-size:12px;color:var(--accent)" title="議事録あり">📝<\/span>':''}
       ${(t.comment&&t.comment.trim())?'<span style="font-size:12px" title="メモ・コメントあり">💬<\/span>':''}
+      ${changed.has(t.task_id)?`<span class="chgbadge" title="前回保存時からの変更">🔔${changed.get(t.task_id).join('・')}<\/span>`:''}
       ${t.tantou?`<span class="ttantou">${esc(t.tantou)}<\/span>`:''}
       ${t.yotei_date?`<span class="tdate ${ov?'ov':''}">${t.yotei_date}<\/span>`:''}
     <\/div>`;
@@ -791,6 +798,42 @@ function renderExt(id){
 // ===== アジェンダ（スプレッドシートで全員共有） =====
 function computeAgenda(){
   agenda = new Set(items.filter(it=>String(it.agenda||'')==='1').map(it=>it.item_id));
+}
+// タスク保存時に親項目を自動でアジェンダへ追加
+function addItemToAgenda(itemId){
+  if(!itemId || agenda.has(itemId)) return;
+  const it=items.find(i=>i.item_id===itemId);
+  if(!it) return;
+  it.agenda='1'; agenda.add(itemId); saveAll();
+  gp('updateItem',{item_id:itemId, agenda:'1'});
+  renderAgenda();
+}
+// ===== 変更検知（前回保存/確認時との相違） =====
+function taskSig(t){ return JSON.stringify({m:t.memo||'',c:t.comment||'',s:t.status||'',n:t.task_content||''}); }
+function computeChanges(){
+  changed=new Map();
+  if(seen===null) seen={};
+  let dirty=false;
+  tasks.forEach(t=>{
+    const cur=taskSig(t), prev=seen[t.task_id];
+    if(prev===undefined){ seen[t.task_id]=cur; dirty=true; return; } // 新規は基準化のみ
+    if(prev!==cur){
+      const p=JSON.parse(prev), c=JSON.parse(cur), r=[];
+      if(p.m!==c.m) r.push('メモ');
+      if(p.c!==c.c) r.push('コメント');
+      if(p.s!==c.s) r.push('状態');
+      if(p.n!==c.n) r.push('内容');
+      if(r.length) changed.set(t.task_id, r);
+    }
+  });
+  if(dirty){ try{ localStorage.setItem('kseen', JSON.stringify(seen)); }catch(e){} }
+}
+function markSeen(taskId){
+  if(!seen) seen={};
+  const t=tasks.find(x=>x.task_id===taskId); if(!t) return;
+  seen[taskId]=taskSig(t);
+  try{ localStorage.setItem('kseen', JSON.stringify(seen)); }catch(e){}
+  changed.delete(taskId);
 }
 function toggleAg(id){
   const it=items.find(i=>i.item_id===id); if(!it) return;
@@ -866,6 +909,7 @@ function clickTask(taskId){
   if(selTaskId===taskId){ switchToItemMode(); return; }
   const t=tasks.find(t=>t.task_id===taskId);
   if(!t) return;
+  markSeen(taskId);
   selTaskId=taskId; mtMode='task';
   document.getElementById('selBanner').style.display='none';
   document.getElementById('taskBanner').style.display='flex';
@@ -889,7 +933,7 @@ function clickTask(taskId){
   document.getElementById('ieComment').value=t.comment||'';
   document.querySelectorAll('#taskEditCard .sbtn').forEach(b=>b.classList.toggle('on',b.dataset.s===(t.status||'未着手')));
   document.getElementById('taskEditCard').style.display='block';
-  renderExt(selId);
+  renderLeft(); renderExt(selId);
   setTimeout(()=>{ document.getElementById('mtText').focus(); },50);
 }
 
@@ -918,6 +962,8 @@ function saveInlineTask(){
   }
   saveAll();
   gp('updateTask',{task_id:selTaskId,task_content:tasks[idx].task_content,tantou:tasks[idx].tantou,goal:tasks[idx].goal,status,hanan_date:tasks[idx].hanan_date,yotei_date:tasks[idx].yotei_date,kanryo_date:tasks[idx].kanryo_date,comment:tasks[idx].comment});
+  markSeen(selTaskId);
+  addItemToAgenda(tasks[idx].item_id);
   const dc2=['未着手','実行中','完了','完了(継続)'].indexOf(status);
   const sl2=['未着手','実行中','完了','完了(継続)','未定'][dc2<0?4:dc2];
   document.getElementById('taskBannerSub').textContent=(tasks[idx].tantou||'担当未設定')+'　'+sl2+'　'+(tasks[idx].yotei_date||'期限未設定');
@@ -967,6 +1013,7 @@ function saveEntry(i){
   entries[i].text=ta.value.trim();
   const newMemo=rebuildMemo(entries);
   tasks[idx].memo=newMemo; saveAll(); editingEntryIdx=-1;
+  markSeen(selTaskId);
   computePrevMt(); renderTaskMemo(selTaskId); renderExt(selId); renderLeft();
   toast('議事録を更新しました','ok');
   gp('updateTask',{task_id:selTaskId, memo:newMemo});
@@ -979,6 +1026,7 @@ function deleteEntry(i){
   entries.splice(i,1);
   const newMemo=rebuildMemo(entries);
   tasks[idx].memo=newMemo; saveAll(); editingEntryIdx=-1;
+  markSeen(selTaskId);
   computePrevMt(); renderTaskMemo(selTaskId); renderExt(selId); renderLeft();
   toast('議事録を削除しました','ok');
   gp('updateTask',{task_id:selTaskId, memo:newMemo});
@@ -996,6 +1044,8 @@ function saveMemo(){
   const newMemo=base ? base+' / '+entry : entry;
   // 楽観更新：先に画面へ即反映（保存待ちなし＝速い）
   tasks[idx].memo=newMemo; saveAll();
+  markSeen(selTaskId);
+  addItemToAgenda(tasks[idx].item_id);
   document.getElementById('mtText').value='';
   computePrevMt(); renderTaskMemo(selTaskId); renderExt(selId); renderLeft();
   toast('議事録を追記しました','ok');
