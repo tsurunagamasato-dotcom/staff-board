@@ -967,8 +967,8 @@ async function loadRecentEntries(){
 // 報奨金処理済みチェックの反映（台帳「報奨金支給」列を 済/空 に更新）
 async function setRewardPaidViaGas(no, paid, el){
   try{
-    const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify({ action:'setRewardPaid', no, paid }) });
-    const json = await res.json();
+    // setRewardPaidは冪等（同じ値を再セットしても無害）なので一過性HTML応答はリトライして取りこぼしを防ぐ
+    const json = await gasFetchJson({ action:'setRewardPaid', no, paid });
     if(!json.ok) throw new Error(json.error || '更新失敗');
   }catch(e){
     alert('報奨金処理の更新に失敗しました：' + e.message);
