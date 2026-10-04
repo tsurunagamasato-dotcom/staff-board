@@ -3,9 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- HTMLをブラウザにキャッシュさせない（更新後も ?nocache 番号を変えずに最新を表示するため） -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>改善提案管理ダッシュボード</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- SheetJS(xlsx 861KB)はExcel取込時のみ遅延ロード（初期表示を軽くするため）。読込は ensureXLSX() が行う -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -490,8 +495,24 @@ function arrayBufferToBase64(buf){
   return btoa(binary);
 }
 
+// SheetJS(xlsx)を必要時だけ読み込む。初回呼び出しでCDNからscriptを注入し、以降は即解決。
+let _xlsxPromise = null;
+function ensureXLSX(){
+  if(window.XLSX) return Promise.resolve();
+  if(_xlsxPromise) return _xlsxPromise;
+  _xlsxPromise = new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = ()=>resolve();
+    s.onerror = ()=>{ _xlsxPromise = null; reject(new Error('Excel読み込みライブラリの取得に失敗しました')); };
+    document.head.appendChild(s);
+  });
+  return _xlsxPromise;
+}
+
 async function handleFiles(fileList){
   setStep(1,'done'); setStep(2,'active');
+  await ensureXLSX(); // Excel解析ライブラリを遅延ロード（初回のみDL）
   ocrResultBody.innerHTML = '';
   previewArea.innerHTML = '';
   entries = [];
