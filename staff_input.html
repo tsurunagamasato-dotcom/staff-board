@@ -534,6 +534,10 @@ async function submitToGAS() {
   if (!LEAVE_STATUSES.includes(selStatus)) { leaveStart = ''; leaveEnd = ''; }
   // 午前休・午後休は単日指定：終了日を開始日に揃える
   if (selStatus === 'gozen_kyuu' || selStatus === 'gogo_kyuu') leaveEnd = leaveStart;
+  // 終了日が未入力、または開始日より前（逆転）の場合は開始日に揃える＝単日扱い。
+  // （既定が両方「今日」のため、開始日だけ未来に変えると終了日が過去のまま＝逆転期間になり、
+  //   休み当日の朝リセットで「期間内でも未来でもない」と誤判定されて行が消え、未打刻になる不具合を防ぐ）
+  if (leaveStart && (!leaveEnd || leaveEnd < leaveStart)) leaveEnd = leaveStart;
 
   // 送信データ。午後休(gogo_kyuu)は「居場所(status)は変えず、午後休フラグ(gogoHalf)だけ立てる」。
   // 左＝現在地はKOTや通常の居場所登録で入り、右＝午後休はフラグで維持される。

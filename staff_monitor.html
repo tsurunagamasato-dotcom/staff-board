@@ -529,9 +529,11 @@ function isActiveToday(id, status) {
   const today = getTodayJST();
   if (st.leaveStart) {
     const ls = normalizeStateDate(st.leaveStart);
-    const le = st.leaveEnd ? normalizeStateDate(st.leaveEnd) : '';
+    let le = st.leaveEnd ? normalizeStateDate(st.leaveEnd) : '';
+    // 終了日が未入力・または開始日より前（逆転）なら開始日を終端とみなす＝単日扱い
+    if (!le || le < ls) le = ls;
     if (ls > today) return false;
-    if (le && le < today) return false;
+    if (le < today) return false;
   }
   return true;
 }
