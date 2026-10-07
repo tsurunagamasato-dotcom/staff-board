@@ -372,8 +372,13 @@
     </div>
 
     <div class="card" id="manageCard" style="margin-top:22px;">
-      <h3>最近の登録（誤登録の削除・取り消し）</h3>
-      <div class="dept-rank-note">直近の登録を新しい順に表示します。誤って登録した提案は「削除」で台帳から削除できます（Boxの原本PDFも一緒に削除されます）。</div>
+      <h3>登録の管理（全件表示・編集・削除）</h3>
+      <div class="dept-rank-note">登録済みの提案を新しい順に<b>全件</b>表示します。「編集」で提出日・氏名・案件名などを修正でき、提出日を直すと評価期間（期フィルター）も自動で付け直します。「削除」で台帳から削除できます（Boxの原本PDFも一緒に削除されます）。</div>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:4px 0 14px;">
+        <input id="recentSearch" type="text" placeholder="No・氏名・案件名・部署で検索" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d9deea; border-radius:8px; font-size:13px;">
+        <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-soft); cursor:pointer; white-space:nowrap;"><input type="checkbox" id="recentUnpaidOnly"> 報奨金 未処理のみ</label>
+        <span id="recentCount" style="font-size:12px; color:var(--ink-soft); white-space:nowrap;"></span>
+      </div>
       <table>
         <thead>
           <tr><th>No</th><th>提出日</th><th>部署</th><th>氏名</th><th>案件名</th><th>原本</th><th>報奨金額</th><th>報奨金処理</th><th></th></tr>
@@ -415,7 +420,10 @@ async function gasFetchJson(payload, retries){
       const res = await fetch(CONFIG.GAS_URL, { method:'POST', body: JSON.stringify(payload) });
       const text = await res.text();
       try{ return JSON.parse(text); }
-      catch(parseErr){ lastErr = new Error('サーバーが一時的に応答できませんでした'); } // HTMLが返った＝一過性
+      catch(parseErr){ // JSON以外（ログイン/エラーHTML等）が返った＝一過性。原因切り分け用にHTTP状態と応答先頭を残す
+        const head = String(text || '').replace(/\s+/g,' ').slice(0, 80);
+        lastErr = new Error('サーバーが一時的に応答できませんでした（HTTP ' + res.status + '／応答: ' + head + '）');
+      }
     }catch(netErr){ lastErr = netErr; }
     if(attempt < retries) await new Promise(r => setTimeout(r, 600 * (attempt + 1))); // 0.6s,1.2s待って再試行
   }
@@ -954,15 +962,33 @@ registerBtn.addEventListener('click', async ()=>{
    ========================================================================== */
 const recentBody = document.getElementById('recentBody');
 
+let _recentRows = []; // 取得した全登録（フィルタ・編集の元データ）
+
 async function loadRecentEntries(){
   if(!CONFIG.GAS_URL){ recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">GAS未接続</td></tr>'; return; }
   recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">読み込み中…</td></tr>';
   try{
-    const json = await gasFetchJson({ action:'getRecentEntries', limit:30 }); // 一過性HTML応答は自動リトライ
+    const json = await gasFetchJson({ action:'getRecentEntries', limit:100000 }); // 全件取得（一過性HTML応答は自動リトライ）
     if(!json.ok) throw new Error(json.error || '取得失敗');
-    const rows = json.result || [];
-    if(!rows.length){ recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">登録がありません</td></tr>'; return; }
-    recentBody.innerHTML = rows.map(r => `
+    _recentRows = json.result || [];
+    renderRecentRows();
+  }catch(e){
+    recentBody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#B91C1C;padding:18px 0;">一覧の取得に失敗しました（${e.message}）</td></tr>`;
+  }
+}
+
+// 検索語・未処理フィルタを適用して描画
+function renderRecentRows(){
+  const q = (document.getElementById('recentSearch') && document.getElementById('recentSearch').value || '').trim().toLowerCase();
+  const unpaidOnly = document.getElementById('recentUnpaidOnly') && document.getElementById('recentUnpaidOnly').checked;
+  let rows = _recentRows;
+  if(unpaidOnly) rows = rows.filter(r => !r.rewardPaid);
+  if(q) rows = rows.filter(r => (String(r.no)+' '+(r.name||'')+' '+(r.title||'')+' '+(r.dept||'')).toLowerCase().includes(q));
+  const countEl = document.getElementById('recentCount');
+  if(countEl) countEl.textContent = `表示 ${rows.length}件 / 全${_recentRows.length}件`;
+  if(!_recentRows.length){ recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">登録がありません</td></tr>'; return; }
+  if(!rows.length){ recentBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);padding:18px 0;">該当する登録がありません</td></tr>'; return; }
+  recentBody.innerHTML = rows.map(r => `
       <tr data-no="${r.no}">
         <td>${r.no}</td>
         <td>${r.date || ''}</td>
@@ -971,30 +997,109 @@ async function loadRecentEntries(){
         <td>${r.title || ''}</td>
         <td>${r.boxUrl ? `<a class="proposal-link" href="${r.boxUrl}" target="_blank" rel="noopener">PDF</a>` : '—'}</td>
         <td style="text-align:right;">${r.reward ? '¥' + Number(r.reward).toLocaleString() : '—'}</td>
-        <td style="text-align:center;"><label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:var(--ink-soft);"><input type="checkbox" class="chk-paid" data-no="${r.no}" ${r.rewardPaid ? 'checked' : ''}>済</label></td>
-        <td><button class="btn btn-ghost btn-del" data-no="${r.no}" data-title="${String(r.title || '').replace(/"/g,'&quot;')}" style="padding:5px 12px; color:#B91C1C; border-color:#F0C2C2;">削除</button></td>
+        <td style="text-align:center; white-space:nowrap;"><label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:var(--ink-soft);"><input type="checkbox" class="chk-paid" data-no="${r.no}" ${r.rewardPaid ? 'checked' : ''}>済</label><span class="paid-stat" data-no="${r.no}" style="margin-left:6px; font-size:12px;"></span></td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-ghost btn-edit" data-no="${r.no}" style="padding:5px 10px; margin-right:4px;">編集</button>
+          <button class="btn btn-ghost btn-del" data-no="${r.no}" data-title="${String(r.title || '').replace(/"/g,'&quot;')}" style="padding:5px 10px; color:#B91C1C; border-color:#F0C2C2;">削除</button>
+        </td>
       </tr>`).join('');
-    recentBody.querySelectorAll('.btn-del').forEach(b=>{
-      b.addEventListener('click', ()=>deleteEntryViaGas(b.dataset.no, b.dataset.title));
-    });
-    recentBody.querySelectorAll('.chk-paid').forEach(c=>{
-      c.addEventListener('change', ()=>setRewardPaidViaGas(c.dataset.no, c.checked, c));
-    });
-  }catch(e){
-    recentBody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#B91C1C;padding:18px 0;">一覧の取得に失敗しました（${e.message}）</td></tr>`;
-  }
+  recentBody.querySelectorAll('.btn-del').forEach(b=> b.addEventListener('click', ()=>deleteEntryViaGas(b.dataset.no, b.dataset.title)));
+  recentBody.querySelectorAll('.chk-paid').forEach(c=> c.addEventListener('change', ()=>setRewardPaidViaGas(c.dataset.no, c.checked, c)));
+  recentBody.querySelectorAll('.btn-edit').forEach(b=> b.addEventListener('click', ()=>openEditModal(b.dataset.no)));
 }
+
+// 検索・フィルタ操作で即再描画
+['recentSearch','recentUnpaidOnly'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', renderRecentRows);
+  if(el) el.addEventListener('change', renderRecentRows);
+});
 
 // 報奨金処理済みチェックの反映（台帳「報奨金支給」列を 済/空 に更新）
 async function setRewardPaidViaGas(no, paid, el){
+  const stat = recentBody.querySelector('.paid-stat[data-no="' + no + '"]');
+  if(stat){ stat.style.color='var(--ink-soft)'; stat.textContent='保存中…'; }
   try{
     // setRewardPaidは冪等（同じ値を再セットしても無害）なので一過性HTML応答はリトライして取りこぼしを防ぐ
     const json = await gasFetchJson({ action:'setRewardPaid', no, paid });
     if(!json.ok) throw new Error(json.error || '更新失敗');
+    const row = _recentRows.find(x=>String(x.no)===String(no)); if(row) row.rewardPaid = paid; // ローカルも更新（フィルタ整合）
+    if(stat){ stat.style.color='#16a34a'; stat.textContent='✓保存'; setTimeout(()=>{ if(stat.textContent==='✓保存') stat.textContent=''; }, 1800); }
   }catch(e){
+    if(stat){ stat.style.color='#B91C1C'; stat.textContent='✗失敗'; }
     alert('報奨金処理の更新に失敗しました：' + e.message);
     if(el) el.checked = !paid; // 失敗したらチェック状態を元に戻す
   }
+}
+
+/* ===== 登録内容の編集モーダル ===== */
+let _editingNo = null;
+function ensureEditModal(){
+  if(document.getElementById('editModal')) return;
+  const inputCss = 'padding:8px 10px; border:1px solid #d9deea; border-radius:8px; font-size:14px; width:100%; box-sizing:border-box;';
+  const labCss = 'display:grid; gap:4px; font-size:13px; color:var(--ink-soft);';
+  const div = document.createElement('div');
+  div.id = 'editModal';
+  div.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:1000; align-items:center; justify-content:center; padding:16px;';
+  div.innerHTML = `
+    <div style="background:#fff; border-radius:14px; padding:22px; width:min(460px,94vw); max-height:90vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <h3 style="margin:0 0 4px;">登録内容の編集（No.<span id="em-no"></span>）</h3>
+      <div style="font-size:12px; color:var(--ink-soft); margin-bottom:14px;">提出日を直すと評価期間（期フィルター）も自動で付け直します。</div>
+      <div style="display:grid; gap:12px;">
+        <label style="${labCss}">提出日（例: 2026/09/25）<input id="em-date" type="text" style="${inputCss}"></label>
+        <label style="${labCss}">部署<input id="em-dept" type="text" style="${inputCss}"></label>
+        <label style="${labCss}">氏名<input id="em-name" type="text" style="${inputCss}"></label>
+        <label style="${labCss}">案件名<input id="em-title" type="text" style="${inputCss}"></label>
+        <label style="${labCss}">報奨金額（円）<input id="em-reward" type="number" style="${inputCss}"></label>
+      </div>
+      <div id="em-msg" style="margin-top:10px; font-size:13px; min-height:18px;"></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+        <button class="btn btn-ghost" id="em-cancel">キャンセル</button>
+        <button class="btn btn-primary" id="em-save">保存する</button>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+  document.getElementById('em-cancel').addEventListener('click', closeEditModal);
+  document.getElementById('em-save').addEventListener('click', saveEditModal);
+  div.addEventListener('click', e=>{ if(e.target===div) closeEditModal(); });
+}
+function openEditModal(no){
+  ensureEditModal();
+  const r = _recentRows.find(x => String(x.no) === String(no));
+  if(!r) return;
+  _editingNo = no;
+  document.getElementById('em-no').textContent = no;
+  document.getElementById('em-date').value = r.date || '';
+  document.getElementById('em-dept').value = r.dept || '';
+  document.getElementById('em-name').value = r.name || '';
+  document.getElementById('em-title').value = r.title || '';
+  document.getElementById('em-reward').value = (r.reward != null ? r.reward : 0);
+  document.getElementById('em-msg').textContent = '';
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal(){ const m=document.getElementById('editModal'); if(m) m.style.display='none'; _editingNo=null; }
+async function saveEditModal(){
+  if(_editingNo==null) return;
+  const msg = document.getElementById('em-msg');
+  const saveBtn = document.getElementById('em-save');
+  const fields = {
+    date:   document.getElementById('em-date').value,
+    dept:   document.getElementById('em-dept').value,
+    name:   document.getElementById('em-name').value,
+    title:  document.getElementById('em-title').value,
+    reward: document.getElementById('em-reward').value
+  };
+  msg.style.color = 'var(--ink-soft)'; msg.textContent = '保存中…'; saveBtn.disabled = true;
+  try{
+    const json = await gasFetchJson({ action:'updateEntry', no: _editingNo, fields }); // 同値再送しても安全なのでリトライ可
+    if(!json.ok) throw new Error(json.error || '更新失敗');
+    closeEditModal();
+    await loadRecentEntries(); // 一覧を最新化
+    const sel = document.getElementById('periodSelect');
+    loadDashboard((sel && sel.value) ? sel.value : currentPeriodLabel()); // 集計も更新（期の付け替えを反映）
+  }catch(e){
+    msg.style.color = '#B91C1C'; msg.textContent = '保存に失敗しました：' + e.message;
+  }finally{ saveBtn.disabled = false; }
 }
 
 async function deleteEntryViaGas(no, title){
