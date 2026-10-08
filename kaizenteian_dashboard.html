@@ -916,8 +916,22 @@ registerBtn.addEventListener('click', async ()=>{
             boxSharedLink = upj.result.boxSharedLink || '';
             entry.boxFileId = upj.result.boxFileId || null;
             entry.boxSharedLink = boxSharedLink;
-            entry.pubBoxLink = upj.result.pubBoxSharedLink || '';
-            if(!entry.pubBoxLink) boxWarnings.push(`${entry.filename}：公開用PDF（氏名なし）を作成できませんでした${upj.result.pubError ? '（' + upj.result.pubError + '）' : ''}`);
+            // 公開用PDF（氏名・評価点数・報奨金額を消した版）は別リクエストで生成。
+            // 1回のGAS処理を短く保つため（原本＋公開用を1回でやると応答が壊れることがあった）
+            entry.pubBoxLink = '';
+            if(upj.result.tempSheetId){
+              try{
+                const mk = await fetch(CONFIG.GAS_URL, {
+                  method:'POST',
+                  body: JSON.stringify({ action:'makePublicPdf', tempSheetId: upj.result.tempSheetId, filename: entry.filename, submittedDate: entry.date, proposerName: entry.name })
+                });
+                const mkj = await mk.json();
+                if(mkj.ok && mkj.result && mkj.result.pubBoxSharedLink) entry.pubBoxLink = mkj.result.pubBoxSharedLink;
+                else boxWarnings.push(`${entry.filename}：公開用PDF（氏名なし）を作成できませんでした（${mkj.error || '不明'}）`);
+              }catch(e){ boxWarnings.push(`${entry.filename}：公開用PDFの作成でエラー（${e.message}）`); }
+            }else{
+              boxWarnings.push(`${entry.filename}：公開用PDFを作成できませんでした（GASが旧バージョン）`);
+            }
           }else{
             boxWarnings.push(`${entry.filename}：${upj.error || 'Box保存エラー'}`);
           }
