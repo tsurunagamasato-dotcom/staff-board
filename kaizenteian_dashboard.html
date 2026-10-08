@@ -908,13 +908,16 @@ registerBtn.addEventListener('click', async ()=>{
         try{
           const up = await fetch(CONFIG.GAS_URL, {
             method:'POST',
-            body: JSON.stringify({ action:'uploadBox', filename: entry.filename, base64pdf: entry.fileBase64, submittedDate: entry.date })
+            // proposerName: GAS側で氏名セルを消した「公開用PDF」も同時に作る（従業員向け閲覧ページ用）
+            body: JSON.stringify({ action:'uploadBox', filename: entry.filename, base64pdf: entry.fileBase64, submittedDate: entry.date, proposerName: entry.name })
           });
           const upj = await up.json();
           if(upj.ok && upj.result){
             boxSharedLink = upj.result.boxSharedLink || '';
             entry.boxFileId = upj.result.boxFileId || null;
             entry.boxSharedLink = boxSharedLink;
+            entry.pubBoxLink = upj.result.pubBoxSharedLink || '';
+            if(!entry.pubBoxLink) boxWarnings.push(`${entry.filename}：公開用PDF（氏名なし）を作成できませんでした${upj.result.pubError ? '（' + upj.result.pubError + '）' : ''}`);
           }else{
             boxWarnings.push(`${entry.filename}：${upj.error || 'Box保存エラー'}`);
           }
@@ -936,7 +939,8 @@ registerBtn.addEventListener('click', async ()=>{
         gradeCheckbox: entry.gradeChecked || '',
         status: entry.status || '',
         comment: entry.comment || '',
-        boxSharedLink: boxSharedLink   // 備考にBox共有リンクを保存（案件名一覧のPDFリンク元）
+        boxSharedLink: boxSharedLink,  // 備考にBox共有リンクを保存（案件名一覧のPDFリンク元）
+        pubBoxLink: entry.pubBoxLink || '' // 公開用PDF（氏名なし）のリンク。従業員向けページが表示する
         // period(評価期間)はGAS側で提出日から自動計算
       };
       const res = await fetch(CONFIG.GAS_URL, {

@@ -38,6 +38,14 @@
   .more{display:inline-block; margin-top:6px; font-size:12px; color:var(--navy-deep); background:none; border:1px solid var(--line); border-radius:999px; padding:3px 10px; cursor:pointer; font-family:inherit;}
   .detail{display:none; margin-top:8px; padding:10px 12px; background:var(--bg); border-radius:8px; font-size:13px; white-space:pre-wrap; line-height:1.6; color:var(--ink);}
   tr.open .detail{display:block;}
+  .more.pdf{color:#fff; background:var(--navy); border-color:var(--navy); margin-left:6px;}
+  #viewer{display:none; position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:1000; padding:12px;}
+  #viewer.on{display:flex; flex-direction:column;}
+  #viewer .bar{display:flex; justify-content:space-between; align-items:center; color:#fff; padding:4px 4px 10px; gap:10px;}
+  #viewer .bar .t{font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  #viewer .bar button{background:#fff; border:0; border-radius:8px; padding:7px 14px; cursor:pointer; font-family:inherit;}
+  #viewer iframe{flex:1; width:100%; border:0; border-radius:10px; background:#fff;}
+  #viewer .msg{color:#fff; text-align:center; padding:30px;}
   .status{text-align:center; color:var(--ink-soft); padding:22px 0;}
   .status.err{color:#B91C1C;}
   @media (max-width:560px){
@@ -50,9 +58,15 @@
   <div class="brand"><span>ナカシマ 総務部</span>みんなの改善提案</div>
 </div>
 
+<div id="viewer" role="dialog" aria-label="提案書">
+  <div class="bar"><span class="t" id="viewerTitle"></span><span style="display:flex; gap:8px; flex-shrink:0;"><button id="viewerOpen" type="button">別タブで開く</button><button id="viewerClose" type="button">閉じる</button></span></div>
+  <div class="msg" id="viewerMsg">読み込み中…</div>
+  <iframe id="viewerFrame" title="提案書（氏名なし）"></iframe>
+</div>
+
 <div class="wrap">
   <div class="card">
-    <p class="note">社内で提出された改善提案の内容を部署ごとに閲覧できます（提案者名は表示されません）。</p>
+    <p class="note">社内で提出された改善提案の内容を部署ごとに閲覧できます（提案者名は表示されません）。アプリで登録された提案は、氏名を消した提案書そのものも見られます。</p>
     <div class="controls">
       <select id="periodSelect" aria-label="評価期間"></select>
       <input id="search" type="text" placeholder="改善内容・部署で検索">
@@ -130,14 +144,39 @@ function render(){
   // 本文（現状・改善案・効果）があれば「詳細を見る」で開ける。アプリで登録した提案のみ本文あり
   body.innerHTML = rows.map(r => `<tr>
       <td class="date">${esc(r.date)}</td><td class="dept">${esc(r.dept)}</td>
-      <td>${esc(r.title)}${r.detail ? `<br><button class="more" type="button">詳細を見る</button><div class="detail">${esc(r.detail)}</div>` : ''}</td>
+      <td>${esc(r.title)}${(r.detail || r.pubId) ? '<br>' : ''}${r.detail ? `<button class="more" type="button">詳細を見る</button>` : ''}${r.pubId ? `<button class="more pdf" type="button" data-pub="${esc(r.pubId)}" data-title="${esc(r.title)}">提案書を見る（氏名なし）</button>` : ''}${r.detail ? `<div class="detail">${esc(r.detail)}</div>` : ''}</td>
     </tr>`).join('');
 }
 document.getElementById('body').addEventListener('click', e => {
+  const pdfBtn = e.target.closest('.more.pdf');
+  if(pdfBtn){ openPdf(pdfBtn.dataset.pub, pdfBtn.dataset.title); return; }
   const btn = e.target.closest('.more'); if(!btn) return;
   const tr = btn.closest('tr'); tr.classList.toggle('open');
   btn.textContent = tr.classList.contains('open') ? '閉じる' : '詳細を見る';
 });
+
+// 公開用PDF（サーバー側で氏名を消して出力したもの）をモーダルで表示。原本PDFは一切取得しない
+let _blobUrl = '';
+async function openPdf(pubId, title){
+  const v = document.getElementById('viewer');
+  v.classList.add('on');
+  document.getElementById('viewerTitle').textContent = title || '';
+  const frame = document.getElementById('viewerFrame'), msg = document.getElementById('viewerMsg');
+  frame.style.display = 'none'; msg.style.display = 'block'; msg.textContent = '読み込み中…';
+  try{
+    const json = await fetchJson({ action:'getPublicPdf', pubId });
+    if(!json.ok) throw new Error(json.error || '取得失敗');
+    const bin = atob(json.result.base64), bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    if(_blobUrl) URL.revokeObjectURL(_blobUrl);
+    _blobUrl = URL.createObjectURL(new Blob([bytes], { type:'application/pdf' }));
+    frame.src = _blobUrl; frame.style.display = 'block'; msg.style.display = 'none';
+    document.getElementById('viewerOpen').onclick = () => window.open(_blobUrl, '_blank');
+  }catch(e){ msg.textContent = '表示できませんでした（' + e.message + '）'; }
+}
+function closePdf(){ const v=document.getElementById('viewer'); v.classList.remove('on'); document.getElementById('viewerFrame').src='about:blank'; }
+document.getElementById('viewerClose').addEventListener('click', closePdf);
+document.getElementById('viewer').addEventListener('click', e => { if(e.target.id === 'viewer') closePdf(); });
 
 async function load(){
   try{
