@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>みんなの改善提案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#3B6FF0; --navy-deep:#2952CC; --gold-soft:#FFD777;
+    --bg:#F4F8FF; --card:#FFFFFF; --line:#E3EAF9; --ink:#212A3D; --ink-soft:#6B7A99;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Noto Sans JP',sans-serif; -webkit-font-smoothing:antialiased;}
+  .topbar{background:var(--navy); color:#fff; padding:20px 16px;}
+  .topbar .brand{font-family:'Shippori Mincho',serif; font-size:21px; letter-spacing:.04em; max-width:1000px; margin:0 auto;}
+  .topbar .brand span{color:var(--gold-soft); font-size:12px; display:block; font-family:'Noto Sans JP',sans-serif; letter-spacing:.12em; margin-bottom:4px;}
+  .wrap{max-width:1000px; margin:0 auto; padding:16px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(59,111,240,.06);}
+  .note{font-size:12px; color:var(--ink-soft); margin:0 0 12px;}
+  .controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px;}
+  .controls select, .controls input{padding:9px 12px; border:1px solid #d9deea; border-radius:8px; font-size:14px; background:#fff; font-family:inherit;}
+  .controls input{flex:1; min-width:180px;}
+  .count{font-size:13px; color:var(--ink-soft); white-space:nowrap;}
+  .chips{display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 14px;}
+  .chip{border:1px solid var(--line); border-radius:999px; padding:5px 12px; font-size:12px; background:#fff; cursor:pointer; color:var(--ink);}
+  .chip b{color:var(--navy-deep); margin-left:4px;}
+  .chip.on{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .chip.on b{color:var(--gold-soft);}
+  table{width:100%; border-collapse:collapse; font-size:14px;}
+  th{font-size:12px; color:var(--ink-soft); text-align:left; font-weight:600; padding:8px 8px; border-bottom:1px solid var(--line);}
+  td{padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.5;}
+  td.date, td.dept{white-space:nowrap; color:var(--ink-soft); font-size:13px;}
+  .status{text-align:center; color:var(--ink-soft); padding:22px 0;}
+  .status.err{color:#B91C1C;}
+  @media (max-width:560px){
+    th:nth-child(1), td:nth-child(1){display:none;} /* 狭い画面では提出日を省略 */
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span>ナカシマ 総務部</span>みんなの改善提案</div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <p class="note">社内で提出された改善提案の内容を部署ごとに閲覧できます（提案者名は表示されません）。</p>
+    <div class="controls">
+      <select id="periodSelect" aria-label="評価期間"></select>
+      <input id="search" type="text" placeholder="改善内容・部署で検索">
+      <span class="count" id="count"></span>
+    </div>
+    <div class="chips" id="deptChips"></div>
+    <table>
+      <thead><tr><th style="width:110px;">提出日</th><th style="width:120px;">部署</th><th>改善内容</th></tr></thead>
+      <tbody id="body"><tr><td colspan="3" class="status">読み込み中…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw1TzESvQEu_m7qnFtdZq7V_ehRAYFEvE6gKy9TD0fwKxA4VT2ACzo6J72r_OxjtBVQAg/exec';
+
+let all = [];        // サーバーから受け取る匿名データ（提出日・部署・内容・期のみ）
+let deptFilter = ''; // 選択中の部署（空＝全部署）
+
+function currentPeriodLabel(){
+  const d = new Date(), y = d.getFullYear(), m = d.getMonth() + 1;
+  if(m >= 4 && m <= 9) return y + '/5/1～' + y + '/10/31';
+  if(m >= 10)          return y + '/11/1～' + (y + 1) + '/4/30';
+  return (y - 1) + '/11/1～' + y + '/4/30';
+}
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// GASは一過性でHTML(ログイン画面等)を返すことがあるため、JSONでなければ少し待って再試行
+async function fetchJson(payload, tries){
+  tries = tries || 3; let lastErr;
+  for(let i=0;i<tries;i++){
+    try{
+      const res = await fetch(GAS_URL, { method:'POST', body: JSON.stringify(payload) });
+      const text = await res.text();
+      try{ return JSON.parse(text); }catch(e){ lastErr = new Error('サーバーが一時的に応答できませんでした'); }
+    }catch(e){ lastErr = e; }
+    await new Promise(r=>setTimeout(r, 700*(i+1)));
+  }
+  throw lastErr;
+}
+
+function buildPeriodSelect(){
+  const sel = document.getElementById('periodSelect');
+  const periods = [];
+  all.forEach(r => { if(r.period && periods.indexOf(r.period) < 0) periods.push(r.period); });
+  periods.sort((a,b) => new Date(b.split('～')[0]) - new Date(a.split('～')[0])); // 新しい期が上
+  const cur = currentPeriodLabel();
+  if(periods.indexOf(cur) < 0) periods.unshift(cur);
+  sel.innerHTML = '<option value="all">全期間</option>' + periods.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  sel.value = cur;
+}
+
+function render(){
+  const period = document.getElementById('periodSelect').value;
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  let rows = all;
+  if(period !== 'all') rows = rows.filter(r => r.period === period);
+
+  // 部署チップ（期で絞った件数。部署フィルタ適用前の件数を出す）
+  const byDept = {};
+  rows.forEach(r => { const d = r.dept || '（部署なし）'; byDept[d] = (byDept[d] || 0) + 1; });
+  const depts = Object.keys(byDept).sort((a,b) => byDept[b] - byDept[a]);
+  if(deptFilter && depts.indexOf(deptFilter) < 0) deptFilter = '';
+  document.getElementById('deptChips').innerHTML =
+    `<span class="chip ${deptFilter ? '' : 'on'}" data-dept="">全部署<b>${rows.length}</b></span>` +
+    depts.map(d => `<span class="chip ${deptFilter === d ? 'on' : ''}" data-dept="${esc(d)}">${esc(d)}<b>${byDept[d]}</b></span>`).join('');
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => { deptFilter = c.dataset.dept; render(); }));
+
+  if(deptFilter) rows = rows.filter(r => (r.dept || '（部署なし）') === deptFilter);
+  if(q) rows = rows.filter(r => ((r.title || '') + ' ' + (r.dept || '')).toLowerCase().includes(q));
+
+  document.getElementById('count').textContent = `${rows.length}件`;
+  const body = document.getElementById('body');
+  if(!rows.length){ body.innerHTML = '<tr><td colspan="3" class="status">該当する提案がありません</td></tr>'; return; }
+  body.innerHTML = rows.map(r => `<tr><td class="date">${esc(r.date)}</td><td class="dept">${esc(r.dept)}</td><td>${esc(r.title)}</td></tr>`).join('');
+}
+
+async function load(){
+  try{
+    const json = await fetchJson({ action:'getPublicEntries' });
+    if(!json.ok) throw new Error(json.error || '取得失敗');
+    all = json.result || [];
+    buildPeriodSelect();
+    render();
+  }catch(e){
+    document.getElementById('body').innerHTML = `<tr><td colspan="3" class="status err">読み込みに失敗しました（${esc(e.message)}）。時間をおいて再読み込みしてください</td></tr>`;
+  }
+}
+document.getElementById('periodSelect').addEventListener('change', render);
+document.getElementById('search').addEventListener('input', render);
+load();
+</script>
+</body>
+</html>
