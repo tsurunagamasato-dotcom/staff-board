@@ -35,6 +35,9 @@
   th{font-size:12px; color:var(--ink-soft); text-align:left; font-weight:600; padding:8px 8px; border-bottom:1px solid var(--line);}
   td{padding:10px 8px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.5;}
   td.date, td.dept{white-space:nowrap; color:var(--ink-soft); font-size:13px;}
+  .more{display:inline-block; margin-top:6px; font-size:12px; color:var(--navy-deep); background:none; border:1px solid var(--line); border-radius:999px; padding:3px 10px; cursor:pointer; font-family:inherit;}
+  .detail{display:none; margin-top:8px; padding:10px 12px; background:var(--bg); border-radius:8px; font-size:13px; white-space:pre-wrap; line-height:1.6; color:var(--ink);}
+  tr.open .detail{display:block;}
   .status{text-align:center; color:var(--ink-soft); padding:22px 0;}
   .status.err{color:#B91C1C;}
   @media (max-width:560px){
@@ -124,8 +127,17 @@ function render(){
   document.getElementById('count').textContent = `${rows.length}件`;
   const body = document.getElementById('body');
   if(!rows.length){ body.innerHTML = '<tr><td colspan="3" class="status">該当する提案がありません</td></tr>'; return; }
-  body.innerHTML = rows.map(r => `<tr><td class="date">${esc(r.date)}</td><td class="dept">${esc(r.dept)}</td><td>${esc(r.title)}</td></tr>`).join('');
+  // 本文（現状・改善案・効果）があれば「詳細を見る」で開ける。アプリで登録した提案のみ本文あり
+  body.innerHTML = rows.map(r => `<tr>
+      <td class="date">${esc(r.date)}</td><td class="dept">${esc(r.dept)}</td>
+      <td>${esc(r.title)}${r.detail ? `<br><button class="more" type="button">詳細を見る</button><div class="detail">${esc(r.detail)}</div>` : ''}</td>
+    </tr>`).join('');
 }
+document.getElementById('body').addEventListener('click', e => {
+  const btn = e.target.closest('.more'); if(!btn) return;
+  const tr = btn.closest('tr'); tr.classList.toggle('open');
+  btn.textContent = tr.classList.contains('open') ? '閉じる' : '詳細を見る';
+});
 
 async function load(){
   try{
