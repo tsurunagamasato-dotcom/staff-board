@@ -331,11 +331,13 @@ async function syncLunchNG(staff, status, leaveStart, leaveEnd) {
   if (!LUNCH_NG_STATUSES.includes(status)) return;
   const today = new Date();
   const todayStr = fmtDateStr(today);
-  const dates = [];
-  if (status === 'yasumi' && !leaveStart) {
-    const h = today.getHours(), m = today.getMinutes();
-    if (h > 8 || (h === 8 && m >= 45)) return;
-  }
+  // 昼食の締切(8:45)を過ぎたら当日分の発注数は確定済み（弁当は発注済み）。
+  // 締切後に休み等にしても「当日」の昼食は自動キャンセルしない＝注文数を減らさない（昼食アプリの締切仕様と揃える）。
+  // ※未来日の休み予約は締切に関係なくキャンセル対象。旧実装は leaveStart が空の時だけ締切判定していたが、
+  //   登録画面は leaveStart を既定で当日にするため判定が素通りし、締切後でも当日分が消えていた不具合を修正。
+  const h = today.getHours(), m = today.getMinutes();
+  const pastDeadline = (h > 8 || (h === 8 && m >= 45));
+  let dates = [];
   if (leaveStart && leaveEnd) {
     const start = new Date(leaveStart + 'T00:00:00');
     const end   = new Date(leaveEnd   + 'T00:00:00');
@@ -347,6 +349,8 @@ async function syncLunchNG(staff, status, leaveStart, leaveEnd) {
     if (leaveStart && leaveStart > todayStr) return;
     dates.push(todayStr);
   }
+  // 締切後は当日分を除外（未来日は残す）
+  if (pastDeadline) dates = dates.filter(date => date !== todayStr);
   if (dates.length === 0) return;
   const orders = dates.map(date => ({
     action:'saveOrder', date, id:staff.id, name:staff.name, dept:staff.dept, order:'nashi', place:'', proxy:false

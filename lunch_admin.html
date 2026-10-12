@@ -1543,7 +1543,7 @@ async function epopSave() {
     var res = await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({
-        action: 'saveOrder',
+        action: 'saveOrder', admin: true,  // 管理画面＝締切後も変更可
         id: _epop.id, name: _epop.name, dept: _epop.dept,
         date: _epop.date, order: _epop.order,
         place: _epop.place||'honsha', count: 1
@@ -1629,7 +1629,7 @@ async function vpopSave() {
   try {
     var res = await fetch(GAS_URL, {
       method: 'POST', headers: {'Content-Type':'text/plain'},
-      body: JSON.stringify({ action:'saveOrder', id:vid, name:name, dept:'来訪者',
+      body: JSON.stringify({ action:'saveOrder', admin:true, id:vid, name:name, dept:'来訪者',
         date:date, order:_vpop.order, place:_vpop.place||'honsha', count:_vpop.count, orderer:orderer })
     });
     var json = await res.json();
@@ -1649,7 +1649,7 @@ async function vpopDelete() {
     // 削除はnashi(0名)で上書き → 集計・表示から除外される
     var res = await fetch(GAS_URL, {
       method: 'POST', headers: {'Content-Type':'text/plain'},
-      body: JSON.stringify({ action:'saveOrder', id:_vpop.id, name:_vpop.name||'来訪者', dept:'来訪者',
+      body: JSON.stringify({ action:'saveOrder', admin:true, id:_vpop.id, name:_vpop.name||'来訪者', dept:'来訪者',
         date:date, order:'nashi', place:_vpop.place||'honsha', count:0 })
     });
     var json = await res.json();
