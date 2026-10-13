@@ -91,7 +91,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI'
 .timeline-table{width:100%;border-collapse:collapse;font-size:11px}
 .timeline-table th{background:var(--surface2);color:var(--text);font-weight:700;padding:7px 4px;text-align:center;border-right:1px solid var(--border);white-space:nowrap}
 .timeline-table td{padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:top}
-.timeline-table td.room-name-cell{text-align:left;font-weight:600;background:var(--surface2);min-width:80px;position:sticky;left:0;z-index:10;padding:6px 8px;white-space:nowrap}
+.timeline-table td.room-name-cell{text-align:left;font-weight:600;background:var(--surface2);width:96px;min-width:96px;max-width:96px;position:sticky;left:0;z-index:10;padding:6px 8px;white-space:normal;word-break:break-word;line-height:1.25;font-size:11px}
 .timeline-table td.free{background:rgba(29,158,117,.12)}
 .timeline-table td.busy{background:rgba(226,75,74,.12)}
 .tl-cell-inner{padding:4px;min-height:32px;display:flex;flex-direction:column;gap:2px}
@@ -267,11 +267,17 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbx2eL3PXJGj3TTWwUdckqc1
 const ROOMS = [
   { name:'本社会議室',  short:'本社会議室' },
   { name:'本社3F食堂',  short:'本社３F' },
-  { name:'旧購買事務所', short:'旧購買' },
+  { name:'旧購買事務所', short:'本社第2会議室（旧購買）', label:'本社第2会議室（旧購買）' },  // nameは連携キーのため不変。表示のみ改称
   { name:'旧組付詰所',  short:'旧組付' },
   { name:'根崎2F食堂',  short:'根崎２F' },
 ];
 const ROOM_NAMES = ROOMS.map(r => r.name);
+// 予約データ上の会議室名(name=連携キー)を、利用者向けの表示名に変換する。
+// labelが設定された部屋だけ改称表示し、それ以外は元の名称のまま返す。
+function roomDisplayName(name) {
+  const r = ROOMS.find(x => x.name === name);
+  return (r && r.label) || name;
+}
 const DEPTS = ['社長','役員','総務部','営業部','設計課','電気課','購買課','加工課','組付課','第一製造部'];
 
 let currentMonth = new Date();
@@ -338,7 +344,7 @@ function renderCalendar() {
         ? `${r.start} ${r.purpose||r.name}`
         : `${r.start} ${ROOMS.find(x=>x.name===r.room)?.short||r.room}`;
       item.textContent = (isOutlook ? '📧 ' : '') + label;
-      item.title = (isOutlook ? '[Outlook経由の予約] ' : '') + `${r.room} ${r.start}〜${r.end} ${r.name}「${r.purpose}」`;
+      item.title = (isOutlook ? '[Outlook経由の予約] ' : '') + `${roomDisplayName(r.room)} ${r.start}〜${r.end} ${r.name}「${r.purpose}」`;
       item.onclick=(e)=>{e.stopPropagation();showDetail(r.id);};
       cell.appendChild(item);
     });
@@ -399,7 +405,7 @@ function renderTimeline() {
           block.className=`tl-rsv-block time-${getTimeOfDay(r.start)}`;
           const isOutlook = r.id.startsWith('OL-');
           block.textContent = (isOutlook ? '📧 ' : '') + (r.purpose || r.name);
-          block.title = (isOutlook ? '[Outlook経由の予約] ' : '') + `${r.room} ${r.start}〜${r.end} ${r.dept} ${r.name}「${r.purpose}」`;
+          block.title = (isOutlook ? '[Outlook経由の予約] ' : '') + `${roomDisplayName(r.room)} ${r.start}〜${r.end} ${r.dept} ${r.name}「${r.purpose}」`;
           block.onclick=()=>showDetail(r.id);
           inner.appendChild(block);
         });
@@ -531,7 +537,7 @@ function showDetail(id) {
   const isOutlook = detailRsv.id.startsWith('OL-');
   document.getElementById('detailContent').innerHTML=`
     ${isOutlook ? '<div style="font-size:11px;color:#9090b0;background:rgba(255,255,255,.05);border-radius:8px;padding:7px 10px;margin-bottom:10px">📧 Outlook経由の予約です。取消はOutlookから行ってください。</div>' : ''}
-    <div class="detail-item"><span class="detail-label">会議室</span><span class="detail-value">${detailRsv.room}</span></div>
+    <div class="detail-item"><span class="detail-label">会議室</span><span class="detail-value">${roomDisplayName(detailRsv.room)}</span></div>
     <div class="detail-item"><span class="detail-label">日付</span><span class="detail-value">${detailRsv.date}</span></div>
     <div class="detail-item"><span class="detail-label">時間</span><span class="detail-value">${detailRsv.start}〜${detailRsv.end}</span></div>
     <div class="detail-item"><span class="detail-label">部署</span><span class="detail-value">${detailRsv.dept}</span></div>
@@ -574,7 +580,7 @@ async function loadRoomInfo(){
 function setupRoomSelect(){
   const sel=document.getElementById('roomSelect');
   sel.innerHTML='<option value="">選択してください</option>';
-  ROOMS.forEach(r=>{ const o=document.createElement('option'); o.value=r.name; o.textContent=r.name; sel.appendChild(o); });
+  ROOMS.forEach(r=>{ const o=document.createElement('option'); o.value=r.name; o.textContent=r.label||r.name; sel.appendChild(o); });
 }
 function setupDeptSelect(){
   const sel=document.getElementById('deptSelect');
