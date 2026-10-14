@@ -909,7 +909,7 @@ registerBtn.addEventListener('click', async ()=>{
           const up = await fetch(CONFIG.GAS_URL, {
             method:'POST',
             // proposerName: GAS側で氏名セルを消した「公開用PDF」も同時に作る（従業員向け閲覧ページ用）
-            body: JSON.stringify({ action:'uploadBox', filename: entry.filename, base64pdf: entry.fileBase64, submittedDate: entry.date, proposerName: entry.name })
+            body: JSON.stringify({ action:'uploadBox', filename: entry.filename, base64pdf: entry.fileBase64, submittedDate: entry.date, proposerName: entry.name, dept: entry.empDept || entry.dept }) // dept: Boxの「期／部署」フォルダへ自動保存
           });
           const upj = await up.json();
           if(upj.ok && upj.result){
@@ -1117,6 +1117,10 @@ async function saveEditModal(){
   try{
     const json = await gasFetchJson({ action:'updateEntry', no: rec.no, row: _editingRow, fields }); // 行番号で特定（Noは重複）。同値再送しても安全なのでリトライ可
     if(!json.ok) throw new Error(json.error || '更新失敗');
+    // 部署・提出日の変更でBoxファイルを移動できなかった場合だけ知らせる（台帳の修正自体は完了している）
+    const mv = (json.result && json.result.boxMove) || '';
+    if(/エラー|失敗/.test(mv)) alert('台帳は修正しました。ただしBoxのPDFを新しいフォルダへ移動できませんでした：
+' + mv);
     closeEditModal();
     await loadRecentEntries(); // 一覧を最新化
     const sel = document.getElementById('periodSelect');
