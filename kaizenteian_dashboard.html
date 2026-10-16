@@ -1119,8 +1119,7 @@ async function saveEditModal(){
     if(!json.ok) throw new Error(json.error || '更新失敗');
     // 部署・提出日の変更でBoxファイルを移動できなかった場合だけ知らせる（台帳の修正自体は完了している）
     const mv = (json.result && json.result.boxMove) || '';
-    if(/エラー|失敗/.test(mv)) alert('台帳は修正しました。ただしBoxのPDFを新しいフォルダへ移動できませんでした：
-' + mv);
+    if(/エラー|失敗/.test(mv)) alert('台帳は修正しました。ただしBoxのPDFを新しいフォルダへ移動できませんでした：\n' + mv);
     closeEditModal();
     await loadRecentEntries(); // 一覧を最新化
     const sel = document.getElementById('periodSelect');
