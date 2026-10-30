@@ -334,8 +334,25 @@
         <div class="settings-label">対象月</div>
         <input type="month" class="settings-input" id="tenbiikiMonth" onchange="renderMondayPriceTable()">
       </div>
+      <div class="settings-row" style="margin-top:10px;">
+        <div class="settings-label">火〜金の弁当代</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:14px;font-weight:700;">¥</span>
+          <input type="number" class="settings-input" id="weekdayPriceInput" style="width:90px;" min="0" step="10" value="450">
+          <button class="icon-btn primary" onclick="saveWeekdayPrice()">保存</button>
+        </div>
+      </div>
+      <div class="settings-row" style="margin-top:8px;">
+        <div class="settings-label">月曜の弁当代（通常）</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:14px;font-weight:700;">¥</span>
+          <input type="number" class="settings-input" id="mondayPriceInput" style="width:90px;" min="0" step="10" value="600">
+          <button class="icon-btn primary" onclick="saveMondayBasePrice()">保存</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:4px;">※火〜金・月曜（通常）の金額はここで変更。月曜の割引日（下）は火〜金と同額になります。期の途中で金額が変わる場合は、変更後の金額で保存し、該当日は総務で調整してください。</div>
       <div id="mondayPriceSection" class="hidden" style="margin-top:14px;">
-        <div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">月曜日の価格設定（まれに¥450になる日を変更）</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">月曜日の価格設定（まれに<span class="wp-label">¥450</span>になる日を変更）</div>
         <div id="mondayPriceTable" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
       </div>
       <button class="icon-btn primary" onclick="exportTenbiikiCSV()" style="margin-top:8px;">📥 天引き表をCSV出力</button>
@@ -344,9 +361,9 @@
     <div class="settings-card" style="margin-top:12px;">
       <div class="settings-title" style="font-size:13px;">出力列の説明</div>
       <div style="font-size:12px;color:var(--text-sub);line-height:1.8;">
-        <div>・<b>月曜日数</b>：¥600の月曜日に注文した日数</div>
-        <div>・<b>¥450日数</b>：火〜金 + ¥450変更月曜に注文した日数</div>
-        <div>・<b>合計（補助前）</b>：月曜数×600 + ¥450日数×450</div>
+        <div>・<b>月曜日数</b>：<span class="mp-label">¥600</span>の月曜日に注文した日数</div>
+        <div>・<b><span class="wp-label">¥450</span>日数</b>：火〜金 + 割引月曜に注文した日数</div>
+        <div>・<b>合計（補助前）</b>：月曜数×<span class="mp-num">600</span> + <span class="wp-label">¥450</span>日数×<span class="wp-num">450</span></div>
         <div>・<b>補助額</b>：¥3,500を上限に補助（合計が¥3,500未満なら全額）</div>
         <div>・<b>実際天引き額</b>：合計−補助額（合計が¥3,500以下なら¥0）</div>
       </div>
@@ -498,11 +515,16 @@ async function init() {
     const deadlineRaw = json.settings.deadline || '08:30';
     document.getElementById('deadlineInput').value = normalizeDeadline(deadlineRaw);
     if (json.settings.visitor_password != null) document.getElementById('visitorPasswordInput').value = String(json.settings.visitor_password);
+    if (json.settings.weekday_price != null) weekdayPrice = Number(json.settings.weekday_price) || 450;
+    if (json.settings.monday_price != null) mondayPrice = Number(json.settings.monday_price) || 600;
+    const wpInput = document.getElementById('weekdayPriceInput'); if (wpInput) wpInput.value = weekdayPrice;
+    const mpInput = document.getElementById('mondayPriceInput'); if (mpInput) mpInput.value = mondayPrice;
+    updatePriceLabels();
     if (json.settings.lunch_holidays) { try { holidaySet = new Set(JSON.parse(json.settings.lunch_holidays)); } catch(e) {} }
     renderHolidayCalendar();
     Object.keys(json.settings).forEach(k => {
       if (k.startsWith('ng_') && (json.settings[k] === true || json.settings[k] === 'TRUE' || json.settings[k] === 'true')) permanentNG[k.replace('ng_','')] = true;
-      if (k.startsWith('mon_price_')) mondayPrices[k.replace('mon_price_','')] = Number(json.settings[k]) || 600;
+      if (k.startsWith('mon_price_')) mondayPrices[k.replace('mon_price_','')] = Number(json.settings[k]) || mondayPrice;
     });
     renderNGTable();
   }
@@ -1322,7 +1344,9 @@ async function deleteTopic() {
 }
 
 // ===== 天引き表 =====
-let mondayPrices = {}; // 'YYYY-MM-DD' → 600 or 450
+let mondayPrices = {}; // 'YYYY-MM-DD' → 600 or 火〜金価格（割引月曜）
+let weekdayPrice = 450; // 火〜金の弁当代（管理画面で編集可。設定キー weekday_price）
+let mondayPrice = 600;  // 月曜の弁当代（通常）（管理画面で編集可。設定キー monday_price）
 
 function fmtDateLocal(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -1347,13 +1371,14 @@ function getMondaysInPeriod(start, end) {
   return mondays;
 }
 
-function initTenbiikiTab() {
+async function initTenbiikiTab() {
   const m = document.getElementById('tenbiikiMonth').value;
   if (!m) {
     const today = new Date();
     document.getElementById('tenbiikiMonth').value =
       today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
   }
+  await refreshPriceSettings();  // 最新の保存価格を取得（他の人が変更していても確実に反映）
   renderMondayPriceTable();
 }
 
@@ -1367,15 +1392,75 @@ function renderMondayPriceTable() {
   document.getElementById('mondayPriceSection').classList.remove('hidden');
   document.getElementById('mondayPriceTable').innerHTML = mondays.map(d => {
     const ds = fmtDateLocal(d);
-    const price = mondayPrices[ds] || 600;
+    const price = mondayPrices[ds] || mondayPrice;
     return `<div style="border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface);min-width:140px;">
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;">${(d.getMonth()+1)}/${d.getDate()}（${days[d.getDay()]}）</div>
       <div style="display:flex;gap:6px;">
-        <button onclick="setMondayPrice('${ds}',600)" style="flex:1;padding:5px;border-radius:7px;border:1.5px solid ${price===600?'var(--green)':'var(--border)'};background:${price===600?'var(--green-bg)':'#fff'};color:${price===600?'var(--green-fg)':'var(--text-sub)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">¥600</button>
-        <button onclick="setMondayPrice('${ds}',450)" style="flex:1;padding:5px;border-radius:7px;border:1.5px solid ${price===450?'var(--orange)':'var(--border)'};background:${price===450?'var(--orange-bg)':'#fff'};color:${price===450?'var(--orange-fg)':'var(--text-sub)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">¥450</button>
+        <button onclick="setMondayPrice('${ds}',${mondayPrice})" style="flex:1;padding:5px;border-radius:7px;border:1.5px solid ${price===mondayPrice?'var(--green)':'var(--border)'};background:${price===mondayPrice?'var(--green-bg)':'#fff'};color:${price===mondayPrice?'var(--green-fg)':'var(--text-sub)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">¥${mondayPrice}</button>
+        <button onclick="setMondayPrice('${ds}',${weekdayPrice})" style="flex:1;padding:5px;border-radius:7px;border:1.5px solid ${price!==mondayPrice?'var(--orange)':'var(--border)'};background:${price!==mondayPrice?'var(--orange-bg)':'#fff'};color:${price!==mondayPrice?'var(--orange-fg)':'var(--text-sub)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">¥${weekdayPrice}</button>
       </div>
     </div>`;
   }).join('');
+}
+
+// 最新の保存価格をサーバから取り直す（複数人運用で、他の人の変更を確実に反映するため）。
+// 天引きタブを開いた時・CSV出力の直前に呼ぶ。失敗時は現在値を維持。
+async function refreshPriceSettings() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getSettings&t=' + Date.now());
+    const json = await res.json();
+    if (json.ok && json.settings) {
+      const s = json.settings;
+      if (s.weekday_price != null) weekdayPrice = Number(s.weekday_price) || weekdayPrice;
+      if (s.monday_price  != null) mondayPrice  = Number(s.monday_price)  || mondayPrice;
+      Object.keys(s).forEach(k => { if (k.startsWith('mon_price_')) mondayPrices[k.replace('mon_price_','')] = Number(s[k]) || mondayPrice; });
+    }
+  } catch(e) {}
+  const wpInput = document.getElementById('weekdayPriceInput'); if (wpInput) wpInput.value = weekdayPrice;
+  const mpInput = document.getElementById('mondayPriceInput'); if (mpInput) mpInput.value = mondayPrice;
+  updatePriceLabels();
+}
+
+// 画面内の価格ラベル（火〜金=wp / 月曜通常=mp）を現在値に合わせて更新
+function updatePriceLabels() {
+  document.querySelectorAll('.wp-label').forEach(el => el.textContent = '¥' + weekdayPrice);
+  document.querySelectorAll('.wp-num').forEach(el => el.textContent = String(weekdayPrice));
+  document.querySelectorAll('.mp-label').forEach(el => el.textContent = '¥' + mondayPrice);
+  document.querySelectorAll('.mp-num').forEach(el => el.textContent = String(mondayPrice));
+}
+
+async function saveWeekdayPrice() {
+  const v = parseInt(document.getElementById('weekdayPriceInput').value, 10);
+  if (!v || v <= 0) { showToast('正しい金額を入力してください'); return; }
+  weekdayPrice = v;
+  updatePriceLabels();
+  renderMondayPriceTable();  // 月曜の割引ボタン表示も更新
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST', headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({ action: 'saveSettings', key: 'weekday_price', value: String(v) })
+    });
+    const json = await res.json();
+    if (json.ok) showToast('火〜金の弁当代を¥' + v + 'に変更しました');
+    else showToast('保存に失敗しました');
+  } catch(e) { showToast('保存に失敗しました'); }
+}
+
+async function saveMondayBasePrice() {
+  const v = parseInt(document.getElementById('mondayPriceInput').value, 10);
+  if (!v || v <= 0) { showToast('正しい金額を入力してください'); return; }
+  mondayPrice = v;
+  updatePriceLabels();
+  renderMondayPriceTable();  // 月曜の通常ボタン表示も更新
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST', headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({ action: 'saveSettings', key: 'monday_price', value: String(v) })
+    });
+    const json = await res.json();
+    if (json.ok) showToast('月曜（通常）の弁当代を¥' + v + 'に変更しました');
+    else showToast('保存に失敗しました');
+  } catch(e) { showToast('保存に失敗しました'); }
 }
 
 async function setMondayPrice(dateStr, price) {
@@ -1403,6 +1488,9 @@ async function exportTenbiikiCSV() {
   const statusEl = document.getElementById('tenbiikiStatus');
   statusEl.textContent = 'データ取得中...';
 
+  // 出力直前に最新の保存価格を取り直す（複数人運用で、古い画面のまま旧価格で計算するのを防ぐ）
+  await refreshPriceSettings();
+
   // 期間全注文を1回で取得
   let allOrders = [];
   try {
@@ -1427,7 +1515,7 @@ async function exportTenbiikiCSV() {
   rows.push([`お弁当天引き表`]);
   rows.push([`${y}年${mo}月度`, '', `${startStr}〜${endStr}`]);
   rows.push([]);
-  rows.push(['', '社員番号', '氏名', '月曜日数(¥600)', '¥450日数', '合計（補助前）', '補助額', '実際天引き額']);
+  rows.push(['', '社員番号', '氏名', `月曜日数(¥${mondayPrice})`, `¥${weekdayPrice}日数`, '合計（補助前）', '補助額', '実際天引き額']);
 
   const activeStaff = ALL_STAFF.filter(s => s.active !== '退職');
 
@@ -1445,12 +1533,12 @@ async function exportTenbiikiCSV() {
           const ordered = rec && rec.order !== 'nashi' && rec.order;
           if (ordered) {
             if (dow === 1) { // 月曜
-              const price = mondayPrices[ds] || 600;
+              const price = mondayPrices[ds] || mondayPrice;
               monAmount += price;
-              if (price === 600) mon600Count++;
+              if (price === mondayPrice) mon600Count++;
               else cheap450Count++;
-            } else {
-              monAmount += 450;
+            } else { // 火〜金
+              monAmount += weekdayPrice;
               cheap450Count++;
             }
           }
