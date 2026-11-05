@@ -125,7 +125,8 @@
      CONTENTS (bookshelf)
      ========================================================= */
   #screen-contents{background:var(--paper); overflow-y:auto;}
-  .contents-wrap{max-width:1100px; margin:0 auto; padding:6vh 6vw 10vh;}
+  .contents-wrap{max-width:1100px; margin:0 auto; padding:6vh clamp(20px,6vw,64px) 10vh;}
+  .title-line{white-space:nowrap; font-size:min(1em, 6vw);}
   .contents-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6vh; flex-wrap:wrap; gap:16px;}
   .brand{display:flex; align-items:center; gap:10px;}
   .brand img{height:22px;}
@@ -191,7 +192,7 @@
   .book.locked .book-title{color:var(--ink); text-shadow:none;}
 
   /* 帯 */
-  .book-status{position:absolute; z-index:1; left:18px; right:0; bottom:22px; height:52px; padding:0 18px;
+  .book-status{position:absolute; z-index:1; left:18px; right:0; bottom:22px; height:52px; padding:0 12px; white-space:nowrap;
     display:flex; align-items:center; justify-content:center; gap:8px;
     font-size:11px; letter-spacing:.18em; font-weight:700;
     background:var(--cream-on-navy); color:var(--brick);
@@ -299,7 +300,7 @@
   /* =========================================================
      GUIDE (目次の案内役 — 連番WebP + Canvas の視線追従)
      ========================================================= */
-  .contents-intro{display:flex; align-items:center; justify-content:space-between; gap:5vw; margin-bottom:7vh;}
+  .contents-intro{display:flex; align-items:center; justify-content:space-between; gap:clamp(20px,4vw,56px); margin-bottom:7vh;}
   .contents-intro .contents-title-block{margin-bottom:0;}
   .guide{flex:none; margin:0 2vw 0 0; display:flex; flex-direction:column; align-items:center; gap:18px;}
   .guide-window{appearance:none; background:none; cursor:pointer; position:relative; width:clamp(120px,15vw,168px); aspect-ratio:1/1; border-radius:50%; border:1px solid rgba(163,129,60,0.55); padding:7px; transition:border-color .3s ease;}
@@ -349,7 +350,7 @@
   .ep-end-btn.waiting{cursor:default; opacity:.7;}
   .ep-end-btn.waiting:hover{background:transparent;}
 
-  /* ---- 第2話の目次：本の表紙と連載の状況 ---- */
+  /* ---- 第2部の目次：本の表紙と連載の状況 ---- */
   .ep2i-hero{display:flex; align-items:center; gap:44px;}
   .ep2i-hero-text{flex:1; min-width:0;}
   .book.ep2i-cover{flex:none; width:178px; min-height:300px; padding:22px 12px 74px 32px; cursor:default;}
@@ -365,7 +366,7 @@
     .ep2i-cover .book-title{font-size:15px; height:156px;}
   }
 
-  /* ---- 第2話の目次：各回のカード ---- */
+  /* ---- 第2部の目次：各回のカード ---- */
   .ep2i-meta{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-top:8px;}
   .ep2i-pub{font-size:11px; letter-spacing:.06em; color:var(--ink); opacity:.55;}
   .ep2i-tag{font-size:10px; font-weight:700; letter-spacing:.12em; padding:2px 9px; border-radius:999px; line-height:1.6;}
@@ -389,7 +390,7 @@
   .door-sub{font-size:15px; line-height:1.9; color:rgba(239,230,210,0.85); max-width:30em; margin:0 auto;}
   .door-date{margin-top:20px; font-size:11px; letter-spacing:.2em; color:var(--gold-soft); opacity:.85;}
 
-  /* ---- 第2話の時期ごとの色 ---- */
+  /* ---- 第2部の時期ごとの色 ---- */
   .ep2i-group{display:flex; align-items:center; gap:12px; margin:18px 0 2px; font-family:'Shippori Mincho B1',serif; font-size:15px; font-weight:700; letter-spacing:.14em; color:var(--stage);}
   .ep2i-group:first-child{margin-top:0;}
   .ep2i-group small{font-family:'Zen Kaku Gothic New',sans-serif; font-size:11px; font-weight:500; letter-spacing:.08em; color:var(--ink); opacity:.55;}
@@ -486,8 +487,8 @@
 
       <div class="contents-intro">
       <div class="contents-title-block">
-        <div class="eyebrow">全4話・シリーズ構成</div>
-        <div class="contents-title serif">昭<span class="wa-accent">和</span>から令<span class="wa-accent">和</span>へ<br>～ ナカシマを創った男の物語 ～</div>
+        <div class="eyebrow">全4部・シリーズ構成</div>
+        <div class="contents-title serif">昭<span class="wa-accent">和</span>から令<span class="wa-accent">和</span>へ<br><span class="title-line">～ ナカシマを創った男の物語 ～</span></div>
         <p class="contents-sub">創業者・会長 中島節雄が語る、生い立ちから創業、そして従業員への言葉まで。<br>50周年に向けて紡ぐ、次の世代への手紙。</p>
       </div>
         <figure class="guide" id="guide">
@@ -502,31 +503,31 @@
       <div class="shelf">
         <div class="book available" id="book1" onclick="openEpisode()">
           <div class="book-spine-edge"></div>
-          <div class="book-num serif">第 1 話</div>
+          <div class="book-num serif">第 1 部</div>
           <div class="book-mid"><div class="book-title serif">少年期</div></div>
           <div class="book-status">公開中・READ NOW</div>
         </div>
         <div class="book available" id="book2" onclick="goTo('ep2index')">
           <div class="book-spine-edge"></div>
-          <div class="book-num serif">第 2 話</div>
+          <div class="book-num serif">第 2 部</div>
           <div class="book-mid"><div class="book-title serif">青年期・社会人期</div></div>
           <div class="book-status">全6回・公開中</div>
         </div>
         <div class="book locked" id="book3">
           <div class="book-spine-edge"></div>
-          <div class="book-num serif">第 3 話</div>
+          <div class="book-num serif">第 3 部</div>
           <div class="book-mid"><div class="book-title serif">社長期</div></div>
           <div class="book-status">近日公開</div>
         </div>
         <div class="book locked" id="book4">
           <div class="book-spine-edge"></div>
-          <div class="book-num serif">第 4 話</div>
+          <div class="book-num serif">第 4 部</div>
           <div class="book-mid"><div class="book-title serif">従業員へ</div></div>
           <div class="book-status">近日公開</div>
         </div>
       </div>
 
-      <div class="foot-note">社内・ポータルサイト向け ／ 会話調、親しみ易さ重視。第2話以降は取材・制作が進み次第、順次公開予定です。</div>
+      <div class="foot-note">社内・ポータルサイト向け ／ 会話調、親しみ易さ重視。第2部以降は取材・制作が進み次第、順次公開予定です。</div>
     </div>
   </section>
 
@@ -537,7 +538,7 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         目次に戻る
       </button>
-      <div class="reader-bar-title">第1話 ｜ 少年期</div>
+      <div class="reader-bar-title">第1部 ｜ 少年期</div>
       <div class="ribbon-track"><div class="ribbon-fill" id="ribbonFill"></div></div>
     </div>
 
@@ -779,8 +780,8 @@
 
         <div class="ep-end">
           <div class="small">NEXT EPISODE</div>
-          <div class="big serif" id="ep1NextText">第2話「青年期・社会人期」<br>全6回・公開中</div>
-          <button class="ep-end-btn" id="ep1NextBtn" onclick="goTo('ep2index')">第2話を読む</button>
+          <div class="big serif" id="ep1NextText">第2部「青年期・社会人期」<br>全6回・公開中</div>
+          <button class="ep-end-btn" id="ep1NextBtn" onclick="goTo('ep2index')">第2部を読む</button>
         </div>
 
       </div>
@@ -801,12 +802,12 @@
       <div class="ep2i-hero">
         <div class="book available ep2i-cover" aria-hidden="true">
           <div class="book-spine-edge"></div>
-          <div class="book-num serif">第 2 話</div>
+          <div class="book-num serif">第 2 部</div>
           <div class="book-mid"><div class="book-title serif">青年期・社会人期</div></div>
           <div class="book-status" id="ep2CoverStatus">全6回・連載中</div>
         </div>
         <div class="ep2i-hero-text">
-        <div class="ep2i-eyebrow">第2話 ・ 全6回の連載</div>
+        <div class="ep2i-eyebrow">第2部 ・ 全6回の連載</div>
         <div class="ep2i-title">青年期・社会人期</div>
         <p class="ep2i-sub">やんちゃな少年が、走ることで負けん気を知り、大企業を半年で飛び出し、町工場で腕を磨く。そして「自分で商売を」という決意へ。創業前夜までの日々を、6つの物語でお届けします。</p>
         <div class="ep2i-status" id="ep2Status"></div>
@@ -822,9 +823,9 @@
     <div class="reader-bar">
       <button class="back-btn" onclick="goTo('ep2index')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        第2話 目次へ
+        第2部 目次へ
       </button>
-      <div class="reader-bar-title" id="ep2ReaderTitle">第2話</div>
+      <div class="reader-bar-title" id="ep2ReaderTitle">第2部</div>
       <div class="ribbon-track"><div class="ribbon-fill" id="ep2RibbonFill"></div></div>
     </div>
     <div class="reader-scroll" id="ep2ReaderScroll">
@@ -837,8 +838,8 @@
 <script>
   // ===== 本文中の写真 =====
   // 写真が届いたらここに追加する。何も登録しなければ何も表示されない。
-  //   ep    : 'ep1'（第1話）または 'ep2'（第2話）
-  //   no    : 第2話の何回目か（第1話のときは不要）
+  //   ep    : 'ep1'（第1部）または 'ep2'（第2部）
+  //   no    : 第2部の何回目か（第1部のときは不要）
   //   after : その話（回）の何番目の「質問と答え」のあとに入れるか（1から数える。0 なら冒頭の最初の質問の前）
   //   src   : 写真（data:image/jpeg;base64,... の形で埋め込む）
   //   year  : 写真の年（例：'昭和34年ごろ'。不要なら空）
@@ -863,7 +864,7 @@
   // 確認用：URLの末尾に ?preview=2026-12-01 を付けると、その日付として表示できる。
   const RELEASE = {
     ep1: '2026-11-11',                              // ナカシマポータル公開日（水）
-    ep2: ['2026-11-18', '2026-11-25', '2026-12-02', '2026-12-09', '2026-12-16', '2026-12-23'],   // 第2話 第1回〜第6回（毎週水曜）
+    ep2: ['2026-11-18', '2026-11-25', '2026-12-02', '2026-12-09', '2026-12-16', '2026-12-23'],   // 第2部 第1回〜第6回（毎週水曜）
     ep3: null,
     ep4: null,
   };
@@ -878,6 +879,7 @@
   const jpDate = (date) => { const d = new Date(+date.slice(0,4), +date.slice(5,7) - 1, +date.slice(8,10)); return `${d.getMonth()+1}月${d.getDate()}日（${WEEK[d.getDay()]}）`; };
   const daysSince = (date) => Math.round((new Date(TODAY) - new Date(date)) / 86400000);
   const dateLabel = (date) => date ? `${jpDate(date)} 公開予定` : '近日公開';
+  const shelfLabel = (date) => date ? `${jpDate(date)} 公開` : '近日公開';   // 本の帯は短く
   const nextDate = (dates) => dates.filter(d => d && !isOpen(d)).sort()[0] || null;   // 未公開の回で一番早い公開日
 
   const EP2_DATA = [
@@ -1106,7 +1108,7 @@
     "title": "社会人期 ・ 後編",
     "subtitle": "怪物の社長と、“産む喜び”",
     "recap": "小さな会社で一気通貫のものづくりを学び、仕事も遊びも全力だった日々。基本を、その手に叩き込んでいった。",
-    "preview": "次回、第6回「買えたときが一番安い」。結婚、そして家族。裸一貫からの創業へ──いよいよ、節雄が自分の道を歩み出す。第2話、完結。",
+    "preview": "次回、第6回「買えたときが一番安い」。結婚、そして家族。裸一貫からの創業へ──いよいよ、節雄が自分の道を歩み出す。第2部、完結。",
     "sections": [
       {
         "heading": "〜 反面教師だった、怪物のような社長 〜",
@@ -1155,7 +1157,7 @@
     "title": "結婚 ・ 独立への決意",
     "subtitle": "縁と覚悟、そして「買えたときが一番安い」",
     "recap": "「俺らはプラモデルを作っとるんじゃない」。苦労の先にある“産む喜び”を知り、人としての在り方も学んだ。一度は独立を見送った節雄だったが──",
-    "preview": "第2話、完結。次章・第3話「社長期」へ。裸一貫で立ち上げた会社は、これからどんな道を歩むのか──",
+    "preview": "第2部、完結。次章・第3部「社長期」へ。裸一貫で立ち上げた会社は、これからどんな道を歩むのか──",
     "sections": [
       {
         "heading": "〜 四度目の電話で決まった縁 〜",
@@ -1228,7 +1230,7 @@
   }
   document.getElementById('readerScroll').addEventListener('scroll', updateRibbon);
 
-  // ---- 第2話の時期（色分け） ----
+  // ---- 第2部の時期（色分け） ----
   const STAGES = [
     { name: '青年期',     nos: [1, 2],    color: '#5e7a3c' },   // 萌黄
     { name: '社会人期',   nos: [3, 4, 5], color: '#2f5573' },   // 藍
@@ -1284,7 +1286,7 @@
     }
   }
 
-  // 本棚と第1話の最後の案内を、公開状況に合わせる
+  // 本棚と第1部の最後の案内を、公開状況に合わせる
   function setBook(id, open, status, onclick){
     const b = document.getElementById(id);
     b.classList.toggle('available', open);
@@ -1294,17 +1296,17 @@
   }
   function applyRelease(){
     const ep1 = isOpen(RELEASE.ep1);
-    setBook('book1', ep1, ep1 ? '公開中・READ NOW' : dateLabel(RELEASE.ep1), openEpisode);
+    setBook('book1', ep1, ep1 ? '公開中・READ NOW' : shelfLabel(RELEASE.ep1), openEpisode);
 
     const opened = RELEASE.ep2.map((d, i) => isOpen(d) ? i + 1 : 0).filter(Boolean);
     const last = opened.length ? Math.max(...opened) : 0;
-    const s2 = opened.length === 6 ? '全6回・公開中' : last ? `全6回・第${last}回まで公開中` : dateLabel(nextDate(RELEASE.ep2));
+    const s2 = opened.length === 6 ? '全6回・公開中' : last ? `全6回・第${last}回まで公開中` : shelfLabel(nextDate(RELEASE.ep2));
     setBook('book2', last > 0, s2, () => goTo('ep2index'));
-    document.getElementById('ep1NextText').innerHTML = `第2話「青年期・社会人期」<br>${s2}`;
-    document.getElementById('ep1NextBtn').textContent = last ? '第2話を読む' : '第2話の公開予定を見る';
+    document.getElementById('ep1NextText').innerHTML = `第2部「青年期・社会人期」<br>${s2}`;
+    document.getElementById('ep1NextBtn').textContent = last ? '第2部を読む' : '第2部の公開予定を見る';
 
-    // 第3話・第4話は原稿ができるまで常に「近日公開」（公開日が決まっていれば日付を出す）
-    ['ep3', 'ep4'].forEach((k, i) => setBook('book' + (i + 3), false, isOpen(RELEASE[k]) ? '近日公開' : dateLabel(RELEASE[k]), null));
+    // 第3部・第4部は原稿ができるまで常に「近日公開」（公開日が決まっていれば日付を出す）
+    ['ep3', 'ep4'].forEach((k, i) => setBook('book' + (i + 3), false, isOpen(RELEASE[k]) ? '近日公開' : shelfLabel(RELEASE[k]), null));
   }
   applyRelease();
   buildEp2List();
@@ -1317,10 +1319,10 @@
     if(!ep || !isOpen(RELEASE.ep2[no-1])) return;
     markRead(no);
     buildEp2List();
-    document.getElementById('ep2ReaderTitle').textContent = `第2話 第${no}回 ｜ ${ep.title}`;
+    document.getElementById('ep2ReaderTitle').textContent = `第2部 第${no}回 ｜ ${ep.title}`;
     let html = '';
     html += `<div class="ep2-door">
-      <div class="door-series">第2話 ・ 青年期・社会人期</div>
+      <div class="door-series">第2部 ・ 青年期・社会人期</div>
       <div class="door-no">第${KANJI[no]}回<small>／全6回</small></div>
       <div class="door-title">${ep.title}</div>
       ${stageOf(no) ? `<div class="door-stage" style="--stage:${stageOf(no).color}">${stageOf(no).name}</div>` : ''}
@@ -1369,7 +1371,7 @@
       } else {
         html += `<button class="ep-end-btn" onclick="goTo('contents')" style="background:rgba(199,163,95,0.16);">目次に戻る</button>`;
       }
-      html += `<button class="ep-end-btn" onclick="goTo('ep2index')" style="border-color:rgba(199,163,95,0.35);">第2話の目次へ</button>`;
+      html += `<button class="ep-end-btn" onclick="goTo('ep2index')" style="border-color:rgba(199,163,95,0.35);">第2部の目次へ</button>`;
       html += `</div></div>`;
     }
 
