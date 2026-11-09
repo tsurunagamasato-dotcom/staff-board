@@ -85,6 +85,8 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
 .mtendbtn{background:#dc2626;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
 .mtendbtn:hover{opacity:.85}
 .agempty{padding:8px 12px 10px;font-size:12px;color:#b45309;opacity:.6}
+.aggrp{font-size:10px;font-weight:800;color:#92400e;padding:5px 8px 2px;letter-spacing:.03em}
+.aggrp-auto{color:#b45309;opacity:.85;border-top:1px dashed rgba(180,83,9,.3);margin-top:3px}
 
 /* フィルタバー */
 #leftTop{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-shrink:0;background:var(--surface2);flex-wrap:wrap}
@@ -445,7 +447,10 @@ body{font-family:"Hiragino Sans","Meiryo",sans-serif;font-size:14px;background:#
           </div>
           <!-- 登録済みタスク -->
           <div class="card" id="extCard">
-            <div class="clbl">📌 登録済みタスク <span style="font-weight:400;font-size:10px;color:var(--sub)">クリックでそのタスクの議事録入力</span></div>
+            <div class="clbl" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span>📌 登録済みタスク <span style="font-weight:400;font-size:10px;color:var(--sub)">クリックで議事録入力</span></span>
+              <button class="btn btn-a btn-sm" onclick="openAdd(selId)" style="margin-left:auto">＋ タスク追加</button>
+            </div>
             <div id="extList"></div>
           </div>
         </div>
@@ -797,15 +802,15 @@ function renderExt(id){
 
 // ===== アジェンダ（スプレッドシートで全員共有） =====
 function computeAgenda(){
-  agenda = new Set(items.filter(it=>String(it.agenda||'')==='1').map(it=>it.item_id));
+  agenda = new Set(items.filter(it=>{const v=String(it.agenda||'');return v==='1'||v==='2';}).map(it=>it.item_id));
 }
 // タスク保存時に親項目を自動でアジェンダへ追加
 function addItemToAgenda(itemId){
   if(!itemId || agenda.has(itemId)) return;
   const it=items.find(i=>i.item_id===itemId);
   if(!it) return;
-  it.agenda='1'; agenda.add(itemId); saveAll();
-  gp('updateItem',{item_id:itemId, agenda:'1'});
+  it.agenda='2'; agenda.add(itemId); saveAll();   // '2' = MT中に自動追加
+  gp('updateItem',{item_id:itemId, agenda:'2'});
   renderAgenda();
 }
 // ===== 変更検知（前回保存/確認時との相違） =====
@@ -845,11 +850,13 @@ function toggleAg(id){
   renderLeft(); renderAgenda();
 }
 function renderAgenda(){
-  const cnt=agenda.size;
+  const today=td();
+  const manual=items.filter(it=>String(it.agenda||'')==='1');
+  const auto  =items.filter(it=>String(it.agenda||'')==='2');
+  const cnt=manual.length+auto.length;
   document.getElementById('agCnt').textContent=cnt;
   if(!cnt){ document.getElementById('agList').innerHTML='<div class="agempty">📌 改善項目の左端をクリックで追加<\/div>'; return; }
-  const today=td();
-  document.getElementById('agList').innerHTML=items.filter(it=>agenda.has(it.item_id)).map(item=>{
+  const row=(item)=>{
     const at=tasks.filter(t=>t.item_id===item.item_id);
     const pend=at.filter(t=>t.status==='未着手'||t.status==='実行中').length;
     const ov=at.filter(t=>t.yotei_date&&t.yotei_date<today&&t.status!=='完了'&&t.status!=='完了(継続)').length;
@@ -860,7 +867,11 @@ function renderAgenda(){
       ${pend?`<span style="font-size:10px;color:var(--sub)">${pend}件<\/span>`:''}
       <span class="agdept">${item.dept}<\/span>
     <\/div>`;
-  }).join('');
+  };
+  let html='';
+  if(manual.length){ html+=`<div class="aggrp">📌 事前アジェンダ（${manual.length}）<\/div>`+manual.map(row).join(''); }
+  if(auto.length){ html+=`<div class="aggrp aggrp-auto">🔔 MT中に追加・更新（${auto.length}）<\/div>`+auto.map(row).join(''); }
+  document.getElementById('agList').innerHTML=html;
 }
 function toggleAgPane(){
   const b=document.getElementById('agendaBody'), a=document.getElementById('agarr');
