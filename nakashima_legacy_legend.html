@@ -130,6 +130,7 @@
   .viewer-count{margin-top:18px; display:inline-flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.12em; color:var(--brick); border:1px solid rgba(138,54,38,0.3); border-radius:999px; padding:6px 16px 6px 13px;}
   .viewer-count[hidden]{display:none;}
   .viewer-count b{font-family:'Shippori Mincho B1',serif; font-size:17px; letter-spacing:.04em; margin:0 2px;}
+  .viewer-count .vc-sep{opacity:.45; margin:0 4px;}
   .contents-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6vh; flex-wrap:wrap; gap:16px;}
   .brand{display:flex; align-items:center; gap:10px;}
   .brand img{height:22px;}
@@ -493,7 +494,7 @@
         <div class="eyebrow">全4部・シリーズ構成</div>
         <div class="contents-title serif">昭<span class="wa-accent">和</span>から令<span class="wa-accent">和</span>へ<br><span class="title-line">～ ナカシマを創った男の物語 ～</span></div>
         <p class="contents-sub">創業者・会長 中島節雄が語る、生い立ちから創業、そして従業員への言葉まで。<br>50周年に向けて紡ぐ、次の世代への手紙。</p>
-        <div class="viewer-count" id="viewerCount" hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>閲覧者<b>0</b>人</div>
+        <div class="viewer-count" id="viewerCount" hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>今日<b id="viewToday">0</b>人<span class="vc-sep">／</span>延べ<b id="viewTotal">0</b>人</div>
       </div>
         <figure class="guide" id="guide">
           <button type="button" class="guide-window" id="guideSwap" aria-label="案内役を交代する"><canvas id="guideCanvas" width="320" height="320" role="img" aria-label="案内役"></canvas></button>
@@ -853,9 +854,14 @@
       id = localStorage.getItem('legacy-legend-vid') || '';
       if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); localStorage.setItem('legacy-legend-vid', id); }
     } catch (e) {}
-    const q = (!isPreview && id) ? `?id=${encodeURIComponent(id)}&page=open` : '';
+    // 開くたびに数える（同じ人でも毎回1人）。ID が作れないブラウザでも記録する
+    const q = !isPreview ? `?rec=1&page=open${id ? `&id=${encodeURIComponent(id)}` : ''}` : '';
     fetch(COUNTER_URL + q).then(r => r.json()).then(d => {
-      if (d && d.visitors > 0) { el.querySelector('b').textContent = Number(d.visitors).toLocaleString(); el.hidden = false; }
+      if (d && d.views > 0) {
+        document.getElementById('viewToday').textContent = Number(d.today || 0).toLocaleString();
+        document.getElementById('viewTotal').textContent = Number(d.views).toLocaleString();
+        el.hidden = false;
+      }
     }).catch(() => {});
   })();
 
