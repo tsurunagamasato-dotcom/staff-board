@@ -127,6 +127,9 @@
   #screen-contents{background:var(--paper); overflow-y:auto;}
   .contents-wrap{max-width:1100px; margin:0 auto; padding:6vh clamp(20px,6vw,64px) 10vh;}
   .title-line{white-space:nowrap; font-size:min(1em, 6vw);}
+  .viewer-count{margin-top:18px; display:inline-flex; align-items:center; gap:8px; font-size:12px; letter-spacing:.12em; color:var(--brick); border:1px solid rgba(138,54,38,0.3); border-radius:999px; padding:6px 16px 6px 13px;}
+  .viewer-count[hidden]{display:none;}
+  .viewer-count b{font-family:'Shippori Mincho B1',serif; font-size:17px; letter-spacing:.04em; margin:0 2px;}
   .contents-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6vh; flex-wrap:wrap; gap:16px;}
   .brand{display:flex; align-items:center; gap:10px;}
   .brand img{height:22px;}
@@ -490,6 +493,7 @@
         <div class="eyebrow">全4部・シリーズ構成</div>
         <div class="contents-title serif">昭<span class="wa-accent">和</span>から令<span class="wa-accent">和</span>へ<br><span class="title-line">～ ナカシマを創った男の物語 ～</span></div>
         <p class="contents-sub">創業者・会長 中島節雄が語る、生い立ちから創業、そして従業員への言葉まで。<br>50周年に向けて紡ぐ、次の世代への手紙。</p>
+        <div class="viewer-count" id="viewerCount" hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>閲覧者<b>0</b>人</div>
       </div>
         <figure class="guide" id="guide">
           <button type="button" class="guide-window" id="guideSwap" aria-label="案内役を交代する"><canvas id="guideCanvas" width="320" height="320" role="img" aria-label="案内役"></canvas></button>
@@ -836,6 +840,25 @@
 </div>
 
 <script>
+  // ===== 閲覧者数 =====
+  // Google Apps Script のウェブアプリの URL（…/exec）を入れると有効になる。空のあいだは何も表示しない。
+  const COUNTER_URL = 'https://script.google.com/macros/s/AKfycbxbO-CBpVJvyCVMQqUgd69XRZcJY7fNZVAeOjMCJPYNmMjKZbI61s8Oww6TyBv2Y_aw/exec';
+  (function countVisit(){
+    const el = document.getElementById('viewerCount');
+    if (!COUNTER_URL || !el) return;
+    // ?preview= で開いたとき（確認用）は数えずに、人数の表示だけ行う
+    const isPreview = new URLSearchParams(location.search).has('preview');
+    let id = '';
+    try {
+      id = localStorage.getItem('legacy-legend-vid') || '';
+      if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); localStorage.setItem('legacy-legend-vid', id); }
+    } catch (e) {}
+    const q = (!isPreview && id) ? `?id=${encodeURIComponent(id)}&page=open` : '';
+    fetch(COUNTER_URL + q).then(r => r.json()).then(d => {
+      if (d && d.visitors > 0) { el.querySelector('b').textContent = Number(d.visitors).toLocaleString(); el.hidden = false; }
+    }).catch(() => {});
+  })();
+
   // ===== 本文中の写真 =====
   // 写真が届いたらここに追加する。何も登録しなければ何も表示されない。
   //   ep    : 'ep1'（第1部）または 'ep2'（第2部）
